@@ -1,0 +1,15 @@
+import 'dotenv/config';
+import { createServer } from 'node:http';
+import { Server } from 'socket.io';
+import { app } from './app.js';
+import { prisma } from './lib/prisma.js';
+import { redis } from './lib/cache.js';
+import { logger } from './lib/logger.js';
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: process.env.CLIENT_ORIGIN?.split(',') || false, credentials: true } });
+app.set('io', io);
+io.on('connection', socket => socket.on('subscribe', userId => { if (typeof userId === 'string') socket.join(userId); }));
+const port = Number(process.env.PORT || 5000);
+const shutdown = async (signal) => { logger.info({ signal }, 'Shutting down'); httpServer.close(); await prisma.$disconnect(); await redis?.quit().catch(() => {}); process.exit(0); };
+process.on('SIGTERM', () => shutdown('SIGTERM')); process.on('SIGINT', () => shutdown('SIGINT'));
+httpServer.listen(port, () => logger.info({ port }, 'CVConnect API listening'));
