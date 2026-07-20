@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.log
+__pycache__/
+.pytest_cache/
+postgres_data/
