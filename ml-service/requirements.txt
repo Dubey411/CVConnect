@@ -1,0 +1,7 @@
+fastapi==0.115.8
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
+numpy==2.2.3
+# Optional heavyweight production models; uncomment in a model image build.
+# spacy==3.8.4
+# sentence-transformers==3.4.1
