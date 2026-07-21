@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Globe, CheckCircle2, Sliders, Shield, Zap, Plus, X, Lock, Play, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Globe, CheckCircle2, Sliders, Shield, Zap, Plus, X, Lock, Play, AlertCircle, RefreshCw } from 'lucide-react';
+import { request } from '../api';
 
 const INITIAL_PLATFORMS = [
   {
@@ -9,9 +10,9 @@ const INITIAL_PLATFORMS = [
     logo: '💼',
     color: 'from-blue-600 to-cyan-500',
     description: 'Auto-apply to Easy Apply roles with tailored resumes and customized screening questions.',
-    status: 'connected',
-    lastSync: '12 mins ago',
-    applicationsCount: 42
+    status: 'disconnected',
+    lastSync: 'Never',
+    applicationsCount: 0
   },
   {
     id: 'indeed',
@@ -20,9 +21,9 @@ const INITIAL_PLATFORMS = [
     logo: '🌐',
     color: 'from-blue-500 to-indigo-600',
     description: 'Direct integration with Indeed Apply for rapid submission across thousands of postings.',
-    status: 'connected',
-    lastSync: '1 hour ago',
-    applicationsCount: 28
+    status: 'disconnected',
+    lastSync: 'Never',
+    applicationsCount: 0
   },
   {
     id: 'internshala',
@@ -31,9 +32,9 @@ const INITIAL_PLATFORMS = [
     logo: '🚀',
     color: 'from-sky-400 to-blue-500',
     description: 'Automated application bot with custom cover letters tailored for student & fresher opportunities.',
-    status: 'connected',
-    lastSync: '3 hours ago',
-    applicationsCount: 19
+    status: 'disconnected',
+    lastSync: 'Never',
+    applicationsCount: 0
   },
   {
     id: 'unstop',
@@ -72,44 +73,91 @@ const INITIAL_PLATFORMS = [
 
 export default function ConnectPlatforms() {
   const [platforms, setPlatforms] = useState(INITIAL_PLATFORMS);
+  const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
   const [autoApplyActive, setAutoApplyActive] = useState(true);
   const [maxAppsPerDay, setMaxAppsPerDay] = useState(25);
   const [targetTitles, setTargetTitles] = useState('Full Stack Developer, Data Analyst, Software Engineer');
   const [remoteOnly, setRemoteOnly] = useState(true);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Connection modal state
   const [authEmail, setAuthEmail] = useState('');
   const [authKey, setAuthKey] = useState('');
   const [connecting, setConnecting] = useState(false);
 
+  const fetchConnections = async () => {
+    setLoading(true);
+    setApiError('');
+    try {
+      const res = await request({ method: 'get', url: '/platforms' });
+      const connections = res.connections || [];
+      
+      setPlatforms(prev => prev.map(p => {
+        const found = connections.find(c => c.platform === p.id);
+        if (found) {
+          return {
+            ...p,
+            status: found.status || 'connected',
+            applicationsCount: found.applicationsCount || 0,
+            accountEmail: found.accountEmail,
+            lastSync: new Date(found.lastSyncAt).toLocaleDateString()
+          };
+        }
+        return p;
+      }));
+    } catch (err) {
+      console.error('Failed to fetch platform connections:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnections();
+  }, []);
+
   const handleConnect = (platform) => {
     setActiveModal(platform);
-    setAuthEmail('');
+    setAuthEmail(platform.accountEmail || '');
     setAuthKey('');
+    setApiError('');
   };
 
-  const submitConnection = (e) => {
+  const submitConnection = async (e) => {
     e.preventDefault();
     setConnecting(true);
-    setTimeout(() => {
-      setPlatforms(prev => prev.map(p => p.id === activeModal.id ? {
-        ...p,
-        status: 'connected',
-        lastSync: 'Just now'
-      } : p));
-      setConnecting(false);
+    setApiError('');
+    try {
+      await request({
+        method: 'post',
+        url: '/platforms/connect',
+        data: {
+          platform: activeModal.id,
+          accountEmail: authEmail,
+          token: authKey
+        }
+      });
+      await fetchConnections();
       setActiveModal(null);
-    }, 1200);
+    } catch (err) {
+      setApiError(err.response?.data?.error?.message || 'Failed to authorize platform credentials.');
+    } finally {
+      setConnecting(false);
+    }
   };
 
-  const handleToggleDisconnect = (platformId) => {
-    setPlatforms(prev => prev.map(p => p.id === platformId ? {
-      ...p,
-      status: p.status === 'connected' ? 'disconnected' : 'connected',
-      lastSync: p.status === 'connected' ? p.lastSync : 'Just now'
-    } : p));
+  const handleToggleDisconnect = async (platformId) => {
+    try {
+      await request({
+        method: 'delete',
+        url: `/platforms/${platformId}`
+      });
+      await fetchConnections();
+    } catch (err) {
+      console.error(`Failed to disconnect ${platformId}:`, err);
+    }
   };
 
   const saveSettings = (e) => {
