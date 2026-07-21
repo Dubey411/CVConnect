@@ -2,10 +2,46 @@
   "name": "cvconnect-api",
   "version": "1.0.0",
   "type": "module",
-  "scripts": { "dev": "nodemon src/server.js", "start": "node src/server.js", "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js", "prisma:generate": "prisma generate", "prisma:migrate": "prisma migrate deploy", "prisma:seed": "prisma db seed" },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.750.0", "@prisma/client": "^6.5.0", "axios": "^1.8.4", "bcryptjs": "^2.4.3", "compression": "^1.8.0", "cors": "^2.8.5", "dotenv": "^16.5.0", "express": "^4.21.2", "express-rate-limit": "^7.5.0", "express-validator": "^7.2.1", "helmet": "^8.1.0", "ioredis": "^5.6.1", "jsonwebtoken": "^9.0.2", "mammoth": "^1.8.0", "morgan": "^1.10.0", "multer": "^1.4.5-lts.1", "openai": "^4.91.1", "pdf-parse": "^1.1.1", "pino": "^9.6.0", "pino-http": "^10.4.0", "socket.io": "^4.8.1", "uuid": "^11.1.0"
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed"
   },
-  "devDependencies": { "jest": "^29.7.0", "nodemon": "^3.1.9", "prisma": "^6.5.0", "supertest": "^7.1.0" },
-  "prisma": { "seed": "node prisma/seed.js" }
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@prisma/client": "^6.5.0",
+    "axios": "^1.8.4",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.2.0",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.8.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.91.1",
+    "pdf-parse": "^1.1.1",
+    "pino": "^9.6.0",
+    "pino-http": "^10.4.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "prisma": "^6.5.0",
+    "supertest": "^7.1.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
 }
