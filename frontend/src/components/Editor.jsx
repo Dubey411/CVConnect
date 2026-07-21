@@ -3,21 +3,82 @@ import { Check, ChevronDown, Copy, Download, X, Eye, FileEdit } from 'lucide-rea
 import { useDispatch, useSelector } from 'react-redux';
 import { resolveChange } from '../store';
 
-const display = (v) => Array.isArray(v) ? v.join('\n• ') : v;
+const display = (v) => {
+  if (!v) return '';
+  if (Array.isArray(v)) {
+    return v.map(item => typeof item === 'string' ? item : (typeof item === 'object' ? JSON.stringify(item) : String(item))).join('\n• ');
+  }
+  if (typeof v === 'object') return JSON.stringify(v, null, 2);
+  return String(v);
+};
+
+// Helper to flatten strings, arrays, or LLM-returned structured objects into string lines
+const flattenLines = (input) => {
+  if (!input) return [];
+  if (typeof input === 'string') return [input];
+  if (Array.isArray(input)) {
+    return input.flatMap(item => flattenLines(item));
+  }
+  if (typeof input === 'object') {
+    const lines = [];
+    const title = input.title || input.name || input.institution || input.company;
+    const company = input.company || input.organization;
+    if (title || company) {
+      const headerParts = [title, company].filter(Boolean);
+      lines.push(headerParts.join(' | '));
+    }
+    const duration = input.duration || input.date || input.dates;
+    if (duration) {
+      lines.push(String(duration));
+    }
+    if (input.degree) {
+      lines.push(String(input.degree));
+    }
+    if (input.role) {
+      const r = String(input.role);
+      lines.push(r.toLowerCase().startsWith('role:') ? r : `Role: ${r}`);
+    }
+    if (input.stack || input.tools) {
+      const s = String(input.stack || input.tools);
+      lines.push(s.toLowerCase().includes('stack:') ? s : `Tech Stack: ${s}`);
+    }
+    const bullets = input.responsibilities || input.bullets || input.details || input.description || input.items;
+    if (bullets) {
+      if (Array.isArray(bullets)) {
+        bullets.forEach(b => {
+          if (typeof b === 'string') lines.push(b);
+          else if (b) lines.push(typeof b === 'object' ? JSON.stringify(b) : String(b));
+        });
+      } else if (typeof bullets === 'string') {
+        lines.push(bullets);
+      }
+    }
+    if (lines.length === 0) {
+      Object.values(input).forEach(val => {
+        if (typeof val === 'string') lines.push(val);
+        else if (Array.isArray(val)) val.forEach(v => typeof v === 'string' && lines.push(v));
+      });
+    }
+    return lines;
+  }
+  return [String(input)];
+};
 
 // Helper to extract dates from raw text lines
 const extractDate = (text) => {
+  if (typeof text !== 'string') return null;
   const match = text.match(/(?:\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*Present|[A-Za-z]+\s+\d{4}\s*-\s*(?:Present|\d{4})|Expected\s+\d{4}|\d+\s+Month\s+Internship|Personal\s+Project)/i);
   return match ? match[0] : null;
 };
 
 // Helper to parse flat experience/projects arrays into structured blocks
-const parseExperience = (lines) => {
+const parseExperience = (rawLines) => {
+  const lines = flattenLines(rawLines);
   const blocks = [];
   let currentBlock = null;
 
   lines.forEach(line => {
-    const cleanLine = line.trim();
+    const cleanLine = typeof line === 'string' ? line.trim() : String(line).trim();
     if (!cleanLine) return;
 
     const isRole = cleanLine.toLowerCase().startsWith('role:');
@@ -66,13 +127,14 @@ const parseExperience = (lines) => {
 };
 
 // Helper to parse flat education details
-const parseEducationAndCerts = (lines) => {
+const parseEducationAndCerts = (rawLines) => {
+  const lines = flattenLines(rawLines);
   const eduBlocks = [];
   let certsLine = '';
   let currentBlock = null;
 
   lines.forEach(line => {
-    const cleanLine = line.trim();
+    const cleanLine = typeof line === 'string' ? line.trim() : String(line).trim();
     if (!cleanLine) return;
 
     if (cleanLine.toUpperCase().includes('CERTIFICATIONS') || cleanLine.toUpperCase().includes('AWARDS')) {
@@ -117,12 +179,13 @@ const parseEducationAndCerts = (lines) => {
 };
 
 // Helper to parse flat skills into categories
-const parseSkills = (skills) => {
+const parseSkills = (rawSkills) => {
+  const skills = flattenLines(rawSkills);
   const categories = [];
   let currentCategory = null;
 
   skills.forEach(skill => {
-    const cleanSkill = skill.trim();
+    const cleanSkill = typeof skill === 'string' ? skill.trim() : String(skill).trim();
     if (!cleanSkill) return;
 
     if (cleanSkill.includes(':')) {
@@ -227,14 +290,14 @@ export default function Editor({ rewrite }) {
     if (resObj.skills && resObj.skills.length > 0) {
       lines.push('SKILLS');
       lines.push('======');
-      lines.push(resObj.skills.join(', '));
+      lines.push(flattenLines(resObj.skills).join(', '));
       lines.push('');
     }
     
     if (resObj.experience && resObj.experience.length > 0) {
       lines.push('PROFESSIONAL EXPERIENCE');
       lines.push('=======================');
-      resObj.experience.forEach(exp => {
+      flattenLines(resObj.experience).forEach(exp => {
         lines.push(`• ${exp}`);
       });
       lines.push('');
@@ -243,7 +306,7 @@ export default function Editor({ rewrite }) {
     if (resObj.projects && resObj.projects.length > 0) {
       lines.push('PROJECTS');
       lines.push('========');
-      resObj.projects.forEach(proj => {
+      flattenLines(resObj.projects).forEach(proj => {
         lines.push(`• ${proj}`);
       });
       lines.push('');
@@ -252,7 +315,7 @@ export default function Editor({ rewrite }) {
     if (resObj.education && resObj.education.length > 0) {
       lines.push('EDUCATION');
       lines.push('=========');
-      resObj.education.forEach(edu => {
+      flattenLines(resObj.education).forEach(edu => {
         lines.push(`• ${edu}`);
       });
       lines.push('');

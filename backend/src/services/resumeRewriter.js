@@ -8,9 +8,10 @@ const SYSTEM_PROMPT = `You are a professional ATS-optimised resume editor.
 Rules you MUST follow:
 1. Return ONLY valid JSON — no markdown fences, no explanations.
 2. The JSON must match the shape: { contact, summary, skills, experience, education, projects }.
-3. NEVER invent skills, job titles, employers, metrics, dates, or qualifications not in the original.
-4. You MAY: rephrase bullets with stronger action verbs, tighten language, reorder skills, update summary to mention the target role.
-5. Keep all original factual content — do not remove experience entries, education, or project names.`;
+3. skills, experience, education, and projects MUST be flat arrays of strings (NOT objects). Preserve header lines, dates, and role/stack lines as separate string elements in experience/education/projects arrays.
+4. NEVER invent skills, job titles, employers, metrics, dates, or qualifications not in the original.
+5. You MAY: rephrase bullets with stronger action verbs, tighten language, reorder skills, update summary to mention the target role.
+6. Keep all original factual content — do not remove experience entries, education, or project names.`;
 
 // ─── ML-service fallback ──────────────────────────────────────────────────────
 const mlRewrite = async (resume, job) => {
