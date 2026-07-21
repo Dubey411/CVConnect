@@ -32,24 +32,51 @@ export class JobScraper {
       let company = '';
       let description = '';
 
-      // 1. Try JSON-LD structured schema (@type === "JobPosting")
-      $('script[type="application/ld+json"]').each((_, element) => {
+      // 0. Try Next.js SSR State (__NEXT_DATA__) used by Unstop and modern job boards
+      const nextData = $('#__NEXT_DATA__').html();
+      if (nextData) {
         try {
-          const content = $(element).html();
-          if (!content) return;
-          const json = JSON.parse(content);
-          const graph = Array.isArray(json) ? json : (json['@graph'] || [json]);
-          for (const item of graph) {
-            if (item && (item['@type'] === 'JobPosting' || item['@type']?.includes?.('JobPosting'))) {
-              if (item.title) title = item.title;
-              if (item.hiringOrganization?.name) company = item.hiringOrganization.name;
-              if (item.description) description = load('<div>' + item.description + '</div>')('div').text().trim();
+          const json = JSON.parse(nextData);
+          const opp = json?.props?.pageProps?.opportunity || 
+                      json?.props?.pageProps?.job || 
+                      json?.props?.pageProps?.details || 
+                      json?.props?.pageProps?.jobDetail;
+
+          if (opp) {
+            if (opp.title) title = opp.title;
+            if (opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name) {
+              company = opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name;
+            }
+            const rawDesc = opp.details || opp.description || opp.about || opp.about_job || opp.job_description;
+            if (rawDesc) {
+              description = load('<div>' + rawDesc + '</div>')('div').text().trim();
             }
           }
         } catch {
-          // Ignore malformed JSON-LD
+          // Ignore malformed Next.js state
         }
-      });
+      }
+
+      // 1. Try JSON-LD structured schema (@type === "JobPosting")
+      if (!title || !description) {
+        $('script[type="application/ld+json"]').each((_, element) => {
+          try {
+            const content = $(element).html();
+            if (!content) return;
+            const json = JSON.parse(content);
+            const graph = Array.isArray(json) ? json : (json['@graph'] || [json]);
+            for (const item of graph) {
+              if (item && (item['@type'] === 'JobPosting' || item['@type']?.includes?.('JobPosting'))) {
+                if (item.title && !title) title = item.title;
+                if (item.hiringOrganization?.name && !company) company = item.hiringOrganization.name;
+                if (item.description && !description) description = load('<div>' + item.description + '</div>')('div').text().trim();
+              }
+            }
+          } catch {
+            // Ignore malformed JSON-LD
+          }
+        });
+      }
 
       // 2. OpenGraph / Twitter Meta Tags Fallback
       if (!title) {
@@ -70,9 +97,14 @@ export class JobScraper {
                       $('meta[name="twitter:description"]').attr('content') || '';
       }
 
-      // 3. Page Body Selector Fallbacks
+      // 3. Page Body Selector Fallbacks (Unstop, Internshala, LinkedIn, Indeed, Glassdoor)
       if (!description || description.length < 100) {
-        const bodyText = $('.show-more-less-html__markup, .jobDescriptionText, #job-description, .description, article, main, .job-details').text().trim();
+        const bodyText = $(
+          '.show-more-less-html__markup, .jobDescriptionText, #job-description, .description, ' +
+          '.job_details, .opportunity-details, .about-job, .details_container, .opportunity_container, ' +
+          '.internship_details, .job-details, article, main'
+        ).text().trim();
+        
         if (bodyText && bodyText.length > description.length) {
           description = bodyText;
         }
