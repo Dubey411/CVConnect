@@ -142,7 +142,14 @@ def normalize_skills(raw) -> list[str]:
 def strengthen_bullet(bullet: str, domain: str) -> str:
     bullet = WEAK_OPENERS.sub("", bullet.strip()).strip().rstrip(".")
     if not bullet: return bullet
-    if re.match(r"^[A-Z][a-z]+ed\b", bullet):
+    # Already starts with a strong action verb (regular -ed OR common irregulars)
+    _ALREADY_STRONG = re.compile(
+        r"^(built|led|made|ran|drove|designed|wrote|created|grew|spearheaded|won|taught|"
+        r"launched|managed|researched|analysed|analyzed|coordinated|produced|shipped|"
+        r"[A-Z][a-z]+ed)\b",
+        re.IGNORECASE
+    )
+    if _ALREADY_STRONG.match(bullet):
         return bullet + "."
     verbs = ACTION_VERBS.get(domain, ACTION_VERBS["default"])
     idx = sum(ord(c) for c in bullet[:10]) % len(verbs)
@@ -278,8 +285,11 @@ def rewrite(payload: RewriteRequest):
     source_text:   str       = resume.get("sourceText", "")
     job_title:     str       = job.get("title", "")
 
-    # 1. Domain classification
-    combined_text = job_title + " " + " ".join(resume_skills) + " " + " ".join(job_skills)
+    # 1. Domain classification (based on target job to steer rewrite towards target domain)
+    job_skills_text = " ".join(job_skills) if job_skills else ""
+    if not job_skills_text:
+        job_skills_text = " ".join(lex_skills(job.get("description", "")))
+    combined_text = job_title + " " + job_skills_text
     domain = infer_domain_from_text(combined_text)
 
     # 2. Predict skill gap from trained dataset
@@ -291,10 +301,42 @@ def rewrite(payload: RewriteRequest):
     # 4. Gap-fill (truth-preserving)
     optimized_skills = gap_fill_skills(resume_skills, all_target_skills, source_text)
 
-    # 5. Strengthen bullets
+    # 5. Strengthen bullets (skip headers, dates, companies, role/stack lines)
     experience = resume.get("experience") or []
+    _MONTHS = {"january","february","march","april","may","june","july","august",
+                "september","october","november","december",
+                "jan","feb","mar","apr","jun","jul","aug","sep","oct","nov","dec"}
+    _BULLET_STARTERS = re.compile(
+        r"^(completed|engineered|collaborated|architected|led|designed|developed|built|"
+        r"managed|implemented|optimized|monitored|applied|generated|owned|assisted|helped|"
+        r"created|worked|delivered|analysed|modelled|processed|visualised|trained|evaluated|"
+        r"extracted|transformed|predicted|curated|benchmarked|tuned|validated|aggregated|"
+        r"deployed|contributed|supported|enhanced|maintained|reviewed|established|improved|"
+        r"enabled|reduced|increased|launched|spearheaded|drove|streamlined|automated|"
+        r"integrated|coordinated|conducted|produced|performed)\b",
+        re.IGNORECASE
+    )
+
+    def _is_bullet(line: str) -> bool:
+        s = line.strip()
+        lower = s.lower()
+        if len(s) < 30:
+            return False
+        if "|" in s or "@" in s:
+            return False
+        if lower.startswith("role:") or lower.startswith("tech stack:") or lower.startswith("tools"):
+            return False
+        words = set(lower.split())
+        if words & _MONTHS:
+            return False
+        if re.search(r"\b\d{4}\b", lower) or re.search(r"\b\d+\s*month", lower):
+            return False
+        if _BULLET_STARTERS.match(s) or len(s) > 60:
+            return True
+        return False
+
     optimized_experience = [
-        strengthen_bullet(b, domain) if isinstance(b, str) else b
+        strengthen_bullet(b, domain) if isinstance(b, str) and _is_bullet(b) else b
         for b in experience
     ]
 
