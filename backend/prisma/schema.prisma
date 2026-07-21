@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  password     String?
-  name         String
-  refreshToken String?
-  resumes      Resume[]
-  jobs         Job[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String?
+  name                String
+  refreshToken        String?
+  resumes             Resume[]
+  jobs                Job[]
+  platformConnections PlatformConnection[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Resume {
@@ -55,4 +56,23 @@ model Job {
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+model PlatformConnection {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform          String
+  accountEmail      String
+  encryptedToken    String
+  iv                String
+  authTag           String
+  status            String   @default("connected")
+  applicationsCount Int      @default(0)
+  lastSyncAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
 }
