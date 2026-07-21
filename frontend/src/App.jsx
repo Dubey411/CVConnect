@@ -4,7 +4,7 @@ import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, Arr
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
-import { analyzeJob, matchResume, rewriteResume, signIn, signOut, uploadResume } from './store';
+import { analyzeJob, matchResume, rewriteResume, setResume, signIn, signOut, uploadResume } from './store';
 import ResumeUpload from './components/ResumeUpload';
 import JobDescriptionInput from './components/JobDescriptionInput';
 import ScorePanel from './components/ScorePanel';
@@ -190,7 +190,10 @@ function Shell() {
         <main className="min-w-0 px-5 py-8 md:px-8 lg:px-12">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             {activeTab === 'history' && (
-              <History onLoadResume={() => setActiveTab('workspace')} />
+              <History onLoadResume={(item) => {
+                dispatch(setResume(item));
+                setActiveTab('workspace');
+              }} />
             )}
 
             {activeTab === 'insights' && (
