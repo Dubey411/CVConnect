@@ -5,11 +5,169 @@ import { resolveChange } from '../store';
 
 const display = (v) => Array.isArray(v) ? v.join('\n• ') : v;
 
+// Helper to extract dates from raw text lines
+const extractDate = (text) => {
+  const match = text.match(/(?:\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*Present|[A-Za-z]+\s+\d{4}\s*-\s*(?:Present|\d{4})|Expected\s+\d{4}|\d+\s+Month\s+Internship|Personal\s+Project)/i);
+  return match ? match[0] : null;
+};
+
+// Helper to parse flat experience/projects arrays into structured blocks
+const parseExperience = (lines) => {
+  const blocks = [];
+  let currentBlock = null;
+
+  lines.forEach(line => {
+    const cleanLine = line.trim();
+    if (!cleanLine) return;
+
+    const isRole = cleanLine.toLowerCase().startsWith('role:');
+    const isStack = cleanLine.toLowerCase().includes('stack:') || cleanLine.toLowerCase().startsWith('tools and stack:');
+    const isBullet = !isRole && !isStack && (
+      cleanLine.match(/^(completed|engineered|collaborated|architected|led|designed|developed|built|managed|implemented|optimized|monitored|applied|generated|owned|assisted|helped|created|worked|delivered)\b/i) ||
+      cleanLine.length > 85 ||
+      (currentBlock && currentBlock.bullets.length > 0)
+    );
+
+    if (!isBullet && !isRole && !isStack) {
+      if (!currentBlock || currentBlock.bullets.length > 0) {
+        const date = extractDate(cleanLine);
+        const titleWithoutDate = date ? cleanLine.replace(date, '').replace(/[-–]$/, '').trim() : cleanLine;
+        currentBlock = {
+          title: titleWithoutDate,
+          date: date || '',
+          role: '',
+          stack: '',
+          bullets: []
+        };
+        blocks.push(currentBlock);
+      } else {
+        const date = extractDate(cleanLine);
+        if (date) currentBlock.date = date;
+        const cleanPart = date ? cleanLine.replace(date, '').trim() : cleanLine;
+        if (cleanPart) {
+          currentBlock.title += ' - ' + cleanPart;
+        }
+      }
+    } else if (isRole) {
+      currentBlock.role = cleanLine;
+    } else if (isStack) {
+      currentBlock.stack = cleanLine;
+    } else {
+      if (currentBlock) {
+        currentBlock.bullets.push(cleanLine);
+      } else {
+        currentBlock = { title: 'Experience', date: '', role: '', stack: '', bullets: [cleanLine] };
+        blocks.push(currentBlock);
+      }
+    }
+  });
+
+  return blocks;
+};
+
+// Helper to parse flat education details
+const parseEducationAndCerts = (lines) => {
+  const eduBlocks = [];
+  let certsLine = '';
+  let currentBlock = null;
+
+  lines.forEach(line => {
+    const cleanLine = line.trim();
+    if (!cleanLine) return;
+
+    if (cleanLine.toUpperCase().includes('CERTIFICATIONS') || cleanLine.toUpperCase().includes('AWARDS')) {
+      return;
+    }
+    
+    if (cleanLine.includes(' | ') || cleanLine.toLowerCase().startsWith('ai and ml') || cleanLine.toLowerCase().startsWith('advanced frontend') || cleanLine.toLowerCase().startsWith('backend architecture')) {
+      certsLine = cleanLine;
+      return;
+    }
+
+    const isDegree = cleanLine.toLowerCase().includes('bachelor') || 
+                     cleanLine.toLowerCase().includes('b.e.') || 
+                     cleanLine.toLowerCase().includes('hsc') || 
+                     cleanLine.toLowerCase().includes('ssc') ||
+                     cleanLine.toLowerCase().includes('degree') ||
+                     cleanLine.toLowerCase().includes('science stream');
+
+    if (!isDegree) {
+      const date = extractDate(cleanLine);
+      const instWithoutDate = date ? cleanLine.replace(date, '').trim() : cleanLine;
+      currentBlock = {
+        institution: instWithoutDate,
+        date: date || '',
+        degree: ''
+      };
+      eduBlocks.push(currentBlock);
+    } else {
+      const date = extractDate(cleanLine);
+      const degWithoutDate = date ? cleanLine.replace(date, '').trim() : cleanLine;
+      if (currentBlock) {
+        if (date) currentBlock.date = date;
+        currentBlock.degree += (currentBlock.degree ? ', ' : '') + degWithoutDate;
+      } else {
+        currentBlock = { institution: 'Education', date: date || '', degree: degWithoutDate };
+        eduBlocks.push(currentBlock);
+      }
+    }
+  });
+
+  return { eduBlocks, certsLine };
+};
+
+// Helper to parse flat skills into categories
+const parseSkills = (skills) => {
+  const categories = [];
+  let currentCategory = null;
+
+  skills.forEach(skill => {
+    const cleanSkill = skill.trim();
+    if (!cleanSkill) return;
+
+    if (cleanSkill.includes(':')) {
+      const parts = cleanSkill.split(':');
+      const catName = parts[0].trim();
+      const firstSkill = parts.slice(1).join(':').trim();
+      
+      currentCategory = {
+        name: catName,
+        items: [firstSkill]
+      };
+      categories.push(currentCategory);
+    } else {
+      if (currentCategory) {
+        currentCategory.items.push(cleanSkill);
+      } else {
+        currentCategory = {
+          name: 'Core Skills',
+          items: [cleanSkill]
+        };
+        categories.push(currentCategory);
+      }
+    }
+  });
+
+  return categories;
+};
+
+// Simple link parser
+const extractLinks = (text) => {
+  if (!text) return {};
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
+  const phone = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0] || '';
+  const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i)?.[0] || 'https://linkedin.com';
+  const github = text.match(/https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i)?.[0] || 'https://github.com';
+  const portfolio = text.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?vercel\.app\b|https?:\/\/[a-zA-Z0-9_-]+\.github\.io\b/i)?.[0] || '';
+
+  return { email, phone, linkedin, github, portfolio };
+};
+
 export default function Editor({ rewrite }) {
   const dispatch = useDispatch();
   const accepted = useSelector(s => s.workspace.accepted);
   const [activeTab, setActiveTab] = useState('review'); // 'review' | 'preview'
-  const [selectedTemplate, setSelectedTemplate] = useState('modern'); // 'modern' | 'tech' | 'classic'
+  const [selectedTemplate, setSelectedTemplate] = useState('calibri'); // 'calibri' | 'modern' | 'tech'
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -43,7 +201,8 @@ export default function Editor({ rewrite }) {
       skills: getSection('skills') || [],
       experience: getSection('experience') || [],
       education: getSection('education') || [],
-      projects: getSection('projects') || []
+      projects: getSection('projects') || [],
+      sourceText: original.sourceText || ''
     };
   };
 
@@ -140,9 +299,105 @@ export default function Editor({ rewrite }) {
   };
 
   const resumeData = compileResume();
+  const links = extractLinks(resumeData.sourceText);
+
+  // Parsed sections for structure layout
+  const parsedExp = parseExperience(resumeData.experience || []);
+  const parsedProj = parseExperience(resumeData.projects || []);
+  const { eduBlocks, certsLine } = parseEducationAndCerts(resumeData.education || []);
+  const parsedSkills = parseSkills(resumeData.skills || []);
 
   return (
     <section className="panel overflow-hidden">
+      {/* Inline Calibri style definitions */}
+      <style>{`
+        .calibri-resume {
+          font-family: Calibri, Arial, sans-serif;
+          font-size: 9.8pt;
+          line-height: 1.24;
+          color: #000;
+          background: #fff;
+          width: 210mm;
+          min-height: 297mm;
+          padding: 8mm 12mm;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+        .calibri-resume header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 7px;
+        }
+        .calibri-resume h1 {
+            font-size: 24pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 0 3px 0;
+            letter-spacing: 0.5px;
+            color: #000;
+            line-height: 1.1;
+        }
+        .calibri-resume .contact-row {
+            font-size: 8.8pt;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0;
+            color: #222;
+            line-height: 1.25;
+        }
+        .calibri-resume a {
+            color: #000;
+            text-decoration: underline;
+            text-underline-offset: 1px;
+            font-weight: 600;
+        }
+        .calibri-resume section { margin-bottom: 8px; }
+        .calibri-resume h2 {
+            font-size: 11pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            margin: 10px 0 5px 0;
+            padding-bottom: 2px;
+            color: #000;
+        }
+        .calibri-resume p { margin: 0; text-align: left; color: #000; }
+        .calibri-resume .summary-text { max-width: 98%; }
+        .calibri-resume .skills-container { font-size: 9.2pt; margin-bottom: 2px; }
+        .calibri-resume .skill-item { margin-bottom: 3px; color: #000; }
+        .calibri-resume .skill-head { font-weight: 700; }
+        .calibri-resume .job-block { margin-bottom: 6px; }
+        .calibri-resume .job-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 10.1pt;
+            margin-bottom: 2px;
+            color: #000;
+        }
+        .calibri-resume .job-title { flex: 1; }
+        .calibri-resume .job-date { white-space: nowrap; text-align: right; }
+        .calibri-resume .job-sub {
+            font-style: italic;
+            font-weight: 600;
+            font-size: 9.4pt;
+            margin-bottom: 1px;
+            color: #000;
+        }
+        .calibri-resume .stack-line {
+            font-size: 8.8pt;
+            color: #444;
+            margin-bottom: 1px;
+        }
+        .calibri-resume .cert-line { font-size: 8.8pt; line-height: 1.2; color: #000; }
+        .calibri-resume ul { margin: 0; padding-left: 13px; list-style-type: disc; }
+        .calibri-resume li { margin-bottom: 2px; text-align: left; color: #000; }
+      `}</style>
+
       {/* Tab Navigation and Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-line bg-black/10 no-print">
         <div className="flex bg-slate-900/60 p-1 rounded border border-line">
@@ -174,6 +429,14 @@ export default function Editor({ rewrite }) {
           {activeTab === 'preview' && (
             <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-line mr-2">
               <button
+                onClick={() => setSelectedTemplate('calibri')}
+                className={`px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider transition ${
+                  selectedTemplate === 'calibri' ? 'bg-aqua/20 text-aqua font-semibold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Calibri Professional
+              </button>
+              <button
                 onClick={() => setSelectedTemplate('modern')}
                 className={`px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider transition ${
                   selectedTemplate === 'modern' ? 'bg-aqua/20 text-aqua font-semibold' : 'text-slate-400 hover:text-slate-200'
@@ -188,14 +451,6 @@ export default function Editor({ rewrite }) {
                 }`}
               >
                 Tech
-              </button>
-              <button
-                onClick={() => setSelectedTemplate('classic')}
-                className={`px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider transition ${
-                  selectedTemplate === 'classic' ? 'bg-aqua/20 text-aqua font-semibold' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Serif
               </button>
             </div>
           )}
@@ -295,8 +550,8 @@ export default function Editor({ rewrite }) {
 
       {/* TAB 2: Resume Template Preview */}
       {activeTab === 'preview' && (
-        <div className="p-6 bg-slate-950/60 overflow-y-auto max-h-[700px] flex justify-center no-print">
-          <div className="w-full max-w-3xl">
+        <div className="p-6 bg-slate-950/60 overflow-y-auto max-h-[750px] flex justify-center no-print">
+          <div className="w-full max-w-[220mm]">
             <p className="text-center text-xs text-slate-400 mb-4">
               Here is your resume compiled with accepted edits. Click <strong>Export &gt; Print or Save as PDF</strong> to print.
             </p>
@@ -305,9 +560,163 @@ export default function Editor({ rewrite }) {
             <div 
               id="resume-printable-area"
               className={`printable-resume bg-white text-slate-800 p-8 md:p-12 shadow-2xl rounded-sm border border-slate-200 min-h-[1050px] ${
-                selectedTemplate === 'classic' ? 'font-serif' : 'font-sans'
+                selectedTemplate === 'calibri' ? 'calibri-resume' : ''
               }`}
             >
+              {/* Calibri Professional Template (Exact user template style made dynamic) */}
+              {selectedTemplate === 'calibri' && (
+                <div className="calibri-resume">
+                  <header>
+                    <h1>{resumeData.contact?.name || 'Resume'}</h1>
+                    <div className="contact-row">
+                      {resumeData.contact?.location && <span>{resumeData.contact.location}</span>}
+                      {resumeData.contact?.location && (links.email || resumeData.contact?.email) && <span>&nbsp; | &nbsp;</span>}
+                      
+                      {(links.email || resumeData.contact?.email) && (
+                        <a href={`mailto:${links.email || resumeData.contact.email}`}>{links.email || resumeData.contact.email}</a>
+                      )}
+                      
+                      {(links.email || resumeData.contact?.email) && (links.phone || resumeData.contact?.phone) && <span>&nbsp; | &nbsp;</span>}
+                      
+                      {(links.phone || resumeData.contact?.phone) && (
+                        <a href={`tel:${links.phone || resumeData.contact.phone}`}>{links.phone || resumeData.contact.phone}</a>
+                      )}
+
+                      {links.linkedin && <span>&nbsp; | &nbsp;</span>}
+                      {links.linkedin && (
+                        <a href={links.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                      )}
+
+                      {links.github && <span>&nbsp; | &nbsp;</span>}
+                      {links.github && (
+                        <a href={links.github} target="_blank" rel="noopener noreferrer">GitHub</a>
+                      )}
+
+                      {links.portfolio && <span>&nbsp; | &nbsp;</span>}
+                      {links.portfolio && (
+                        <a href={links.portfolio} target="_blank" rel="noopener noreferrer">Portfolio</a>
+                      )}
+                    </div>
+                  </header>
+
+                  {resumeData.summary && (
+                    <section>
+                      <h2>Professional Summary</h2>
+                      <p className="summary-text">{resumeData.summary}</p>
+                    </section>
+                  )}
+
+                  {parsedSkills && parsedSkills.length > 0 && (
+                    <section>
+                      <h2>Technical Skills</h2>
+                      <div className="skills-container">
+                        {parsedSkills.map((cat, i) => (
+                          <div key={i} className="skill-item">
+                            <span className="skill-head">{cat.name}:</span> {cat.items.join(', ')}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {parsedExp && parsedExp.length > 0 && (
+                    <section>
+                      <h2>Experience</h2>
+                      {parsedExp.map((job, i) => (
+                        <div key={i} className="job-block">
+                          <div className="job-header">
+                            <span className="job-title">{job.title}</span>
+                            <span className="job-date">{job.date}</span>
+                          </div>
+                          {job.role && <div className="job-sub">{job.role}</div>}
+                          {job.stack && <div className="stack-line">{job.stack}</div>}
+                          <ul>
+                            {job.bullets.map((bullet, j) => {
+                              const firstWord = bullet.match(/^\s*([A-Za-z\-]+)\b/)?.[1] || '';
+                              const restOfBullet = bullet.substring(firstWord.length);
+                              return (
+                                <li key={j}>
+                                  {firstWord ? <b>{firstWord}</b> : ''}{restOfBullet}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+
+                  {parsedProj && parsedProj.length > 0 && (
+                    <section>
+                      <h2>Projects</h2>
+                      {parsedProj.map((proj, i) => (
+                        <div key={i} className="job-block">
+                          <div className="job-header">
+                            <span className="job-title">{proj.title}</span>
+                            <span className="job-date">{proj.date}</span>
+                          </div>
+                          {proj.role && <div className="job-sub">{proj.role}</div>}
+                          {proj.stack && <div className="stack-line">{proj.stack}</div>}
+                          <ul>
+                            {proj.bullets.map((bullet, j) => {
+                              const firstWord = bullet.match(/^\s*([A-Za-z\-]+)\b/)?.[1] || '';
+                              const restOfBullet = bullet.substring(firstWord.length);
+                              return (
+                                <li key={j}>
+                                  {firstWord ? <b>{firstWord}</b> : ''}{restOfBullet}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+
+                  {eduBlocks && eduBlocks.length > 0 && (
+                    <section>
+                      <h2>Education</h2>
+                      {eduBlocks.map((edu, i) => (
+                        <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '2px' }}>
+                          <div className="job-header">
+                            <span className="job-title">{edu.institution}</span>
+                            <span className="job-date">{edu.date}</span>
+                          </div>
+                          {edu.degree && <div>{edu.degree}</div>}
+                        </div>
+                      ))}
+                    </section>
+                  )}
+
+                  {certsLine && (
+                    <section>
+                      <h2>Certifications and Awards</h2>
+                      <div className="cert-line">
+                        {certsLine.split(' | ').map((cert, i) => {
+                          // Bold the first part if structured
+                          const cleanCert = cert.trim();
+                          const parts = cleanCert.match(/^([A-Za-z0-9\s]+)\(([^)]+)\)$/);
+                          if (parts) {
+                            return (
+                              <span key={i}>
+                                {i > 0 && ' | '}
+                                <b>{parts[1].trim()}</b> ({parts[2].trim()})
+                              </span>
+                            );
+                          }
+                          return (
+                            <span key={i}>
+                              {i > 0 && ' | '}
+                              {cleanCert}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+
               {/* Modern Minimalist Template */}
               {selectedTemplate === 'modern' && (
                 <div>
@@ -350,28 +759,6 @@ export default function Editor({ rewrite }) {
                       </ul>
                     </section>
                   )}
-
-                  {resumeData.projects && resumeData.projects.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Key Projects</h2>
-                      <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700">
-                        {resumeData.projects.map((proj, i) => (
-                          <li key={i} className="leading-relaxed">{proj}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-
-                  {resumeData.education && resumeData.education.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Education</h2>
-                      <ul className="list-disc pl-5 space-y-1 text-xs text-slate-700">
-                        {resumeData.education.map((edu, i) => (
-                          <li key={i} className="leading-relaxed">{edu}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
                 </div>
               )}
 
@@ -403,17 +790,6 @@ export default function Editor({ rewrite }) {
                           </div>
                         </div>
                       )}
-
-                      {resumeData.education && resumeData.education.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[9px] mb-1.5">Education</h4>
-                          <ul className="space-y-1.5">
-                            {resumeData.education.map((edu, i) => (
-                              <li key={i} className="leading-tight text-[10px]">{edu}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -425,98 +801,7 @@ export default function Editor({ rewrite }) {
                         <p className="text-xs leading-relaxed text-slate-700 whitespace-pre-line">{resumeData.summary}</p>
                       </section>
                     )}
-
-                    {resumeData.experience && resumeData.experience.length > 0 && (
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 pb-0.5 border-b-2 border-slate-900">Professional Experience</h2>
-                        <ul className="list-none space-y-3 text-xs text-slate-700">
-                          {resumeData.experience.map((bullet, i) => (
-                            <li key={i} className="flex gap-2 items-start leading-relaxed">
-                              <span className="text-slate-900 font-bold mt-0.5">•</span>
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    )}
-
-                    {resumeData.projects && resumeData.projects.length > 0 && (
-                      <section>
-                        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 pb-0.5 border-b-2 border-slate-900">Key Projects</h2>
-                        <ul className="list-none space-y-3 text-xs text-slate-700">
-                          {resumeData.projects.map((proj, i) => (
-                            <li key={i} className="flex gap-2 items-start leading-relaxed">
-                              <span className="text-slate-900 font-bold mt-0.5">•</span>
-                              <span>{proj}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    )}
                   </div>
-                </div>
-              )}
-
-              {/* Classic Serif Template */}
-              {selectedTemplate === 'classic' && (
-                <div className="font-serif">
-                  <header className="text-center mb-6">
-                    <h1 className="text-3xl font-normal text-slate-900 tracking-wide">{resumeData.contact?.name || 'Resume'}</h1>
-                    <div className="flex justify-center flex-wrap gap-2 text-xs text-slate-600 mt-2 font-sans">
-                      {resumeData.contact?.email && <span>{resumeData.contact.email}</span>}
-                      {resumeData.contact?.phone && <span>| {resumeData.contact.phone}</span>}
-                      {resumeData.contact?.location && <span>| {resumeData.contact.location}</span>}
-                    </div>
-                  </header>
-
-                  {resumeData.summary && (
-                    <section className="mb-6">
-                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Professional Objective</h2>
-                      <p className="text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line indent-8">{resumeData.summary}</p>
-                    </section>
-                  )}
-
-                  {resumeData.skills && resumeData.skills.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Technical Qualifications</h2>
-                      <p className="text-xs text-slate-800 leading-relaxed text-center italic">
-                        {resumeData.skills.join(' • ')}
-                      </p>
-                    </section>
-                  )}
-
-                  {resumeData.experience && resumeData.experience.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-3 pb-0.5 border-b border-slate-300">Work Experience History</h2>
-                      <ul className="list-disc pl-6 space-y-2 text-xs text-slate-800 text-justify">
-                        {resumeData.experience.map((bullet, i) => (
-                          <li key={i} className="leading-relaxed">{bullet}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-
-                  {resumeData.projects && resumeData.projects.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-3 pb-0.5 border-b border-slate-300">Key Achievements & Projects</h2>
-                      <ul className="list-disc pl-6 space-y-2 text-xs text-slate-800 text-justify">
-                        {resumeData.projects.map((proj, i) => (
-                          <li key={i} className="leading-relaxed">{proj}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-
-                  {resumeData.education && resumeData.education.length > 0 && (
-                    <section className="mb-6">
-                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Education Details</h2>
-                      <ul className="list-disc pl-6 space-y-1 text-xs text-slate-800">
-                        {resumeData.education.map((edu, i) => (
-                          <li key={i} className="leading-relaxed">{edu}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
                 </div>
               )}
             </div>
@@ -526,195 +811,142 @@ export default function Editor({ rewrite }) {
 
       {/* Hidden printable copy that is only visible to the printer */}
       <div className="hidden print:block printable-resume bg-white text-slate-800 p-12 min-h-[1050px]">
-        {/* Modern Minimalist Printable */}
-        {selectedTemplate === 'modern' && (
-          <div>
-            <header className="border-b-2 border-slate-800 pb-4 mb-6">
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{resumeData.contact?.name || 'Resume'}</h1>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 mt-2">
-                {resumeData.contact?.email && <span>{resumeData.contact.email}</span>}
-                {resumeData.contact?.phone && <span>• {resumeData.contact.phone}</span>}
-                {resumeData.contact?.location && <span>• {resumeData.contact.location}</span>}
+        {/* Exact Calibri Template Layout for Print */}
+        {selectedTemplate === 'calibri' && (
+          <div className="calibri-resume" style={{ padding: 0 }}>
+            <header>
+              <h1>{resumeData.contact?.name || 'Resume'}</h1>
+              <div className="contact-row">
+                {resumeData.contact?.location && <span>{resumeData.contact.location}</span>}
+                {resumeData.contact?.location && (links.email || resumeData.contact?.email) && <span>&nbsp; | &nbsp;</span>}
+                {(links.email || resumeData.contact?.email) && (
+                  <a href={`mailto:${links.email || resumeData.contact.email}`}>{links.email || resumeData.contact.email}</a>
+                )}
+                {(links.email || resumeData.contact?.email) && (links.phone || resumeData.contact?.phone) && <span>&nbsp; | &nbsp;</span>}
+                {(links.phone || resumeData.contact?.phone) && (
+                  <a href={`tel:${links.phone || resumeData.contact.phone}`}>{links.phone || resumeData.contact.phone}</a>
+                )}
+                {links.linkedin && <span>&nbsp; | &nbsp;</span>}
+                {links.linkedin && <a href={links.linkedin}>{links.linkedin}</a>}
+                {links.github && <span>&nbsp; | &nbsp;</span>}
+                {links.github && <a href={links.github}>{links.github}</a>}
+                {links.portfolio && <span>&nbsp; | &nbsp;</span>}
+                {links.portfolio && <a href={links.portfolio}>{links.portfolio}</a>}
               </div>
             </header>
-            {resumeData.summary && (
-              <section className="mb-6">
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Professional Summary</h2>
-                <p className="text-xs leading-relaxed text-slate-700 whitespace-pre-line">{resumeData.summary}</p>
-              </section>
-            )}
-            {resumeData.skills && resumeData.skills.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Core Competencies</h2>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {resumeData.skills.map((skill, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] rounded-sm font-medium">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-            {resumeData.experience && resumeData.experience.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Professional Experience</h2>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700">
-                  {resumeData.experience.map((bullet, i) => (
-                    <li key={i} className="leading-relaxed">{bullet}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resumeData.projects && resumeData.projects.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Key Projects</h2>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700">
-                  {resumeData.projects.map((proj, i) => (
-                    <li key={i} className="leading-relaxed">{proj}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resumeData.education && resumeData.education.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Education</h2>
-                <ul className="list-disc pl-5 space-y-1 text-xs text-slate-700">
-                  {resumeData.education.map((edu, i) => (
-                    <li key={i} className="leading-relaxed">{edu}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </div>
-        )}
 
-        {/* Tech Slate Printable */}
-        {selectedTemplate === 'tech' && (
-          <div className="grid grid-cols-[1fr_2.2fr] gap-6">
-            <div className="border-r border-slate-200 pr-6">
-              <h1 className="text-2xl font-bold text-slate-955 mb-1">{resumeData.contact?.name || 'Resume'}</h1>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-6">Candidate</p>
-              <div className="space-y-4 text-[11px] text-slate-600">
-                <div>
-                  <h4 className="font-bold text-slate-905 uppercase tracking-wider text-[9px] mb-1">Contact</h4>
-                  {resumeData.contact?.email && <p className="truncate">{resumeData.contact.email}</p>}
-                  {resumeData.contact?.phone && <p>{resumeData.contact.phone}</p>}
-                  {resumeData.contact?.location && <p>{resumeData.contact.location}</p>}
-                </div>
-                {resumeData.skills && resumeData.skills.length > 0 && (
-                  <div>
-                    <h4 className="font-bold text-slate-905 uppercase tracking-wider text-[9px] mb-2">Technical Skills</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {resumeData.skills.map((skill, i) => (
-                        <span key={i} className="px-1.5 py-0.5 bg-slate-900 text-white text-[9px] rounded-sm font-mono">
-                          {skill}
-                        </span>
-                      ))}
+            {resumeData.summary && (
+              <section>
+                <h2>Professional Summary</h2>
+                <p className="summary-text">{resumeData.summary}</p>
+              </section>
+            )}
+
+            {parsedSkills && parsedSkills.length > 0 && (
+              <section>
+                <h2>Technical Skills</h2>
+                <div className="skills-container">
+                  {parsedSkills.map((cat, i) => (
+                    <div key={i} className="skill-item">
+                      <span className="skill-head">{cat.name}:</span> {cat.items.join(', ')}
                     </div>
-                  </div>
-                )}
-                {resumeData.education && resumeData.education.length > 0 && (
-                  <div>
-                    <h4 className="font-bold text-slate-905 uppercase tracking-wider text-[9px] mb-1.5">Education</h4>
-                    <ul className="space-y-1.5">
-                      {resumeData.education.map((edu, i) => (
-                        <li key={i} className="leading-tight text-[10px]">{edu}</li>
-                      ))}
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {parsedExp && parsedExp.length > 0 && (
+              <section>
+                <h2>Experience</h2>
+                {parsedExp.map((job, i) => (
+                  <div key={i} className="job-block">
+                    <div className="job-header">
+                      <span className="job-title">{job.title}</span>
+                      <span className="job-date">{job.date}</span>
+                    </div>
+                    {job.role && <div className="job-sub">{job.role}</div>}
+                    {job.stack && <div className="stack-line">{job.stack}</div>}
+                    <ul>
+                      {job.bullets.map((bullet, j) => {
+                        const firstWord = bullet.match(/^\s*([A-Za-z\-]+)\b/)?.[1] || '';
+                        const restOfBullet = bullet.substring(firstWord.length);
+                        return (
+                          <li key={j}>
+                            {firstWord ? <b>{firstWord}</b> : ''}{restOfBullet}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="space-y-6">
-              {resumeData.summary && (
-                <section>
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 pb-0.5 border-b-2 border-slate-900">Summary</h2>
-                  <p className="text-xs leading-relaxed text-slate-700 whitespace-pre-line">{resumeData.summary}</p>
-                </section>
-              )}
-              {resumeData.experience && resumeData.experience.length > 0 && (
-                <section>
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 pb-0.5 border-b-2 border-slate-900">Professional Experience</h2>
-                  <ul className="list-none space-y-3 text-xs text-slate-700">
-                    {resumeData.experience.map((bullet, i) => (
-                      <li key={i} className="flex gap-2 items-start leading-relaxed">
-                        <span className="text-slate-900 font-bold mt-0.5">•</span>
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-              {resumeData.projects && resumeData.projects.length > 0 && (
-                <section>
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 pb-0.5 border-b-2 border-slate-900">Key Projects</h2>
-                  <ul className="list-none space-y-3 text-xs text-slate-700">
-                    {resumeData.projects.map((proj, i) => (
-                      <li key={i} className="flex gap-2 items-start leading-relaxed">
-                        <span className="text-slate-900 font-bold mt-0.5">•</span>
-                        <span>{proj}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
-          </div>
-        )}
+                ))}
+              </section>
+            )}
 
-        {/* Classic Serif Printable */}
-        {selectedTemplate === 'classic' && (
-          <div className="font-serif">
-            <header className="text-center mb-6">
-              <h1 className="text-3xl font-normal text-slate-900 tracking-wide">{resumeData.contact?.name || 'Resume'}</h1>
-              <div className="flex justify-center flex-wrap gap-2 text-xs text-slate-600 mt-2 font-sans">
-                {resumeData.contact?.email && <span>{resumeData.contact.email}</span>}
-                {resumeData.contact?.phone && <span>| {resumeData.contact.phone}</span>}
-                {resumeData.contact?.location && <span>| {resumeData.contact.location}</span>}
-              </div>
-            </header>
-            {resumeData.summary && (
-              <section className="mb-6">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Professional Objective</h2>
-                <p className="text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line indent-8">{resumeData.summary}</p>
+            {parsedProj && parsedProj.length > 0 && (
+              <section>
+                <h2>Projects</h2>
+                {parsedProj.map((proj, i) => (
+                  <div key={i} className="job-block">
+                    <div className="job-header">
+                      <span className="job-title">{proj.title}</span>
+                      <span className="job-date">{proj.date}</span>
+                    </div>
+                    {proj.role && <div className="job-sub">{proj.role}</div>}
+                    {proj.stack && <div className="stack-line">{proj.stack}</div>}
+                    <ul>
+                      {proj.bullets.map((bullet, j) => {
+                        const firstWord = bullet.match(/^\s*([A-Za-z\-]+)\b/)?.[1] || '';
+                        const restOfBullet = bullet.substring(firstWord.length);
+                        return (
+                          <li key={j}>
+                            {firstWord ? <b>{firstWord}</b> : ''}{restOfBullet}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
               </section>
             )}
-            {resumeData.skills && resumeData.skills.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Technical Qualifications</h2>
-                <p className="text-xs text-slate-800 leading-relaxed text-center italic">
-                  {resumeData.skills.join(' • ')}
-                </p>
+
+            {eduBlocks && eduBlocks.length > 0 && (
+              <section>
+                <h2>Education</h2>
+                {eduBlocks.map((edu, i) => (
+                  <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '2px' }}>
+                    <div className="job-header">
+                      <span className="job-title">{edu.institution}</span>
+                      <span className="job-date">{edu.date}</span>
+                    </div>
+                    {edu.degree && <div>{edu.degree}</div>}
+                  </div>
+                ))}
               </section>
             )}
-            {resumeData.experience && resumeData.experience.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-3 pb-0.5 border-b border-slate-300">Work Experience History</h2>
-                <ul className="list-disc pl-6 space-y-2 text-xs text-slate-800 text-justify">
-                  {resumeData.experience.map((bullet, i) => (
-                    <li key={i} className="leading-relaxed">{bullet}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resumeData.projects && resumeData.projects.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-3 pb-0.5 border-b border-slate-300">Key Achievements & Projects</h2>
-                <ul className="list-disc pl-6 space-y-2 text-xs text-slate-800 text-justify">
-                  {resumeData.projects.map((proj, i) => (
-                    <li key={i} className="leading-relaxed">{proj}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resumeData.education && resumeData.education.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-widest text-center mb-2 pb-0.5 border-b border-slate-300">Education Details</h2>
-                <ul className="list-disc pl-6 space-y-1 text-xs text-slate-800">
-                  {resumeData.education.map((edu, i) => (
-                    <li key={i} className="leading-relaxed">{edu}</li>
-                  ))}
-                </ul>
+
+            {certsLine && (
+              <section>
+                <h2>Certifications and Awards</h2>
+                <div className="cert-line">
+                  {certsLine.split(' | ').map((cert, i) => {
+                    const cleanCert = cert.trim();
+                    const parts = cleanCert.match(/^([A-Za-z0-9\s]+)\(([^)]+)\)$/);
+                    if (parts) {
+                      return (
+                        <span key={i}>
+                          {i > 0 && ' | '}
+                          <b>{parts[1].trim()}</b> ({parts[2].trim()})
+                        </span>
+                      );
+                    }
+                    return (
+                      <span key={i}>
+                        {i > 0 && ' | '}
+                        {cleanCert}
+                      </span>
+                    );
+                  })}
+                </div>
               </section>
             )}
           </div>
