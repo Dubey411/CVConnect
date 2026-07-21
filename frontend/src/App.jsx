@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Settings, Sparkles, X, ArrowLeft } from 'lucide-react';
+import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, ArrowLeft, Globe } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
@@ -10,6 +10,9 @@ import JobDescriptionInput from './components/JobDescriptionInput';
 import ScorePanel from './components/ScorePanel';
 import Editor from './components/Editor';
 import LandingPage from './components/LandingPage';
+import History from './components/History';
+import Insights from './components/Insights';
+import ConnectPlatforms from './components/ConnectPlatforms';
 
 function Auth({ mode, setMode, onBack }) {
   const dispatch = useDispatch();
@@ -108,6 +111,7 @@ function Shell() {
   const { user } = useSelector(s => s.auth);
   const { resume, job, analysis, rewrite, status, error } = useSelector(s => s.workspace);
   const [sidebar, setSidebar] = useState(false);
+  const [activeTab, setActiveTab] = useState('workspace'); // 'workspace' | 'history' | 'insights' | 'platforms'
   const busy = status === 'loading';
 
   useEffect(() => {
@@ -127,7 +131,12 @@ function Shell() {
 
   const doRewrite = () => resume && job && dispatch(rewriteResume({ resumeId: resume.id, jobId: job.id }));
 
-  const nav = [['Workspace', Sparkles], ['History', FileText], ['Insights', BarChart3], ['Settings', Settings]];
+  const nav = [
+    ['Workspace', Sparkles, 'workspace'],
+    ['History', FileText, 'history'],
+    ['Insights', BarChart3, 'insights'],
+    ['Connect Platforms', Globe, 'platforms']
+  ];
 
   return (
     <div className="min-h-screen bg-ink">
@@ -153,11 +162,20 @@ function Shell() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1500px] md:grid-cols-[190px_1fr]">
+      <div className="mx-auto grid max-w-[1500px] md:grid-cols-[200px_1fr]">
         <aside className={`${sidebar ? 'block' : 'hidden'} fixed inset-x-0 top-16 z-10 border-b border-line bg-ink p-4 md:static md:block md:min-h-[calc(100vh-4rem)] md:border-b-0 md:border-r`}>
           <nav className="space-y-1">
-            {nav.map(([label, Icon], index) => (
-              <button key={label} className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm ${index === 0 ? 'bg-aqua text-ink' : 'text-slate-400 hover:bg-white/5 hover:text-mist'}`}>
+            {nav.map(([label, Icon, key]) => (
+              <button 
+                key={key} 
+                onClick={() => {
+                  setActiveTab(key);
+                  setSidebar(false);
+                }}
+                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  activeTab === key ? 'bg-aqua text-ink font-semibold rounded' : 'text-slate-400 hover:bg-white/5 hover:text-mist'
+                }`}
+              >
                 <Icon size={16}/>
                 {label}
               </button>
@@ -170,39 +188,55 @@ function Shell() {
         </aside>
 
         <main className="min-w-0 px-5 py-8 md:px-8 lg:px-12">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="eyebrow">Workspace / new application</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] text-white">Make every word count.</h1>
-              </div>
-              <p className="max-w-xs text-sm leading-6 text-slate-400">Upload your source resume, target the role, then decide on each proposed edit.</p>
-            </div>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            {activeTab === 'history' && (
+              <History onLoadResume={() => setActiveTab('workspace')} />
+            )}
 
-            {error && <div role="alert" className="mb-5 border-l-2 border-coral bg-coral/10 p-3 text-sm text-coral">{error}</div>}
+            {activeTab === 'insights' && (
+              <Insights />
+            )}
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_350px]">
-              <div className="space-y-5">
-                <section className="grid gap-5 lg:grid-cols-2">
+            {activeTab === 'platforms' && (
+              <ConnectPlatforms />
+            )}
+
+            {activeTab === 'workspace' && (
+              <>
+                <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">01 / Source resume</p>
-                    <ResumeUpload resume={resume} busy={busy} onUpload={doUpload}/>
+                    <p className="eyebrow">Workspace / new application</p>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] text-white">Make every word count.</h1>
                   </div>
-                  <div>
-                    <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">02 / Target position</p>
-                    <JobDescriptionInput job={job} busy={busy} onAnalyze={doAnalyze}/>
+                  <p className="max-w-xs text-sm leading-6 text-slate-400">Upload your source resume, target the role, then decide on each proposed edit.</p>
+                </div>
+
+                {error && <div role="alert" className="mb-5 border-l-2 border-coral bg-coral/10 p-3 text-sm text-coral">{error}</div>}
+
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_350px]">
+                  <div className="space-y-5">
+                    <section className="grid gap-5 lg:grid-cols-2">
+                      <div>
+                        <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">01 / Source resume</p>
+                        <ResumeUpload resume={resume} busy={busy} onUpload={doUpload}/>
+                      </div>
+                      <div>
+                        <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">02 / Target position</p>
+                        <JobDescriptionInput job={job} busy={busy} onAnalyze={doAnalyze}/>
+                      </div>
+                    </section>
+                    <AnimatePresence>
+                      {(resume || job) && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                          <Editor rewrite={rewrite}/>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </section>
-                <AnimatePresence>
-                  {(resume || job) && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                      <Editor rewrite={rewrite}/>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy}/>
-            </div>
+                  <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy}/>
+                </div>
+              </>
+            )}
           </motion.div>
         </main>
       </div>
