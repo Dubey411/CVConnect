@@ -32,6 +32,35 @@ export class JobScraper {
       let company = '';
       let description = '';
 
+      // Special Handler: Unstop (unstop.com) API Extraction
+      if (parsedUrl.hostname.includes('unstop.com')) {
+        const idMatch = rawUrl.match(/[-_](\d+)(?:\?|$|\/)/);
+        if (idMatch && idMatch[1]) {
+          try {
+            const apiRes = await axios.get(`https://unstop.com/api/public/competition/${idMatch[1]}`, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json, text/plain, */*'
+              },
+              timeout: 10000
+            });
+            const comp = apiRes.data?.data?.competition;
+            if (comp) {
+              if (comp.title) title = comp.title;
+              if (comp.organisation?.name || comp.company_name) {
+                company = comp.organisation?.name || comp.company_name;
+              }
+              const rawDetails = comp.details || comp.about || comp.description;
+              if (rawDetails) {
+                description = load('<div>' + rawDetails + '</div>')('div').text().trim();
+              }
+            }
+          } catch {
+            // Ignore Unstop API error and fallback to HTML scraping
+          }
+        }
+      }
+
       // 0. Try Next.js SSR State (__NEXT_DATA__) used by Unstop and modern job boards
       const nextData = $('#__NEXT_DATA__').html();
       if (nextData) {
