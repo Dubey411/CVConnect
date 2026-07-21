@@ -3,37 +3,39 @@ import axios from 'axios';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 
-/**
- * Fallback: calls the ML service /rewrite endpoint.
- * If the ML service is also unavailable, falls back to the dumb local rewriter.
- */
+// ─── System prompt ────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are a professional ATS-optimised resume editor.
+Rules you MUST follow:
+1. Return ONLY valid JSON — no markdown fences, no explanations.
+2. The JSON must match the shape: { contact, summary, skills, experience, education, projects }.
+3. NEVER invent skills, job titles, employers, metrics, dates, or qualifications not in the original.
+4. You MAY: rephrase bullets with stronger action verbs, tighten language, reorder skills, update summary to mention the target role.
+5. Keep all original factual content — do not remove experience entries, education, or project names.`;
+
+// ─── ML-service fallback ──────────────────────────────────────────────────────
 const mlRewrite = async (resume, job) => {
   try {
     const { data } = await axios.post(`${ML_SERVICE_URL}/rewrite`, { resume, job }, { timeout: 15000 });
     return { ...data, provider: 'ml-lexical-v2' };
   } catch (mlErr) {
-    console.warn(`[ResumeRewriter] ML service unavailable (${mlErr?.message}). Using dumb local fallback.`);
+    console.warn(`[ResumeRewriter] ML service unavailable (${mlErr?.message}). Using local fallback.`);
     return dumbLocalRewrite(resume, job);
   }
 };
 
-/**
- * Last-resort local rewrite — no network required.
- */
+// ─── Last-resort local rewrite ────────────────────────────────────────────────
 const dumbLocalRewrite = (resume, job) => {
   const keywords = (job.skills || []).slice(0, 6).join(', ');
-  const summary = `${resume.summary || 'Results-oriented professional'} Tailored for ${job.title}, with demonstrated experience aligned to ${keywords}.`;
+  const summary = `${resume.summary || 'Results-oriented professional.'} Tailored for ${job.title}, with demonstrated experience aligned to ${keywords}.`;
   const optimized = {
-    ...resume,
-    summary,
+    ...resume, summary,
     skills: [...new Set([
       ...(resume.skills || []),
       ...(job.skills || []).filter(s => (resume.sourceText || '').toLowerCase().includes(s.toLowerCase()))
     ])],
     experience: (resume.experience || []).map(b =>
-      typeof b === 'string' && !b.match(/^\s*(led|built|designed|delivered|managed|improved|created)/i)
-        ? `Delivered ${b}`
-        : b
+      typeof b === 'string' && !b.match(/^\s*(led|built|designed|delivered|managed|improved|created|developed)/i)
+        ? `Delivered ${b}` : b
     )
   };
   const changes = ['summary', 'skills', 'experience', 'projects', 'education']
@@ -42,59 +44,106 @@ const dumbLocalRewrite = (resume, job) => {
   return { optimized, changes, provider: 'safe-local-fallback' };
 };
 
+// ─── LLM call helper ──────────────────────────────────────────────────────────
+const callLLM = async (client, model, resume, job) => {
+  const prompt = `Optimise this resume for the target job. Return only the improved JSON object.
+
+RESUME:
+${JSON.stringify(resume, null, 2)}
+
+TARGET JOB:
+${JSON.stringify({ title: job.title, description: job.description, skills: job.skills }, null, 2)}`;
+
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.25,
+    max_tokens: 3000,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: prompt }
+    ]
+  });
+
+  const raw = completion.choices[0].message.content.trim();
+  // Strip any accidental markdown fences
+  const jsonStr = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+  return JSON.parse(jsonStr);
+};
+
+// ─── Diff helper ──────────────────────────────────────────────────────────────
+function diffChanges(original, optimized) {
+  return ['summary', 'skills', 'experience', 'projects', 'education']
+    .filter(key => JSON.stringify(original[key] || '') !== JSON.stringify(optimized[key] || ''))
+    .map(section => ({
+      id: section,
+      section,
+      before: original[section] || '',
+      after: optimized[section] || '',
+      status: 'pending'
+    }));
+}
+
+// ─── ResumeRewriter ───────────────────────────────────────────────────────────
 export class ResumeRewriter {
   constructor() {
-    if (process.env.DEEPSEEK_API_KEY) {
+    if (process.env.OPENROUTER_API_KEY) {
       this.client = new OpenAI({
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        baseURL: process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com'
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': 'https://cvconnect.app',
+          'X-Title': 'CVConnect'
+        }
       });
-      this.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-      this.provider = 'deepseek';
+      this.model         = process.env.OPENROUTER_MODEL          || 'google/gemini-2.0-flash-exp:free';
+      this.fallbackModel = process.env.OPENROUTER_FALLBACK_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+      this.provider = 'openrouter';
+      console.log(`[ResumeRewriter] OpenRouter ready — primary: ${this.model} | fallback: ${this.fallbackModel}`);
     } else if (process.env.OPENAI_API_KEY) {
       this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+      this.fallbackModel = null;
       this.provider = 'openai';
+      console.log(`[ResumeRewriter] OpenAI ready — model: ${this.model}`);
     } else {
       this.client = null;
       this.provider = 'ml-lexical-v2';
+      console.log('[ResumeRewriter] No LLM key — using ML service only.');
     }
   }
 
   async rewrite(resume, job) {
-    let result;
+    if (!this.client) return mlRewrite(resume, job);
 
-    if (this.client) {
-      try {
-        const prompt = `Return only valid JSON matching the resume object. Improve clarity and ATS relevance for the job. Never invent skills, titles, employers, metrics, qualifications or dates. You may only surface terms supported by the original resume.\nRESUME:${JSON.stringify(resume)}\nJOB:${JSON.stringify({ title: job.title, description: job.description, skills: job.skills })}`;
-        const completion = await this.client.chat.completions.create({
-          model: this.model,
-          temperature: 0.2,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'You are a rigorous resume editor. Preserve truth. Return an object with contact, summary, skills, experience, education, projects.' },
-            { role: 'user', content: prompt }
-          ]
-        });
-        const optimized = JSON.parse(completion.choices[0].message.content);
-        const changes = ['summary', 'skills', 'experience', 'projects', 'education']
-          .filter(key => JSON.stringify(resume[key] || '') !== JSON.stringify(optimized[key] || ''))
-          .map(section => ({
-            id: section, section,
-            before: resume[section] || '',
-            after: optimized[section] || '',
-            status: 'pending'
-          }));
-        result = { optimized, changes, provider: this.provider };
-      } catch (apiErr) {
-        console.warn(`[ResumeRewriter] ${this.provider} API error (${apiErr?.status || apiErr?.message}). Falling back to ML service.`);
-        result = await mlRewrite(resume, job);
-      }
-    } else {
-      // No LLM configured — use ML service directly
-      result = await mlRewrite(resume, job);
+    // Primary model
+    try {
+      console.log(`[ResumeRewriter] Calling ${this.provider} primary (${this.model})...`);
+      const optimized = await callLLM(this.client, this.model, resume, job);
+      return {
+        optimized,
+        changes: diffChanges(resume, optimized),
+        provider: `${this.provider}/${this.model}`
+      };
+    } catch (primaryErr) {
+      console.warn(`[ResumeRewriter] Primary failed: ${primaryErr?.status || primaryErr?.message}`);
     }
 
-    return result;
+    // Fallback model
+    if (this.fallbackModel) {
+      try {
+        console.log(`[ResumeRewriter] Trying fallback (${this.fallbackModel})...`);
+        const optimized = await callLLM(this.client, this.fallbackModel, resume, job);
+        return {
+          optimized,
+          changes: diffChanges(resume, optimized),
+          provider: `${this.provider}/${this.fallbackModel}`
+        };
+      } catch (fallbackErr) {
+        console.warn(`[ResumeRewriter] Fallback failed: ${fallbackErr?.status || fallbackErr?.message}`);
+      }
+    }
+
+    // Both LLMs failed — ML service
+    return mlRewrite(resume, job);
   }
 }
