@@ -1,6 +1,47 @@
 import axios from 'axios';
 import { load } from 'cheerio';
 
+function formatHtmlToStructuredText(rawHtml) {
+  if (!rawHtml) return '';
+
+  const $ = load(`<div>${rawHtml}</div>`);
+
+  // Format headers and block elements with proper line breaks
+  $('p, h1, h2, h3, h4, h5, h6, div, article, section').each((_, el) => {
+    $(el).prepend('\n\n');
+  });
+
+  $('br').replaceWith('\n');
+
+  $('li').each((_, el) => {
+    $(el).prepend('\n• ');
+  });
+
+  let text = $.text();
+
+  // Clean lines
+  const lines = text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  // Group lines into readable structured text with section headers & bullet spacing
+  const cleanLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(About|Responsibilities|Requirements|Qualifications|Perks|Role|Skills|Eligibility|What You Will Do|Who You Are|Basic Qualifications|Preferred Qualifications):?/i.test(line)) {
+      cleanLines.push('');
+      cleanLines.push(line.endsWith(':') ? line : `${line}:`);
+    } else if (line.startsWith('•')) {
+      cleanLines.push(`  ${line}`);
+    } else {
+      cleanLines.push(line);
+    }
+  }
+
+  return cleanLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export class JobScraper {
   async scrape(url) {
     if (!url || typeof url !== 'string') {
@@ -52,7 +93,7 @@ export class JobScraper {
               }
               const rawDetails = comp.details || comp.about || comp.description;
               if (rawDetails) {
-                description = load('<div>' + rawDetails + '</div>')('div').text().trim();
+                description = formatHtmlToStructuredText(rawDetails);
               }
             }
           } catch {
@@ -62,27 +103,29 @@ export class JobScraper {
       }
 
       // 0. Try Next.js SSR State (__NEXT_DATA__) used by Unstop and modern job boards
-      const nextData = $('#__NEXT_DATA__').html();
-      if (nextData) {
-        try {
-          const json = JSON.parse(nextData);
-          const opp = json?.props?.pageProps?.opportunity || 
-                      json?.props?.pageProps?.job || 
-                      json?.props?.pageProps?.details || 
-                      json?.props?.pageProps?.jobDetail;
+      if (!description) {
+        const nextData = $('#__NEXT_DATA__').html();
+        if (nextData) {
+          try {
+            const json = JSON.parse(nextData);
+            const opp = json?.props?.pageProps?.opportunity || 
+                        json?.props?.pageProps?.job || 
+                        json?.props?.pageProps?.details || 
+                        json?.props?.pageProps?.jobDetail;
 
-          if (opp) {
-            if (opp.title) title = opp.title;
-            if (opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name) {
-              company = opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name;
+            if (opp) {
+              if (!title && opp.title) title = opp.title;
+              if (!company && (opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name)) {
+                company = opp.organisation?.name || opp.company_name || opp.company?.name || opp.employer_name;
+              }
+              const rawDesc = opp.details || opp.description || opp.about || opp.about_job || opp.job_description;
+              if (rawDesc) {
+                description = formatHtmlToStructuredText(rawDesc);
+              }
             }
-            const rawDesc = opp.details || opp.description || opp.about || opp.about_job || opp.job_description;
-            if (rawDesc) {
-              description = load('<div>' + rawDesc + '</div>')('div').text().trim();
-            }
+          } catch {
+            // Ignore malformed Next.js state
           }
-        } catch {
-          // Ignore malformed Next.js state
         }
       }
 
@@ -98,7 +141,7 @@ export class JobScraper {
               if (item && (item['@type'] === 'JobPosting' || item['@type']?.includes?.('JobPosting'))) {
                 if (item.title && !title) title = item.title;
                 if (item.hiringOrganization?.name && !company) company = item.hiringOrganization.name;
-                if (item.description && !description) description = load('<div>' + item.description + '</div>')('div').text().trim();
+                if (item.description && !description) description = formatHtmlToStructuredText(item.description);
               }
             }
           } catch {
@@ -121,28 +164,30 @@ export class JobScraper {
       }
 
       if (!description) {
-        description = $('meta[property="og:description"]').attr('content') ||
-                      $('meta[name="description"]').attr('content') ||
-                      $('meta[name="twitter:description"]').attr('content') || '';
+        const rawMeta = $('meta[property="og:description"]').attr('content') ||
+                        $('meta[name="description"]').attr('content') ||
+                        $('meta[name="twitter:description"]').attr('content') || '';
+        description = formatHtmlToStructuredText(rawMeta);
       }
 
       // 3. Page Body Selector Fallbacks (Unstop, Internshala, LinkedIn, Indeed, Glassdoor)
       if (!description || description.length < 100) {
-        const bodyText = $(
+        const bodyElem = $(
           '.show-more-less-html__markup, .jobDescriptionText, #job-description, .description, ' +
           '.job_details, .opportunity-details, .about-job, .details_container, .opportunity_container, ' +
           '.internship_details, .job-details, article, main'
-        ).text().trim();
-        
-        if (bodyText && bodyText.length > description.length) {
-          description = bodyText;
+        );
+        if (bodyElem.length > 0) {
+          const bodyText = formatHtmlToStructuredText(bodyElem.html() || bodyElem.text());
+          if (bodyText && bodyText.length > description.length) {
+            description = bodyText;
+          }
         }
       }
 
       // Clean up whitespace & formatting
       title = (title || '').replace(/[-|–].*$/, '').trim() || 'Target Position';
       company = (company || '').trim();
-      description = (description || '').replace(/\s+/g, ' ').trim();
 
       if (!description || description.length < 40) {
         const err = new Error('Could not automatically extract job description text from this link. Please paste the job description manually.');
