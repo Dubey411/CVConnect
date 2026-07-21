@@ -252,10 +252,16 @@ export default function Editor({ rewrite }) {
     const optimized = rewrite.optimized || {};
 
     const getSection = (key) => {
-      if (accepted[key] === false) {
-        return original[key];
+      const changeEntry = (rewrite.changes || []).find(c => c.section === key || c.id === key);
+      const changeId = changeEntry ? changeEntry.id : key;
+
+      // Only include optimized content if explicitly accepted by user (accept === true)
+      if (accepted[changeId] === true || accepted[key] === true) {
+        return optimized[key] !== undefined ? optimized[key] : original[key];
       }
-      return optimized[key] !== undefined ? optimized[key] : original[key];
+
+      // If rejected (false) or unreviewed (undefined), remain 100% original!
+      return original[key];
     };
 
     return {
@@ -565,48 +571,104 @@ export default function Editor({ rewrite }) {
       
       {/* TAB 1: Edit & Review Studio */}
       {activeTab === 'review' && (
-        <div className="grid border-b border-line lg:grid-cols-2 no-print">
-          <div className="border-b border-line bg-black/10 p-5 lg:border-b-0 lg:border-r">
-            <p className="mb-4 font-mono text-[10px] uppercase tracking-widest text-slate-500">Original</p>
-            {rewrite.changes.map(change => (
-              <article key={change.id} className="mb-5 last:mb-0">
-                <h3 className="mb-1 text-xs font-semibold capitalize text-slate-300">{change.section}</h3>
-                <p className="whitespace-pre-line text-sm leading-6 text-slate-400">{display(change.before) || '—'}</p>
-              </article>
-            ))}
+        <div className="no-print">
+          <div className="bg-slate-900/80 p-4 border-b border-line text-xs text-slate-300 flex flex-wrap items-center justify-between gap-3">
+            <p>
+              <strong className="text-aqua">Step 1:</strong> Select <span className="text-aqua font-semibold">✓ Yes (Accept)</span> to include an AI update, or <span className="text-coral font-semibold">✗ No (Keep Original)</span> to keep your original content. Sections without accepted changes remain <strong>100% untouched</strong> in your final resume.
+            </p>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className="button-primary text-xs py-1.5 px-4 flex items-center gap-1.5 shrink-0"
+            >
+              <Eye size={13} />
+              Generate Final Resume Template ({Object.values(accepted).filter(Boolean).length} Accepted)
+            </button>
           </div>
-          
-          <div className="p-5">
-            <p className="mb-4 font-mono text-[10px] uppercase tracking-widest text-aqua">Optimised draft</p>
-            {rewrite.changes.map(change => (
-              <article 
-                key={change.id} 
-                className={`mb-5 border-l-2 pl-3 ${accepted[change.id] === false ? 'border-coral/40 opacity-50' : 'border-aqua/70'}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="mb-1 text-xs font-semibold capitalize text-mist">{change.section}</h3>
-                    <p className="whitespace-pre-line text-sm leading-6 text-slate-200">{display(change.after) || '—'}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button 
-                      aria-label={`Accept ${change.section}`} 
-                      onClick={() => dispatch(resolveChange({ id: change.id, accept: true }))} 
-                      className={`grid h-7 w-7 place-items-center border ${accepted[change.id] === true ? 'border-aqua bg-aqua text-ink' : 'border-line text-aqua'}`}
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button 
-                      aria-label={`Reject ${change.section}`} 
-                      onClick={() => dispatch(resolveChange({ id: change.id, accept: false }))} 
-                      className={`grid h-7 w-7 place-items-center border ${accepted[change.id] === false ? 'border-coral bg-coral text-ink' : 'border-line text-coral'}`}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+
+          <div className="grid border-b border-line lg:grid-cols-2">
+            <div className="border-b border-line bg-black/10 p-5 lg:border-b-0 lg:border-r">
+              <p className="mb-4 font-mono text-[10px] uppercase tracking-widest text-slate-500">Original (Unchanged Baseline)</p>
+              {rewrite.changes.map(change => (
+                <article key={change.id} className="mb-5 last:mb-0">
+                  <h3 className="mb-1 text-xs font-semibold capitalize text-slate-300">{change.section}</h3>
+                  <p className="whitespace-pre-line text-sm leading-6 text-slate-400">{display(change.before) || '—'}</p>
+                </article>
+              ))}
+            </div>
+            
+            <div className="p-5">
+              <p className="mb-4 font-mono text-[10px] uppercase tracking-widest text-aqua">Optimised AI Draft</p>
+              {rewrite.changes.map(change => {
+                const isAccepted = accepted[change.id] === true || accepted[change.section] === true;
+                const isRejected = accepted[change.id] === false || accepted[change.section] === false;
+
+                return (
+                  <article 
+                    key={change.id} 
+                    className={`mb-5 border-l-2 pl-3 transition-all ${
+                      isAccepted ? 'border-aqua bg-aqua/5 p-3 rounded-r' : isRejected ? 'border-coral/40 opacity-60' : 'border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-xs font-semibold capitalize text-mist">{change.section}</h3>
+                          {isAccepted && (
+                            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-aqua/20 text-aqua">
+                              ✓ Accepted (In Final Resume)
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-coral/20 text-coral">
+                              ✗ Rejected (Keeping Original)
+                            </span>
+                          )}
+                          {!isAccepted && !isRejected && (
+                            <span className="text-[10px] font-mono text-slate-500">
+                              (Original retained until accepted)
+                            </span>
+                          )}
+                        </div>
+                        <p className="whitespace-pre-line text-sm leading-6 text-slate-200">{display(change.after) || '—'}</p>
+                      </div>
+
+                      <div className="flex shrink-0 gap-1.5">
+                        <button 
+                          aria-label={`Accept ${change.section}`} 
+                          onClick={() => dispatch(resolveChange({ id: change.id, accept: true }))} 
+                          title="Accept AI Change (Include in Final Resume)"
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border transition ${
+                            isAccepted ? 'border-aqua bg-aqua text-ink font-semibold' : 'border-line text-slate-300 hover:border-aqua hover:text-aqua'
+                          }`}
+                        >
+                          <Check size={14} /> Yes
+                        </button>
+                        <button 
+                          aria-label={`Reject ${change.section}`} 
+                          onClick={() => dispatch(resolveChange({ id: change.id, accept: false }))} 
+                          title="Reject AI Change (Keep Original Content)"
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border transition ${
+                            isRejected ? 'border-coral bg-coral text-ink font-semibold' : 'border-line text-slate-300 hover:border-coral hover:text-coral'
+                          }`}
+                        >
+                          <X size={14} /> No
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+
+              <div className="mt-6 pt-4 border-t border-line flex justify-end">
+                <button
+                  onClick={() => setActiveTab('preview')}
+                  className="button-primary text-xs py-2 px-5 flex items-center gap-2"
+                >
+                  <Eye size={14} />
+                  Generate & View Final Resume Template
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
