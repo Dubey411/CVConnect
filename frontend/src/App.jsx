@@ -120,7 +120,12 @@ function Shell() {
     return () => socket.close();
   }, [user.id]);
 
-  const doUpload = file => dispatch(uploadResume(file));
+  const doUpload = async file => {
+    const action = await dispatch(uploadResume(file));
+    if (uploadResume.fulfilled.match(action) && job) {
+      dispatch(matchResume({ resumeId: action.payload.resume.id, jobId: job.id }));
+    }
+  };
   
   const doAnalyze = async data => {
     const action = await dispatch(analyzeJob(data));
