@@ -59,9 +59,10 @@ export class BotRunner {
       // Set platform session cookies
       const domain = platform === 'unstop' ? '.unstop.com' : platform === 'internshala' ? '.internshala.com' : '.linkedin.com';
       await context.addCookies([
+        { name: 'access_token', value: sessionToken, domain: '.unstop.com', path: '/' },
+        { name: 'unstop_session', value: sessionToken, domain: '.unstop.com', path: '/' },
         { name: 'PHPSESSID', value: sessionToken, domain, path: '/' },
-        { name: 'unstop_session', value: sessionToken, domain, path: '/' },
-        { name: 'ICAPS_SESSION', value: sessionToken, domain, path: '/' }
+        { name: 'ICAPS_SESSION', value: sessionToken, domain: '.internshala.com', path: '/' }
       ]);
 
       const page = await context.newPage();
