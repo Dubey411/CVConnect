@@ -203,8 +203,31 @@ export class JobScraper {
       };
     } catch (err) {
       if (err.status) throw err;
-      const customErr = new Error(`Unable to fetch job link (${err.response?.status || err.code || 'Network/Protection Block'}). Please copy and paste the job description manually.`);
+
+      // Extract title hint from URL slug (e.g. 3627072-react-native-intern -> React Native Intern)
+      let guessedTitle = '';
+      try {
+        const slugMatch = parsedUrl.pathname.match(/\/jobs\/(?:\d+-)?([a-z0-9-]+)/i);
+        if (slugMatch && slugMatch[1]) {
+          guessedTitle = slugMatch[1]
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase());
+        }
+      } catch {
+        // ignore slug parse error
+      }
+
+      if (err.response?.status === 403 || err.response?.status === 401 || parsedUrl.hostname.includes('wellfound.com')) {
+        const customErr = new Error(`${parsedUrl.hostname.replace(/^www\./, '')} is protected by Cloudflare anti-bot security. Please copy and paste the job description text below.`);
+        customErr.status = 400;
+        customErr.code = 'SITE_PROTECTED';
+        customErr.guessedTitle = guessedTitle;
+        throw customErr;
+      }
+
+      const customErr = new Error(`Unable to fetch job link (${err.response?.status || err.code || 'Network/Protection Block'}). Please copy and paste the job description text below.`);
       customErr.status = 400;
+      customErr.guessedTitle = guessedTitle;
       throw customErr;
     }
   }
