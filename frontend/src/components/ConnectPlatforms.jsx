@@ -476,7 +476,7 @@ export default function ConnectPlatforms() {
                   <li>Press <kbd className="bg-ink px-1 rounded text-white font-mono">F12</kbd> or right-click ➔ Inspect.</li>
                   <li>Click <span className="text-white font-medium">Application</span> tab ➔ <span className="text-white font-medium">Cookies</span>.</li>
                   <li>Copy value of <code className="text-aqua font-mono">{
-                    activeModal.id === 'unstop' ? 'unstop_session' :
+                    activeModal.id === 'unstop' ? 'access_token (or unstop_session)' :
                     activeModal.id === 'internshala' ? 'ICAPS_SESSION' :
                     activeModal.id === 'linkedin' ? 'li_at' :
                     activeModal.id === 'indeed' ? 'CTK' : 'PHPSESSID'
