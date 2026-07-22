@@ -460,14 +460,31 @@ export default function ConnectPlatforms() {
                   required
                   type="password"
                   className="input text-xs"
-                  placeholder="e.g. session_token_xxxx..."
+                  placeholder="Paste session token / cookie value..."
                   value={authKey}
                   onChange={e => setAuthKey(e.target.value)}
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Used to execute background Easy Apply jobs on your behalf.</p>
               </div>
 
-              <div className="pt-3 flex justify-end gap-3">
+              {/* Step-by-step token finder guide */}
+              <div className="p-3 bg-surface/80 border border-line rounded text-[11px] text-slate-300 space-y-1">
+                <p className="font-semibold text-aqua flex items-center gap-1">
+                  <AlertCircle size={12} /> How to find your {activeModal.name} Session Cookie:
+                </p>
+                <ol className="list-decimal list-inside space-y-0.5 text-slate-400 pl-1">
+                  <li>Open <span className="text-white font-mono">{activeModal.id}.com</span> & log in to your account.</li>
+                  <li>Press <kbd className="bg-ink px-1 rounded text-white font-mono">F12</kbd> or right-click ➔ Inspect.</li>
+                  <li>Click <span className="text-white font-medium">Application</span> tab ➔ <span className="text-white font-medium">Cookies</span>.</li>
+                  <li>Copy value of <code className="text-aqua font-mono">{
+                    activeModal.id === 'unstop' ? 'unstop_session' :
+                    activeModal.id === 'internshala' ? 'ICAPS_SESSION' :
+                    activeModal.id === 'linkedin' ? 'li_at' :
+                    activeModal.id === 'indeed' ? 'CTK' : 'PHPSESSID'
+                  }</code>.</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
