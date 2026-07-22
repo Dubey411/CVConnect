@@ -42,8 +42,10 @@ export function decryptToken(encryptedObj) {
   }
 }
 
+import axios from 'axios';
+
 /**
- * Validate platform session token before saving
+ * Validate platform session token against live platform APIs before saving
  */
 export async function verifyPlatformToken(platform, token) {
   if (!token || typeof token !== 'string' || token.trim().length < 8) {
@@ -52,11 +54,46 @@ export async function verifyPlatformToken(platform, token) {
     throw err;
   }
 
-  // Soft format checks per platform
-  if (platform === 'unstop' && !token.startsWith('eyJ') && token.length < 20) {
-    const err = new Error('Invalid Unstop access_token JWT. It usually starts with "eyJ...".');
-    err.status = 400;
-    throw err;
+  const trimmedToken = token.trim();
+
+  if (platform === 'unstop') {
+    try {
+      const res = await axios.get('https://unstop.com/api/v1/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${trimmedToken}`,
+          'Cookie': `access_token=${trimmedToken}; unstop_session=${trimmedToken}`,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 6000
+      });
+
+      if (res.status !== 200) {
+        throw new Error('Unstop returned unauthorized.');
+      }
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        const error = new Error('Authentication failed on Unstop. Your session token is invalid or expired. Please re-copy from browser.');
+        error.status = 400;
+        throw error;
+      }
+      if (!trimmedToken.startsWith('eyJ') && trimmedToken.length < 20) {
+        const error = new Error('Invalid Unstop access_token JWT format. Unstop access_token must start with "eyJ...".');
+        error.status = 400;
+        throw error;
+      }
+    }
+  } else if (platform === 'internshala') {
+    if (trimmedToken.length < 10) {
+      const error = new Error('Invalid Internshala session token. Token length must be at least 10 characters.');
+      error.status = 400;
+      throw error;
+    }
+  } else if (platform === 'wellfound') {
+    if (trimmedToken.length < 10) {
+      const error = new Error('Invalid Wellfound session token. Token length must be at least 10 characters.');
+      error.status = 400;
+      throw error;
+    }
   }
 
   return true;
