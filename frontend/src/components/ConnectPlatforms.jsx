@@ -478,6 +478,7 @@ export default function ConnectPlatforms() {
                   <li>Copy value of <code className="text-aqua font-mono">{
                     activeModal.id === 'unstop' ? 'access_token (or unstop_session)' :
                     activeModal.id === 'internshala' ? 'ICAPS_SESSION' :
+                    activeModal.id === 'wellfound' ? '_wellfound (or datadome)' :
                     activeModal.id === 'linkedin' ? 'li_at' :
                     activeModal.id === 'indeed' ? 'CTK' : 'PHPSESSID'
                   }</code>.</li>
