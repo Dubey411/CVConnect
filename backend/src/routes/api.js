@@ -29,9 +29,149 @@ router.post('/resumes/:id/match', [param('id').isString(), body('jobId').isStrin
 router.post('/resumes/:id/rewrite', [param('id').isString(), body('jobId').isString()], validate, async (req, res, next) => { try { const resume = await ownedResume(req.params.id, req.user.sub); const job = await prisma.job.findFirst({ where: { id: req.body.jobId, userId: req.user.sub } }); if (!job) return res.status(404).json({ error: { code: 'JOB_NOT_FOUND', message: 'Job description not found.' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'rewriting', percent: 45 }); const rewrite = await new ResumeRewriter().rewrite(resume.original, job); const saved = await prisma.resume.update({ where: { id: resume.id }, data: { optimized: { ...rewrite.optimized, changes: rewrite.changes, provider: rewrite.provider } } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'complete', percent: 100 }); res.json({ resume: saved, ...rewrite }); } catch (e) { next(e); } });
 router.get('/users/me', async (req, res, next) => { try { const user = await prisma.user.findUnique({ where: { id: req.user.sub }, select: { id: true, email: true, name: true, createdAt: true } }); res.json({ user }); } catch (e) { next(e); } });
 router.put('/users/me', [body('name').trim().isLength({ min: 2, max: 80 })], validate, async (req, res, next) => { try { const user = await prisma.user.update({ where: { id: req.user.sub }, data: { name: req.body.name }, select: { id: true, email: true, name: true } }); res.json({ user }); } catch (e) { next(e); } });
-router.get('/platforms', async (req, res, next) => { try { const connections = await prisma.platformConnection.findMany({ where: { userId: req.user.sub }, select: { id: true, platform: true, accountEmail: true, status: true, applicationsCount: true, lastSyncAt: true, createdAt: true } }); res.json({ connections }); } catch (e) { next(e); } });
+router.get('/platforms', async (req, res, next) => {
+  try {
+    const connections = await prisma.platformConnection.findMany({
+      where: { userId: req.user.sub },
+      select: {
+        id: true,
+        platform: true,
+        accountEmail: true,
+        status: true,
+        applicationsCount: true,
+        tokenExpiresAt: true,
+        lastSyncAt: true,
+        createdAt: true
+      }
+    });
+    res.json({ connections });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// GET /platforms/health - returns session health, JWT expiry countdown & stale warnings
+router.get('/platforms/health', async (req, res, next) => {
+  try {
+    const connections = await prisma.platformConnection.findMany({
+      where: { userId: req.user.sub },
+      select: {
+        id: true,
+        platform: true,
+        accountEmail: true,
+        status: true,
+        tokenExpiresAt: true,
+        lastSyncAt: true,
+        updatedAt: true
+      }
+    });
+
+    const now = new Date();
+    const health = connections.map(conn => {
+      let healthStatus = 'healthy';
+      let daysRemaining = null;
+      let message = 'Session active and healthy';
+
+      if (conn.status === 'expired') {
+        healthStatus = 'expired';
+        message = 'Session has expired. Re-authentication required.';
+      } else if (conn.tokenExpiresAt) {
+        const expDate = new Date(conn.tokenExpiresAt);
+        const diffMs = expDate.getTime() - now.getTime();
+        daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+        if (diffMs <= 0) {
+          healthStatus = 'expired';
+          message = 'JWT token has expired. Please log in and re-copy token.';
+        } else if (daysRemaining <= 3) {
+          healthStatus = 'expiring_soon';
+          message = `Token expires in ${daysRemaining} day(s). Re-authentication recommended soon.`;
+        } else {
+          healthStatus = 'healthy';
+          message = `Token valid for ${daysRemaining} days.`;
+        }
+      } else {
+        // Cookie-based platforms without explicit JWT expiry
+        const daysSinceSync = Math.floor((now.getTime() - new Date(conn.lastSyncAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceSync > 30) {
+          healthStatus = 'likely_expired';
+          message = 'No activity in over 30 days. Cookie may have expired on platform.';
+        } else if (daysSinceSync > 7) {
+          healthStatus = 'stale_warning';
+          message = `Last synced ${daysSinceSync} days ago. Ensure you remain logged in on web.`;
+        }
+      }
+
+      return {
+        id: conn.id,
+        platform: conn.platform,
+        accountEmail: conn.accountEmail,
+        status: conn.status,
+        healthStatus,
+        tokenExpiresAt: conn.tokenExpiresAt,
+        daysRemaining,
+        lastSyncAt: conn.lastSyncAt,
+        message
+      };
+    });
+
+    res.json({ health });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Lightweight token probe — verifies without persisting (used for live feedback in Connect modal)
-router.post('/platforms/verify', [body('platform').trim().isString().isLength({ min: 2, max: 40 }), body('token').trim().isLength({ min: 4, max: 5000 })], validate, async (req, res, next) => { try { const { platform, token } = req.body; const result = await verifyPlatformToken(platform, token); res.json({ valid: true, method: result.method, username: result.username || null, expiresAt: result.expiresAt || null }); } catch (e) { if (e.status === 400) return res.status(400).json({ error: { code: 'TOKEN_INVALID', message: e.message } }); next(e); } });
-router.post('/platforms/connect', [body('platform').trim().isString().isLength({ min: 2, max: 40 }), body('accountEmail').trim().isEmail(), body('token').trim().isLength({ min: 4, max: 5000 })], validate, async (req, res, next) => { try { const { platform, accountEmail, token } = req.body; const verifyResult = await verifyPlatformToken(platform, token); const { encryptedToken, iv, authTag } = encryptToken(token); const connection = await prisma.platformConnection.upsert({ where: { userId_platform: { userId: req.user.sub, platform } }, update: { accountEmail, encryptedToken, iv, authTag, status: 'connected', lastSyncAt: new Date() }, create: { userId: req.user.sub, platform, accountEmail, encryptedToken, iv, authTag, status: 'connected' }, select: { id: true, platform: true, accountEmail: true, status: true, applicationsCount: true, lastSyncAt: true } }); res.json({ connection, message: `${platform} connected securely.`, verification: { method: verifyResult.method, username: verifyResult.username || null, expiresAt: verifyResult.expiresAt || null } }); } catch (e) { next(e); } });
-router.delete('/platforms/:platform', [param('platform').isString()], validate, async (req, res, next) => { try { await prisma.platformConnection.deleteMany({ where: { userId: req.user.sub, platform: req.params.platform } }); res.json({ success: true, message: `Disconnected ${req.params.platform}.` }); } catch (e) { next(e); } });
+router.post('/platforms/verify', [body('platform').trim().isString().isLength({ min: 2, max: 40 }), body('token').trim().isLength({ min: 4, max: 5000 })], validate, async (req, res, next) => {
+  try {
+    const { platform, token } = req.body;
+    const result = await verifyPlatformToken(platform, token);
+    res.json({
+      valid: true,
+      method: result.method,
+      username: result.username || null,
+      expiresAt: result.expiresAt || null
+    });
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: { code: 'TOKEN_INVALID', message: e.message } });
+    next(e);
+  }
+});
+
+router.post('/platforms/connect', [body('platform').trim().isString().isLength({ min: 2, max: 40 }), body('accountEmail').trim().isEmail(), body('token').trim().isLength({ min: 4, max: 5000 })], validate, async (req, res, next) => {
+  try {
+    const { platform, accountEmail, token } = req.body;
+    const verifyResult = await verifyPlatformToken(platform, token);
+    const { encryptedToken, iv, authTag } = encryptToken(token);
+    const tokenExpiresAt = verifyResult.expiresAt ? new Date(verifyResult.expiresAt) : null;
+
+    const connection = await prisma.platformConnection.upsert({
+      where: { userId_platform: { userId: req.user.sub, platform } },
+      update: { accountEmail, encryptedToken, iv, authTag, status: 'connected', tokenExpiresAt, lastSyncAt: new Date() },
+      create: { userId: req.user.sub, platform, accountEmail, encryptedToken, iv, authTag, status: 'connected', tokenExpiresAt },
+      select: { id: true, platform: true, accountEmail: true, status: true, applicationsCount: true, tokenExpiresAt: true, lastSyncAt: true }
+    });
+
+    res.json({
+      connection,
+      message: `${platform} connected securely.`,
+      verification: {
+        method: verifyResult.method,
+        username: verifyResult.username || null,
+        expiresAt: verifyResult.expiresAt || null
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/platforms/:platform', [param('platform').isString()], validate, async (req, res, next) => {
+  try {
+    await prisma.platformConnection.deleteMany({ where: { userId: req.user.sub, platform: req.params.platform } });
+    res.json({ success: true, message: `Disconnected ${req.params.platform}.` });
+  } catch (e) {
+    next(e);
+  }
+});
 export default router;

@@ -61,19 +61,20 @@ model Job {
 }
 
 model PlatformConnection {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   platform          String
   accountEmail      String
   encryptedToken    String
   iv                String
   authTag           String
-  status            String   @default("connected")
-  applicationsCount Int      @default(0)
-  lastSyncAt        DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  status            String    @default("connected")
+  applicationsCount Int       @default(0)
+  tokenExpiresAt    DateTime?                     // populated for JWT platforms (Unstop)
+  lastSyncAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([userId, platform])
   @@index([userId])
