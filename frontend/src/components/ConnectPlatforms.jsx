@@ -39,7 +39,7 @@ const PLATFORMS = [
     accent: '#0ea5e9',
     description: 'Automated application bot with custom cover letters tailored for student & fresher opportunities.',
     tokenType: 'Session Cookie',
-    cookieName: 'ICAPS_SESSION',
+    cookieName: 'PHPSESSID',
     cookieDomain: 'internshala.com',
     siteUrl: 'https://internshala.com',
     steps: [
@@ -47,9 +47,9 @@ const PLATFORMS = [
       { text: 'Log in to your account' },
       { text: 'Press', key: 'F12', text2: 'to open DevTools' },
       { text: 'Go to', tab: 'Application', text2: '→ Cookies → internshala.com' },
-      { text: 'Find cookie named', code: 'ICAPS_SESSION', text2: 'and copy its full value' },
+      { text: 'Find cookie named', code: 'PHPSESSID', text2: 'and copy its full value' },
     ],
-    note: 'This cookie is a long encrypted session string. The value is verified live against Internshala servers.'
+    note: 'The PHPSESSID is a 26–40 character alphanumeric string (letters + numbers only). Must be at least 26 chars.'
   },
   {
     id: 'linkedin',
