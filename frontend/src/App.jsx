@@ -241,7 +241,7 @@ function Shell() {
                       )}
                     </AnimatePresence>
                   </div>
-                  <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy}/>
+                  <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy} resumeId={resume?.id} jobId={job?.id}/>
                 </div>
               </>
             )}

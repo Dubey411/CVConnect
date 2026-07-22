@@ -73,6 +73,8 @@ const INITIAL_PLATFORMS = [
 
 export default function ConnectPlatforms() {
   const [platforms, setPlatforms] = useState(INITIAL_PLATFORMS);
+  const [applications, setApplications] = useState([]);
+  const [activeProgress, setActiveProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
   const [autoApplyActive, setAutoApplyActive] = useState(true);
@@ -91,8 +93,13 @@ export default function ConnectPlatforms() {
     setLoading(true);
     setApiError('');
     try {
-      const res = await request({ method: 'get', url: '/platforms' });
-      const connections = res.connections || [];
+      const [connRes, appRes] = await Promise.all([
+        request({ method: 'get', url: '/platforms' }),
+        request({ method: 'get', url: '/applications' }).catch(() => ({ applications: [] }))
+      ]);
+
+      const connections = connRes.connections || [];
+      setApplications(appRes.applications || []);
       
       setPlatforms(prev => prev.map(p => {
         const found = connections.find(c => c.platform === p.id);
@@ -348,6 +355,69 @@ export default function ConnectPlatforms() {
             CVConnect uses AES-256 client-side session token encryption. Your credentials are only decrypted locally during headless application runs and are never shared or sold to third parties.
           </p>
         </div>
+      </div>
+
+      {/* Application History Tracker Log */}
+      <div className="panel p-6">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-line">
+          <div>
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Zap size={18} className="text-aqua" /> Auto-Apply Activity Tracker
+            </h2>
+            <p className="text-xs text-slate-400">Live submission log of multi-platform automated resume applications.</p>
+          </div>
+          <button 
+            onClick={fetchConnections}
+            className="button-quiet text-xs py-1.5 px-3 flex items-center gap-1.5"
+          >
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh Log
+          </button>
+        </div>
+
+        {applications.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-xs">
+            No automated applications submitted yet. Click <span className="text-white font-medium">Start Auto-Apply Bot</span> or Connect your platforms to start!
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-line text-slate-400 font-mono text-[11px]">
+                  <th className="pb-2">Platform</th>
+                  <th className="pb-2">Job Role</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2">Date Submitted</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/40">
+                {applications.map((app) => (
+                  <tr key={app.id} className="hover:bg-surface/30 transition-colors">
+                    <td className="py-3 font-semibold text-white capitalize flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-aqua" />
+                      {app.platform}
+                    </td>
+                    <td className="py-3 text-slate-300">
+                      {app.job?.title || app.targetUrl || 'Full-Stack Developer'}
+                    </td>
+                    <td className="py-3">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                        app.status === 'submitted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        app.status === 'applying' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 animate-pulse' :
+                        app.status === 'failed' ? 'bg-coral/10 text-coral border border-coral/20' :
+                        'bg-slate-800 text-slate-400'
+                      }`}>
+                        {app.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 text-slate-400 font-mono text-[11px]">
+                      {new Date(app.createdAt).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Connect Modal */}

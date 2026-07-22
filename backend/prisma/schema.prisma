@@ -16,6 +16,7 @@ model User {
   resumes             Resume[]
   jobs                Job[]
   platformConnections PlatformConnection[]
+  jobApplications     JobApplication[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -53,6 +54,7 @@ model Job {
   skills       Json
   requirements Json
   resumes      Resume[]
+  applications JobApplication[]
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
@@ -75,4 +77,22 @@ model PlatformConnection {
 
   @@unique([userId, platform])
   @@index([userId])
+}
+
+model JobApplication {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId        String?
+  job          Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  platform     String
+  status       String   @default("pending")
+  targetUrl    String?
+  errorDetails String?  @db.Text
+  submittedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([platform, status])
 }
