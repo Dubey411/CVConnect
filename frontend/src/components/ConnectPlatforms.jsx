@@ -456,25 +456,38 @@ export default function ConnectPlatforms() {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [disconnecting, setDisconnecting] = useState(null);
 
+  const [healthMap, setHealthMap] = useState({});
+
   const fetchConnections = async () => {
     setLoading(true);
     try {
-      const [connRes, appRes] = await Promise.all([
+      const [connRes, healthRes, appRes] = await Promise.all([
         request({ method: 'get', url: '/platforms' }),
+        request({ method: 'get', url: '/platforms/health' }).catch(() => ({ health: [] })),
         request({ method: 'get', url: '/applications' }).catch(() => ({ applications: [] }))
       ]);
 
       const connections = connRes.connections || [];
+      const healthList = healthRes.health || [];
       setApplications(appRes.applications || []);
+
+      const hMap = {};
+      healthList.forEach(h => { hMap[h.platform] = h; });
+      setHealthMap(hMap);
 
       setPlatforms(prev => prev.map(p => {
         const found = connections.find(c => c.platform === p.id);
+        const health = hMap[p.id];
         if (found) {
           return {
             ...p,
             status: found.status || 'connected',
             applicationsCount: found.applicationsCount || 0,
             accountEmail: found.accountEmail,
+            tokenExpiresAt: found.tokenExpiresAt,
+            healthStatus: health?.healthStatus || 'healthy',
+            healthMessage: health?.message || 'Session active',
+            daysRemaining: health?.daysRemaining,
             lastSync: found.lastSyncAt ? new Date(found.lastSyncAt).toLocaleDateString('en-IN') : 'Never'
           };
         }
@@ -578,9 +591,19 @@ export default function ConnectPlatforms() {
                         </div>
                       </div>
                       {isConnected ? (
-                        <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                          <CheckCircle2 size={10} /> Connected
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border shrink-0 ${
+                            platform.healthStatus === 'healthy'        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                            platform.healthStatus === 'expiring_soon'  ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' :
+                            platform.healthStatus === 'stale_warning'  ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                                                                         'text-coral bg-coral/10 border-coral/20'
+                          }`}>
+                            <CheckCircle2 size={10} />
+                            {platform.healthStatus === 'healthy' ? 'Connected' :
+                             platform.healthStatus === 'expiring_soon' ? `Expiring (${platform.daysRemaining}d)` :
+                             platform.healthStatus === 'stale_warning' ? 'Stale Session' : 'Re-auth Required'}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-[10px] text-slate-500 bg-surface px-2 py-0.5 rounded border border-line shrink-0">
                           Not Connected
@@ -590,10 +613,20 @@ export default function ConnectPlatforms() {
 
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">{platform.description}</p>
 
-                    {/* Connected info */}
-                    {isConnected && platform.accountEmail && (
-                      <div className="mb-3 p-2 bg-emerald-500/5 border border-emerald-500/20 rounded text-[10px] text-slate-400 truncate">
-                        <span className="text-emerald-400">●</span> {platform.accountEmail}
+                    {/* Connected info & health alert */}
+                    {isConnected && (
+                      <div className="space-y-1.5 mb-3">
+                        {platform.accountEmail && (
+                          <div className="p-2 bg-emerald-500/5 border border-emerald-500/20 rounded text-[10px] text-slate-400 truncate">
+                            <span className="text-emerald-400">●</span> {platform.accountEmail}
+                          </div>
+                        )}
+                        {platform.healthStatus !== 'healthy' && (
+                          <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-[10px] text-yellow-300 flex items-center gap-1.5">
+                            <AlertCircle size={11} className="shrink-0" />
+                            <span>{platform.healthMessage}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -768,6 +801,11 @@ export default function ConnectPlatforms() {
                       }`}>
                         {app.status.toUpperCase()}
                       </span>
+                      {app.errorDetails && app.errorDetails.includes('CAPTCHA') && (
+                        <span className="ml-2 text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                          ⚠️ CAPTCHA
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 text-slate-400 font-mono text-[11px]">
                       {new Date(app.createdAt).toLocaleString('en-IN')}
