@@ -27,7 +27,11 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
         if (res.job.description) setDescription(res.job.description);
       }
     } catch (err) {
-      setScrapeError(err.response?.data?.error?.message || 'Could not fetch job link. Please paste description manually.');
+      const errObj = err.response?.data?.error;
+      if (errObj?.guessedTitle && !title) {
+        setTitle(errObj.guessedTitle);
+      }
+      setScrapeError(errObj?.message || 'Could not fetch job link. Please paste description manually.');
     } finally {
       setFetchingUrl(false);
     }
