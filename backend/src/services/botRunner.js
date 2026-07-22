@@ -57,12 +57,15 @@ export class BotRunner {
       });
 
       // Set platform session cookies
-      const domain = platform === 'unstop' ? '.unstop.com' : platform === 'internshala' ? '.internshala.com' : '.linkedin.com';
       await context.addCookies([
         { name: 'access_token', value: sessionToken, domain: '.unstop.com', path: '/' },
         { name: 'unstop_session', value: sessionToken, domain: '.unstop.com', path: '/' },
-        { name: 'PHPSESSID', value: sessionToken, domain, path: '/' },
-        { name: 'ICAPS_SESSION', value: sessionToken, domain: '.internshala.com', path: '/' }
+        { name: 'PHPSESSID', value: sessionToken, domain: '.unstop.com', path: '/' },
+        { name: 'ICAPS_SESSION', value: sessionToken, domain: '.internshala.com', path: '/' },
+        { name: '_wellfound', value: sessionToken, domain: '.wellfound.com', path: '/' },
+        { name: 'cf_clearance', value: sessionToken, domain: '.wellfound.com', path: '/' },
+        { name: 'datadome', value: sessionToken, domain: '.wellfound.com', path: '/' },
+        { name: 'li_at', value: sessionToken, domain: '.linkedin.com', path: '/' }
       ]);
 
       const page = await context.newPage();
