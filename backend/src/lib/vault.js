@@ -125,55 +125,65 @@ async function verifyUnstop(token) {
 }
 
 async function verifyInternshala(token) {
-  if (token.length < 20) {
+  // Internshala uses PHPSESSID — a standard PHP session ID
+  // Real format: 26–40 lowercase alphanumeric characters (e.g. 4d29oqqmbthjoo2dptngsSdd0dn8fb97r)
+  // NOTE: Internshala always returns HTTP 200 with a JS shell for any cookie value
+  // (the real auth check happens client-side), so we cannot use HTTP status codes.
+  // We must rely on strict format validation.
+
+  if (token.length < 26) {
     throw makeErr(
-      'Internshala ICAPS_SESSION cookie is too short. ' +
-      'Make sure you copied the full value — it should be at least 20 characters.'
+      `Internshala PHPSESSID is too short (got ${token.length} chars, need at least 26). ` +
+      'Make sure you copied the full PHPSESSID cookie value from DevTools → Application → Cookies → internshala.com.'
     );
   }
 
-  // Internshala session cookie format check — it's typically a long alphanumeric string
-  if (!/^[a-zA-Z0-9%._\-=+/]+$/.test(token)) {
+  if (token.length > 128) {
     throw makeErr(
-      'Internshala session token contains unexpected characters. ' +
-      'Please re-copy exactly the ICAPS_SESSION cookie value from DevTools.'
+      'Internshala PHPSESSID is too long. ' +
+      'Make sure you copied only the PHPSESSID cookie value, not the entire cookie header.'
     );
   }
 
-  // Live session ping — hit the dashboard endpoint with the session cookie
-  let res;
-  try {
-    res = await liveGet('https://internshala.com/student/resume', {
-      'Cookie': `ICAPS_SESSION=${token}`,
-      'Referer': 'https://internshala.com/'
-    });
-  } catch (netErr) {
-    console.warn('[Vault:Internshala] Live check network error:', netErr.message);
-    // Structural check passed — accept with warning
-    return { verified: true, method: 'structural' };
-  }
-
-  // If redirected to /login or got 401/403, session is invalid
-  const finalUrl = res.request?.res?.responseUrl || res.config?.url || '';
-  if (res.status === 401 || res.status === 403 || finalUrl.includes('/login') || finalUrl.includes('/student/login')) {
+  // PHPSESSID must be alphanumeric only (lowercase letters + digits + optional uppercase)
+  // Reject tokens with spaces, special chars, dots, equals, slashes, etc.
+  if (!/^[a-zA-Z0-9]+$/.test(token)) {
     throw makeErr(
-      'Internshala did not accept this session cookie — the session has expired or is invalid. ' +
-      'Please log into Internshala again, then re-copy the ICAPS_SESSION cookie from DevTools → Application → Cookies.'
+      'Internshala PHPSESSID contains invalid characters. ' +
+      'The PHPSESSID cookie value should only contain letters and numbers. ' +
+      'Please re-copy exactly the PHPSESSID value from DevTools.'
     );
   }
 
-  return { verified: true, method: 'live_session' };
+  // All checks passed — note that live HTTP verification is not possible
+  // because Internshala always returns 200 regardless of session validity
+  return { verified: true, method: 'structural' };
 }
 
 async function verifyWellfound(token) {
-  if (token.length < 20) {
+  // _wellfound is a long session string, typically 40+ chars, alphanumeric + hyphens/underscores
+  if (token.length < 32) {
     throw makeErr(
-      'Wellfound session token is too short. ' +
-      'Please copy the full _wellfound cookie value from DevTools — it should be at least 20 characters.'
+      `Wellfound _wellfound cookie is too short (got ${token.length} chars, need at least 32). ` +
+      'Please copy the full _wellfound cookie value from DevTools → Application → Cookies → wellfound.com.'
     );
   }
 
-  // Live ping — Wellfound has a lightweight user-info GraphQL or REST probe
+  if (token.length > 512) {
+    throw makeErr(
+      'Wellfound token is too long. Make sure you copied only the _wellfound cookie value.'
+    );
+  }
+
+  // _wellfound cookies are alphanumeric + common URL-safe chars; reject spaces or clearly invalid content
+  if (/\s/.test(token)) {
+    throw makeErr(
+      'Wellfound _wellfound cookie should not contain spaces. ' +
+      'Please re-copy exactly the cookie value from DevTools.'
+    );
+  }
+
+  // Live ping with DataDome-aware approach
   let res;
   try {
     res = await liveGet('https://wellfound.com/api/v1/user', {
@@ -182,29 +192,42 @@ async function verifyWellfound(token) {
     });
   } catch (netErr) {
     console.warn('[Vault:Wellfound] Live check network error:', netErr.message);
+    // Format passed — structural OK
     return { verified: true, method: 'structural' };
   }
 
   if (res.status === 401 || res.status === 403) {
     throw makeErr(
-      'Wellfound rejected this session token — it may be expired or invalid. ' +
-      'Please log into Wellfound, then re-copy the _wellfound cookie from DevTools → Application → Cookies.'
+      'Wellfound rejected this session token (HTTP ' + res.status + '). ' +
+      'The cookie may be expired or invalid. Please log into Wellfound and re-copy the _wellfound cookie.'
     );
   }
 
-  const username = res.data?.data?.name || res.data?.name || res.data?.email || 'Wellfound User';
+  const username = res.data?.data?.name || res.data?.name || res.data?.email || undefined;
   return { verified: true, method: res.status === 200 ? 'live_api' : 'structural', username };
 }
 
 async function verifyLinkedIn(token) {
-  if (token.length < 30) {
+  // LinkedIn li_at is a long AQE... base64-like string, typically 100+ chars
+  if (token.length < 40) {
     throw makeErr(
-      'LinkedIn li_at cookie is too short. ' +
-      'The li_at cookie is a long string — please re-copy it from DevTools → Application → Cookies → linkedin.com.'
+      `LinkedIn li_at cookie is too short (got ${token.length} chars, need at least 40). ` +
+      'The li_at cookie is a long AQE... string. Please re-copy it from DevTools → Application → Cookies → linkedin.com.'
     );
   }
 
-  // LinkedIn Voyager API — lightweight "me" endpoint used by the LinkedIn web app itself
+  if (token.length > 1024) {
+    throw makeErr('LinkedIn li_at cookie is too long. Make sure you copied only the li_at cookie value.');
+  }
+
+  if (/\s/.test(token)) {
+    throw makeErr(
+      'LinkedIn li_at cookie should not contain spaces. ' +
+      'Please re-copy exactly the cookie value.'
+    );
+  }
+
+  // LinkedIn Voyager API — lightweight "me" endpoint used by LinkedIn web app
   let res;
   try {
     res = await liveGet('https://www.linkedin.com/voyager/api/me', {
@@ -220,48 +243,35 @@ async function verifyLinkedIn(token) {
 
   if (res.status === 401 || res.status === 403) {
     throw makeErr(
-      'LinkedIn rejected this li_at cookie — the session has expired or is invalid. ' +
-      'Please log into LinkedIn, then re-copy the li_at cookie from DevTools → Application → Cookies → linkedin.com.'
+      'LinkedIn rejected this li_at cookie (HTTP ' + res.status + '). ' +
+      'The session has expired or is invalid. Please log into LinkedIn and re-copy the li_at cookie from DevTools.'
     );
   }
 
   const profile = res.data?.miniProfile || res.data;
-  const username = [profile?.firstName?.text, profile?.lastName?.text].filter(Boolean).join(' ') || 'LinkedIn User';
+  const username = [profile?.firstName?.text, profile?.lastName?.text].filter(Boolean).join(' ') || undefined;
   return { verified: true, method: res.status === 200 ? 'live_api' : 'structural', username };
 }
 
 async function verifyIndeed(token) {
-  if (token.length < 10) {
+  // Indeed CTK cookie: alphanumeric, typically 16–32 chars
+  if (token.length < 16) {
     throw makeErr(
-      'Indeed CTK token is too short. ' +
+      `Indeed CTK token is too short (got ${token.length} chars, need at least 16). ` +
       'Please copy the CTK cookie value from DevTools → Application → Cookies → indeed.com.'
     );
   }
 
-  // Basic structure check — Indeed CTK is an alphanumeric string
-  if (!/^[a-zA-Z0-9_\-=+./]+$/.test(token)) {
+  if (token.length > 256) {
+    throw makeErr('Indeed CTK cookie is too long. Make sure you copied only the CTK cookie value.');
+  }
+
+  // CTK is strictly alphanumeric + hyphens
+  if (!/^[a-zA-Z0-9_\-]+$/.test(token)) {
     throw makeErr(
-      'Indeed token contains unexpected characters. ' +
+      'Indeed CTK cookie contains invalid characters. ' +
+      'The CTK value should only contain letters, numbers, underscores, and hyphens. ' +
       'Please re-copy exactly the CTK cookie value from DevTools.'
-    );
-  }
-
-  // Live ping against Indeed's account endpoint
-  let res;
-  try {
-    res = await liveGet('https://www.indeed.com/account/signin', {
-      'Cookie': `CTK=${token}`,
-      'Referer': 'https://www.indeed.com'
-    });
-  } catch (netErr) {
-    console.warn('[Vault:Indeed] Live check network error:', netErr.message);
-    return { verified: true, method: 'structural' };
-  }
-
-  if (res.status === 401 || res.status === 403) {
-    throw makeErr(
-      'Indeed rejected this session token. ' +
-      'Please log into Indeed again and re-copy the CTK cookie from DevTools.'
     );
   }
 
