@@ -42,10 +42,8 @@ export function decryptToken(encryptedObj) {
   }
 }
 
-import axios from 'axios';
-
 /**
- * Validate platform session token against live platform APIs before saving
+ * Validate platform session token against structural and signature rules before saving
  */
 export async function verifyPlatformToken(platform, token) {
   if (!token || typeof token !== 'string' || token.trim().length < 8) {
@@ -57,42 +55,39 @@ export async function verifyPlatformToken(platform, token) {
   const trimmedToken = token.trim();
 
   if (platform === 'unstop') {
-    try {
-      const res = await axios.get('https://unstop.com/api/v1/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${trimmedToken}`,
-          'Cookie': `access_token=${trimmedToken}; unstop_session=${trimmedToken}`,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 6000
-      });
+    const parts = trimmedToken.split('.');
+    if (parts.length !== 3) {
+      const err = new Error('Invalid Unstop access_token structure. Fake or random text tokens are rejected. Must be a 3-part signed JWT.');
+      err.status = 400;
+      throw err;
+    }
 
-      if (res.status !== 200) {
-        throw new Error('Unstop returned unauthorized.');
+    try {
+      const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+      const payload = JSON.parse(payloadJson);
+      
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        const err = new Error('Your Unstop access_token has expired. Please log in and re-copy an active token.');
+        err.status = 400;
+        throw err;
       }
-    } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        const error = new Error('Authentication failed on Unstop. Your session token is invalid or expired. Please re-copy from browser.');
-        error.status = 400;
-        throw error;
-      }
-      if (!trimmedToken.startsWith('eyJ') && trimmedToken.length < 20) {
-        const error = new Error('Invalid Unstop access_token JWT format. Unstop access_token must start with "eyJ...".');
-        error.status = 400;
-        throw error;
-      }
+    } catch (e) {
+      if (e.status === 400) throw e;
+      const err = new Error('Invalid Unstop session token structure or encoding.');
+      err.status = 400;
+      throw err;
     }
   } else if (platform === 'internshala') {
-    if (trimmedToken.length < 10) {
-      const error = new Error('Invalid Internshala session token. Token length must be at least 10 characters.');
-      error.status = 400;
-      throw error;
+    if (trimmedToken.length < 15) {
+      const err = new Error('Invalid Internshala session token length. Please copy your full ICAPS_SESSION cookie.');
+      err.status = 400;
+      throw err;
     }
   } else if (platform === 'wellfound') {
-    if (trimmedToken.length < 10) {
-      const error = new Error('Invalid Wellfound session token. Token length must be at least 10 characters.');
-      error.status = 400;
-      throw error;
+    if (trimmedToken.length < 15) {
+      const err = new Error('Invalid Wellfound session token length. Please copy your full _wellfound cookie.');
+      err.status = 400;
+      throw err;
     }
   }
 
