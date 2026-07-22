@@ -56,16 +56,24 @@ export class BotRunner {
         viewport: { width: 1280, height: 800 }
       });
 
-      // Set platform session cookies
+      // Map each platform to its correct session cookie name + domain
+      const PLATFORM_COOKIE_MAP = {
+        unstop:      { name: 'access_token', domain: '.unstop.com' },
+        internshala: { name: 'PHPSESSID',    domain: '.internshala.com' },
+        wellfound:   { name: '_wellfound',    domain: '.wellfound.com' },
+        linkedin:    { name: 'li_at',         domain: '.linkedin.com' },
+        indeed:      { name: 'CTK',           domain: '.indeed.com' },
+        glassdoor:   { name: 'JSESSIONID',    domain: '.glassdoor.com' }
+      };
+
+      const cookieConfig = PLATFORM_COOKIE_MAP[platform];
+      if (!cookieConfig) {
+        throw new Error(`No cookie configuration found for platform: ${platform}`);
+      }
+
+      // Only inject the cookie for the relevant platform — not all platforms at once
       await context.addCookies([
-        { name: 'access_token', value: sessionToken, domain: '.unstop.com', path: '/' },
-        { name: 'unstop_session', value: sessionToken, domain: '.unstop.com', path: '/' },
-        { name: 'PHPSESSID', value: sessionToken, domain: '.unstop.com', path: '/' },
-        { name: 'ICAPS_SESSION', value: sessionToken, domain: '.internshala.com', path: '/' },
-        { name: '_wellfound', value: sessionToken, domain: '.wellfound.com', path: '/' },
-        { name: 'cf_clearance', value: sessionToken, domain: '.wellfound.com', path: '/' },
-        { name: 'datadome', value: sessionToken, domain: '.wellfound.com', path: '/' },
-        { name: 'li_at', value: sessionToken, domain: '.linkedin.com', path: '/' }
+        { name: cookieConfig.name, value: sessionToken, domain: cookieConfig.domain, path: '/', httpOnly: true, sameSite: 'Lax' }
       ]);
 
       const page = await context.newPage();
