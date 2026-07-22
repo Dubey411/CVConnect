@@ -55,8 +55,16 @@ export class JobScraper {
       rawUrl = `https://${rawUrl}`;
     }
 
+    let parsedUrl;
     try {
-      const parsedUrl = new URL(rawUrl);
+      parsedUrl = new URL(rawUrl);
+    } catch {
+      const err = new Error('Invalid URL format.');
+      err.status = 400;
+      throw err;
+    }
+
+    try {
       const { data: html } = await axios.get(parsedUrl.toString(), {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -192,6 +200,7 @@ export class JobScraper {
       if (!description || description.length < 40) {
         const err = new Error('Could not automatically extract job description text from this link. Please paste the job description manually.');
         err.status = 400;
+        err.isCustomScraperError = true;
         throw err;
       }
 
@@ -202,10 +211,11 @@ export class JobScraper {
         url: rawUrl
       };
     } catch (err) {
-      if (err.status) throw err;
+      if (err.isCustomScraperError) throw err;
 
-      // Extract title hint from URL slug (e.g. 3627072-react-native-intern -> React Native Intern)
+      // Extract title & company hint from URL slug (e.g. 4486291-software-developer-intern -> Software Developer Intern)
       let guessedTitle = '';
+      let guessedCompany = '';
       try {
         const slugMatch = parsedUrl.pathname.match(/\/jobs\/(?:\d+-)?([a-z0-9-]+)/i);
         if (slugMatch && slugMatch[1]) {
@@ -213,21 +223,29 @@ export class JobScraper {
             .replace(/-/g, ' ')
             .replace(/\b\w/g, char => char.toUpperCase());
         }
+        guessedCompany = parsedUrl.hostname.replace(/^www\./, '').split('.')[0];
+        if (guessedCompany) {
+          guessedCompany = guessedCompany.charAt(0).toUpperCase() + guessedCompany.slice(1);
+        }
       } catch {
         // ignore slug parse error
       }
 
-      if (err.response?.status === 403 || err.response?.status === 401 || parsedUrl.hostname.includes('wellfound.com')) {
-        const customErr = new Error(`${parsedUrl.hostname.replace(/^www\./, '')} is protected by Cloudflare anti-bot security. Please copy and paste the job description text below.`);
+      if (err.response?.status === 403 || err.response?.status === 401 || parsedUrl?.hostname?.includes('wellfound.com')) {
+        const customErr = new Error(`${parsedUrl ? parsedUrl.hostname.replace(/^www\./, '') : 'Job site'} is protected by Cloudflare anti-bot security. Please copy and paste the job description text below.`);
         customErr.status = 400;
         customErr.code = 'SITE_PROTECTED';
         customErr.guessedTitle = guessedTitle;
+        customErr.guessedCompany = guessedCompany;
+        customErr.isCustomScraperError = true;
         throw customErr;
       }
 
       const customErr = new Error(`Unable to fetch job link (${err.response?.status || err.code || 'Network/Protection Block'}). Please copy and paste the job description text below.`);
       customErr.status = 400;
       customErr.guessedTitle = guessedTitle;
+      customErr.guessedCompany = guessedCompany;
+      customErr.isCustomScraperError = true;
       throw customErr;
     }
   }
