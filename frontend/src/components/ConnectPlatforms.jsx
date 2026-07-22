@@ -440,6 +440,13 @@ export default function ConnectPlatforms() {
             </div>
 
             <form onSubmit={submitConnection} className="space-y-4">
+              {apiError && (
+                <div className="p-2.5 bg-coral/10 border border-coral/30 rounded text-xs text-coral flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{apiError}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs text-slate-300 mb-1">Account Email / Username</label>
                 <input
