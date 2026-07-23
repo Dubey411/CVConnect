@@ -8,6 +8,8 @@ const labels = { skills: 'Skills', experience: 'Experience', keywords: 'Keywords
 export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId }) {
   const [applyState, setApplyState] = useState('idle'); // idle | selecting | applying | done | error
   const [selectedPlatform, setSelectedPlatform] = useState('unstop');
+  const [jobUrl, setJobUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!analysis) return (
@@ -25,6 +27,16 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId 
   const color = analysis.score >= 75 ? 'text-aqua' : analysis.score >= 55 ? 'text-amber-300' : 'text-coral';
 
   const triggerAutoApply = async (platform) => {
+    // Validate URL
+    if (!jobUrl.trim()) {
+      setUrlError('Please paste the job URL from the platform.');
+      return;
+    }
+    try { new URL(jobUrl.trim()); } catch {
+      setUrlError('Please enter a valid URL (e.g. https://unstop.com/jobs/...).');
+      return;
+    }
+    setUrlError('');
     setApplyState('applying');
     setErrorMsg('');
     try {
@@ -34,11 +46,12 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId 
         data: {
           platform,
           resumeId,
-          jobId
+          jobId,
+          targetUrl: jobUrl.trim()
         }
       });
       setApplyState('done');
-      setTimeout(() => setApplyState('idle'), 4000);
+      setTimeout(() => { setApplyState('idle'); setJobUrl(''); }, 5000);
     } catch (err) {
       setErrorMsg(err.response?.data?.error?.message || 'Platform account not connected. Please visit Connect Platforms.');
       setApplyState('error');
@@ -101,20 +114,32 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId 
         </button>
 
         {applyState === 'selecting' ? (
-          <div className="panel p-3 bg-surface/60 border border-line space-y-2">
-            <p className="text-[11px] text-slate-300 font-medium">Select Auto-Apply Target Platform:</p>
+          <div className="panel p-3 bg-surface/60 border border-line space-y-3">
+            <p className="text-[11px] text-slate-300 font-medium">1. Paste the job listing URL:</p>
+            <div>
+              <input
+                type="url"
+                className="input text-xs w-full"
+                placeholder="https://unstop.com/jobs/... or internshala.com/..."
+                value={jobUrl}
+                onChange={e => { setJobUrl(e.target.value); setUrlError(''); }}
+                autoFocus
+              />
+              {urlError && <p className="text-[10px] text-coral mt-1">{urlError}</p>}
+            </div>
+            <p className="text-[11px] text-slate-300 font-medium">2. Select platform:</p>
             <div className="grid grid-cols-2 gap-1.5">
               {['unstop', 'internshala', 'linkedin', 'indeed'].map(p => (
                 <button
                   key={p}
-                  onClick={() => triggerAutoApply(p)}
+                  onClick={() => { setSelectedPlatform(p); triggerAutoApply(p); }}
                   className="button-quiet text-[11px] py-1 px-2 capitalize justify-center"
                 >
                   {p}
                 </button>
               ))}
             </div>
-            <button onClick={() => setApplyState('idle')} className="text-[10px] text-slate-400 hover:text-white w-full text-center mt-1">
+            <button onClick={() => { setApplyState('idle'); setUrlError(''); setJobUrl(''); }} className="text-[10px] text-slate-400 hover:text-white w-full text-center">
               Cancel
             </button>
           </div>
