@@ -17,6 +17,7 @@ model User {
   jobs                Job[]
   platformConnections PlatformConnection[]
   jobApplications     JobApplication[]
+  browserSessions     BrowserSession[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -96,4 +97,21 @@ model JobApplication {
 
   @@index([userId, createdAt])
   @@index([platform, status])
+}
+
+model BrowserSession {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     String
+  profilePath  String                          // absolute path to the Playwright user-data-dir
+  status       String    @default("pending")   // pending | connecting | connected | expired | failed
+  accountEmail String?
+  connectedAt  DateTime?
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
 }

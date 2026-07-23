@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import { prisma } from '../lib/prisma.js';
 import { decryptToken } from '../lib/vault.js';
 import { generateResumePdf } from '../lib/resumePdf.js';
+import { getProfilePath } from './sessionManager.js';
 
 // ─── Stealth fingerprint override script ─────────────────────────────────────
 // Injected into every page before any JS runs to defeat automation detection.
@@ -121,51 +122,24 @@ export class BotRunner {
 
   // ── Public entry point ───────────────────────────────────────────────────
 
-  async runApplication({ userId, applicationId, jobId, platform, resumeId, targetUrl }) {
+  async runApplication({ userId, applicationId, jobId, platform, resumeId, targetUrl, useBrowserSession = false }) {
     let browser;
     let pdfPath;
 
     try {
-      // 1. Load all required data in parallel
-      const [application, user, resume, connection] = await Promise.all([
+      // 1. Load all required data
+      const [application, user, resume] = await Promise.all([
         prisma.jobApplication.findUnique({ where: { id: applicationId }, include: { job: true } }),
         prisma.user.findUnique({ where: { id: userId } }),
         resumeId ? prisma.resume.findUnique({ where: { id: resumeId } }) : Promise.resolve(null),
-        prisma.platformConnection.findUnique({ where: { userId_platform: { userId, platform } } })
       ]);
 
-      // 2. Pre-flight checks
-      if (!connection || connection.status !== 'connected') {
-        throw new Error(`${platform} is not connected. Please reconnect in Connect Platforms.`);
-      }
-
-      if (connection.tokenExpiresAt && new Date(connection.tokenExpiresAt) < new Date()) {
-        // Mark as expired in DB
-        await prisma.platformConnection.update({ where: { id: connection.id }, data: { status: 'expired' } });
-        throw new Error(
-          `Your ${platform} session expired on ${new Date(connection.tokenExpiresAt).toLocaleDateString('en-IN')}. ` +
-          'Please re-connect with a fresh token.'
-        );
-      }
-
-      const sessionToken = decryptToken({
-        encryptedToken: connection.encryptedToken,
-        iv:             connection.iv,
-        authTag:        connection.authTag,
-      });
-
-      if (!sessionToken) {
-        throw new Error(`Could not decrypt ${platform} token. Please re-connect the platform.`);
-      }
-
       const destination = targetUrl || application?.job?.description?.match(/https?:\/\/[^\s]+/)?.[0];
-      if (!destination) {
-        throw new Error('No target URL provided. Add a job URL before triggering auto-apply.');
-      }
+      if (!destination) throw new Error('No target URL provided. Add a job URL before triggering auto-apply.');
 
       this.emit(userId, applicationId, 'init', `Initializing stealth bot for ${platform}…`, 10);
 
-      // 3. Generate resume PDF from parsed JSON
+      // 2. Generate resume PDF
       const resumeData = resume?.optimized || resume?.original;
       if (resumeData) {
         this.emit(userId, applicationId, 'generating_pdf', 'Generating optimized resume PDF…', 20);
@@ -175,58 +149,98 @@ export class BotRunner {
         });
       }
 
-      // 4. Update status → applying
+      // 3. Update status → applying
       await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'applying' } });
 
-      // 5. Launch stealth Playwright browser
-      browser = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-infobars',
-          '--disable-dev-shm-usage',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-          '--window-size=1366,768',
-          '--disable-extensions',
-        ],
-      });
+      // 4. Launch browser — persistent profile (preferred) or fresh + cookie injection
+      let context;
+      if (useBrowserSession) {
+        // ── Persistent browser session (user logged in manually once) ──────────
+        const profilePath = getProfilePath(userId, platform);
+        this.emit(userId, applicationId, 'authenticating', `Loading saved ${platform} session…`, 30);
 
-      const userAgent = UA_POOL[Math.floor(Math.random() * UA_POOL.length)];
+        context = await chromium.launchPersistentContext(profilePath, {
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-dev-shm-usage',
+            '--no-first-run',
+            '--disable-gpu',
+            '--window-size=1366,768',
+          ],
+        });
 
-      const context = await browser.newContext({
-        userAgent,
-        viewport: {
-          width:  1280 + Math.floor(Math.random() * 120),
-          height: 720  + Math.floor(Math.random() * 80),
-        },
-        locale: 'en-US',
-        timezoneId: 'Asia/Kolkata',
-        extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9,hi;q=0.8' },
-      });
+        // Update lastUsedAt for the session
+        await prisma.browserSession.updateMany({
+          where: { userId, platform },
+          data: { lastUsedAt: new Date() },
+        }).catch(() => {});
 
-      // Inject stealth script into every new page before any JS
-      await context.addInitScript(STEALTH_SCRIPT);
+      } else {
+        // ── Cookie/token injection (legacy fallback) ───────────────────────────
+        const connection = await prisma.platformConnection.findUnique({
+          where: { userId_platform: { userId, platform } }
+        });
 
-      // 6. Inject the correct session cookie for this platform
-      const cookieCfg = PLATFORM_COOKIE[platform];
-      if (!cookieCfg) throw new Error(`No cookie config for platform: ${platform}`);
+        if (!connection || connection.status !== 'connected') {
+          throw new Error(`${platform} is not connected. Please reconnect in Accounts or Connect Platforms.`);
+        }
 
-      await context.addCookies([{
-        name:     cookieCfg.name,
-        value:    sessionToken,
-        domain:   cookieCfg.domain,
-        path:     '/',
-        httpOnly: true,
-        sameSite: 'Lax',
-      }]);
+        if (connection.tokenExpiresAt && new Date(connection.tokenExpiresAt) < new Date()) {
+          await prisma.platformConnection.update({ where: { id: connection.id }, data: { status: 'expired' } });
+          throw new Error(
+            `Your ${platform} session expired on ${new Date(connection.tokenExpiresAt).toLocaleDateString('en-IN')}. ` +
+            'Please re-connect with a fresh token.'
+          );
+        }
+
+        const sessionToken = decryptToken({
+          encryptedToken: connection.encryptedToken,
+          iv: connection.iv,
+          authTag: connection.authTag,
+        });
+        if (!sessionToken) throw new Error(`Could not decrypt ${platform} token. Please re-connect the platform.`);
+
+        const userAgent = UA_POOL[Math.floor(Math.random() * UA_POOL.length)];
+        browser = await chromium.launch({
+          headless: true,
+          args: [
+            '--no-sandbox', '--disable-setuid-sandbox',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-infobars', '--disable-dev-shm-usage',
+            '--no-first-run', '--no-zygote', '--disable-gpu',
+            '--window-size=1366,768', '--disable-extensions',
+          ],
+        });
+
+        context = await browser.newContext({
+          userAgent,
+          viewport: {
+            width:  1280 + Math.floor(Math.random() * 120),
+            height: 720  + Math.floor(Math.random() * 80),
+          },
+          locale: 'en-US',
+          timezoneId: 'Asia/Kolkata',
+          extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9,hi;q=0.8' },
+        });
+
+        await context.addInitScript(STEALTH_SCRIPT);
+
+        const cookieCfg = PLATFORM_COOKIE[platform];
+        if (!cookieCfg) throw new Error(`No cookie config for platform: ${platform}`);
+
+        await context.addCookies([{
+          name: cookieCfg.name, value: sessionToken,
+          domain: cookieCfg.domain, path: '/',
+          httpOnly: true, sameSite: 'Lax',
+        }]);
+      }
 
       const page = await context.newPage();
 
-      // Block tracking, ads and heavy assets to reduce detection surface + speed up
+      // Block heavy assets / tracking
       await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,ico,woff,woff2,ttf,eot,otf}', r => r.abort());
       await page.route('**/analytics*', r => r.abort());
       await page.route('**/hotjar*',    r => r.abort());
@@ -247,16 +261,25 @@ export class BotRunner {
 
       // 8. Persist result
       if (success) {
-        await Promise.all([
+        const updates = [
           prisma.jobApplication.update({
             where: { id: applicationId },
             data: { status: 'submitted', submittedAt: new Date() },
           }),
-          prisma.platformConnection.update({
-            where: { id: connection.id },
-            data: { applicationsCount: { increment: 1 }, lastSyncAt: new Date() },
-          }),
-        ]);
+        ];
+        // Increment applicationsCount on token connection if used
+        if (!useBrowserSession) {
+          const conn = await prisma.platformConnection.findUnique({
+            where: { userId_platform: { userId, platform } }
+          }).catch(() => null);
+          if (conn) {
+            updates.push(prisma.platformConnection.update({
+              where: { id: conn.id },
+              data: { applicationsCount: { increment: 1 }, lastSyncAt: new Date() },
+            }));
+          }
+        }
+        await Promise.all(updates);
         this.emit(userId, applicationId, 'complete', `Application submitted on ${platform}! 🎉`, 100);
       } else {
         await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission.' } });
@@ -273,8 +296,10 @@ export class BotRunner {
       this.emit(userId, applicationId, 'failed', `Auto-apply failed: ${err.message}`, 0, err.message);
       throw err;
     } finally {
-      if (browser)  await browser.close().catch(() => {});
-      if (pdfPath)  await fs.unlink(pdfPath).catch(() => {});
+      // For persistent context: close the context itself
+      // For fresh browser: close the browser (which closes all contexts)
+      if (browser) await browser.close().catch(() => {});
+      if (pdfPath) await fs.unlink(pdfPath).catch(() => {});
     }
   }
 

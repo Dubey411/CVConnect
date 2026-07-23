@@ -12,13 +12,33 @@ import { storeResumeSource } from '../lib/storage.js';
 import { encryptToken, verifyPlatformToken } from '../lib/vault.js';
 import { JobScraper } from '../services/jobScraper.js';
 import { BotRunner } from '../services/botRunner.js';
+import {
+  launchLoginSession,
+  validateSession,
+  deleteSession,
+  getSessions,
+  getSupportedPlatforms,
+} from '../services/sessionManager.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, files: 1 }, (req, file, cb) => (/pdf|word|officedocument/.test(file.mimetype) ? cb(null, true) : cb(Object.assign(new Error('Only PDF and DOCX resumes are supported.'), { status: 415 }))));
 const validate = (req, res, next) => { const e = validationResult(req); return e.isEmpty() ? next() : res.status(422).json({ error: { code: 'VALIDATION_ERROR', details: e.array() } }); };
 const ownedResume = async (id, userId) => { const resume = await prisma.resume.findFirst({ where: { id, userId }, include: { job: true } }); if (!resume) { const err = new Error('Resume not found.'); err.status = 404; throw err; } return resume; };
 router.use(authenticate);
 router.get('/applications', async (req, res, next) => { try { const applications = await prisma.jobApplication.findMany({ where: { userId: req.user.sub }, orderBy: { createdAt: 'desc' }, take: 50, include: { job: { select: { title: true, company: true } } } }); res.json({ applications }); } catch (e) { next(e); } });
-router.post('/applications/apply', [body('platform').trim().isString(), body('resumeId').isString(), body('jobId').optional().isString(), body('targetUrl').optional().isString()], validate, async (req, res, next) => { try { const { platform, resumeId, jobId, targetUrl } = req.body; const connection = await prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }); if (!connection || connection.status !== 'connected') { return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${platform} account in Connect Platforms first.` } }); } const application = await prisma.jobApplication.create({ data: { userId: req.user.sub, jobId: jobId || null, platform, targetUrl: targetUrl || null, status: 'pending' } }); const io = req.app.get('io'); new BotRunner(io).runApplication({ userId: req.user.sub, applicationId: application.id, jobId, platform, resumeId, targetUrl }).catch(err => console.error('[BotRunner Async Error]:', err.message)); res.status(202).json({ application, message: `Automated application to ${platform} initiated.` }); } catch (e) { next(e); } });
+router.post('/applications/apply', [body('platform').trim().isString(), body('resumeId').isString(), body('jobId').optional().isString(), body('targetUrl').optional().isString()], validate, async (req, res, next) => { try { const { platform, resumeId, jobId, targetUrl } = req.body;
+  if (!targetUrl) return res.status(400).json({ error: { code: 'URL_REQUIRED', message: 'No target URL provided. Add a job URL before triggering auto-apply.' } });
+  // Check browser session first, then fall back to token connection
+  const [browserSession, tokenConnection] = await Promise.all([
+    prisma.browserSession.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }),
+    prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }),
+  ]);
+  const hasSession = browserSession?.status === 'connected';
+  const hasToken   = tokenConnection?.status === 'connected';
+  if (!hasSession && !hasToken) return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${platform} account in Accounts or Connect Platforms first.` } });
+  const application = await prisma.jobApplication.create({ data: { userId: req.user.sub, jobId: jobId || null, platform, targetUrl, status: 'pending' } });
+  const io = req.app.get('io');
+  new BotRunner(io).runApplication({ userId: req.user.sub, applicationId: application.id, jobId, platform, resumeId, targetUrl, useBrowserSession: hasSession }).catch(err => console.error('[BotRunner Async Error]:', err.message));
+  res.status(202).json({ application, message: `Automated application to ${platform} initiated.` }); } catch (e) { next(e); } });
 router.post('/jobs/scrape', [body('url').trim().isURL()], validate, async (req, res, next) => { try { const jobData = await new JobScraper().scrape(req.body.url); res.json({ job: jobData }); } catch (e) { if (e.code === 'SITE_PROTECTED' || e.status === 400) { return res.status(400).json({ error: { code: e.code || 'JOB_SCRAPE_FAILED', message: e.message, guessedTitle: e.guessedTitle || '', guessedCompany: e.guessedCompany || '', isProtected: Boolean(e.code === 'SITE_PROTECTED') } }); } next(e); } });
 router.post('/resumes/upload', upload.single('resume'), async (req, res, next) => { try { if (!req.file) return res.status(400).json({ error: { code: 'FILE_REQUIRED', message: 'Choose a resume to upload.' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { stage: 'parsing', percent: 35 }); const [original, sourceUrl] = await Promise.all([new ResumeParser().parse(req.file), storeResumeSource(req.file, req.user.sub)]); const resume = await prisma.resume.create({ data: { userId: req.user.sub, original, sourceUrl, status: 'completed' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'complete', percent: 100 }); res.status(201).json({ resume }); } catch (e) { next(e); } });
 router.get('/resumes', async (req, res, next) => { try { const page = Math.max(1, Number(req.query.page) || 1); const take = Math.min(20, Math.max(1, Number(req.query.limit) || 20)); const where = { userId: req.user.sub }; const [items, total] = await prisma.$transaction([prisma.resume.findMany({ where, orderBy: { updatedAt: 'desc' }, skip: (page - 1) * take, take, include: { job: { select: { title: true, company: true } } } }), prisma.resume.count({ where })]); res.json({ items, pagination: { page, limit: take, total, pages: Math.ceil(total / take) } }); } catch (e) { next(e); } });
@@ -174,4 +194,50 @@ router.delete('/platforms/:platform', [param('platform').isString()], validate, 
     next(e);
   }
 });
+
+// ─── Browser Session Routes (/sessions/*) ────────────────────────────────────
+
+// GET /sessions — list all persistent browser sessions for the user
+router.get('/sessions', async (req, res, next) => {
+  try {
+    const [sessions, platforms] = await Promise.all([
+      getSessions(req.user.sub),
+      Promise.resolve(getSupportedPlatforms()),
+    ]);
+    res.json({ sessions, supportedPlatforms: platforms });
+  } catch (e) { next(e); }
+});
+
+// POST /sessions/:platform/launch — start non-headless login flow
+router.post('/sessions/:platform/launch', [param('platform').isString().isLength({ min: 2, max: 40 })], validate, async (req, res, next) => {
+  try {
+    const { platform } = req.params;
+    const io = req.app.get('io');
+    // Respond immediately; login flow is async (user must interact with browser)
+    res.status(202).json({ message: `Opening ${platform} login window. Watch the browser that appears on your screen.` });
+    // Run login in background — emits session:status events via WebSocket
+    launchLoginSession(req.user.sub, platform, io)
+      .catch(err => {
+        console.error(`[SessionManager] Login failed for ${platform}:`, err.message);
+        io?.to(req.user.sub).emit('session:status', { platform, status: 'failed', message: err.message });
+      });
+  } catch (e) { next(e); }
+});
+
+// POST /sessions/:platform/validate — headless check of existing session
+router.post('/sessions/:platform/validate', [param('platform').isString()], validate, async (req, res, next) => {
+  try {
+    const result = await validateSession(req.user.sub, req.params.platform, req.app.get('io'));
+    res.json(result);
+  } catch (e) { next(e); }
+});
+
+// DELETE /sessions/:platform — disconnect and delete profile
+router.delete('/sessions/:platform', [param('platform').isString()], validate, async (req, res, next) => {
+  try {
+    await deleteSession(req.user.sub, req.params.platform);
+    res.json({ success: true, message: `${req.params.platform} session disconnected.` });
+  } catch (e) { next(e); }
+});
+
 export default router;
