@@ -317,6 +317,20 @@ export class BotRunner {
 
     this.emit(userId, appId, 'filling', 'Locating Unstop Apply button…', 58);
 
+    // Check if user has ALREADY APPLIED to this listing
+    const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+    const alreadySubmitted = (
+      bodyText.includes('already registered') ||
+      bodyText.includes('you have registered') ||
+      bodyText.includes('application submitted') ||
+      bodyText.includes('already applied')
+    );
+
+    if (alreadySubmitted) {
+      this.emit(userId, appId, 'complete', 'You have already applied for this position on Unstop! 🎉', 100);
+      return true;
+    }
+
     // Step 1: Click Quick Apply / Register button (exact button selectors, avoid container div matching)
     const applyBtn = await findVisible(page, [
       '#un-register-btn',
@@ -332,6 +346,11 @@ export class BotRunner {
     ]);
 
     if (!applyBtn) {
+      // Re-check if page says registered after checking buttons
+      if (bodyText.includes('registered') || bodyText.includes('applied')) {
+        this.emit(userId, appId, 'complete', 'Application is already submitted on Unstop! 🎉', 100);
+        return true;
+      }
       console.warn('[BotRunner:Unstop] Could not find Apply/Register button on page.');
       return false;
     }
