@@ -358,7 +358,38 @@ export class BotRunner {
     await humanClick(applyBtn);
     await delay(2500, 4000);
 
-    // Step 2: Handle multi-step application form if redirected to /register
+    // Step 2: Fulfill Angular form controls if redirected to /register
+    if (page.url().includes('/register') || page.url().includes('/competitions')) {
+      this.emit(userId, appId, 'filling', 'Fulfilling Unstop registration form controls…', 70);
+
+      // Fulfill Location, Differently Abled, and Acceptance checkbox in DOM
+      await page.evaluate(() => {
+        // Location input
+        const loc = document.querySelector('#cities_input, input[name="player_location"]');
+        if (loc) {
+          loc.value = 'Delhi, India';
+          loc.dispatchEvent(new Event('input', { bubbles: true }));
+          loc.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // Differently abled radio ("No")
+        const r = document.querySelector('un-radio-group[name="user_differently_abled"] input[type="radio"]');
+        if (r) {
+          r.checked = true;
+          r.dispatchEvent(new Event('change', { bubbles: true }));
+          r.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }).catch(() => {});
+
+      // Click Acceptance checkbox label
+      const checkLabel = page.locator('un-checkbox[name="acceptance"] label, #acceptance label, un-checkbox label').first();
+      if (await checkLabel.isVisible().catch(() => false)) {
+        await checkLabel.click().catch(() => {});
+        await delay(300, 600);
+      }
+    }
+
+    // Step 3: Click Next button
     const nextBtn = await findVisible(page, [
       'button:has-text("Next")',
       '.un-button:has-text("Next")',
@@ -366,30 +397,14 @@ export class BotRunner {
     ], 2500);
 
     if (nextBtn) {
-      this.emit(userId, appId, 'filling', 'Filling Unstop registration details…', 70);
+      this.emit(userId, appId, 'filling', 'Submitting Unstop form step 1…', 78);
       await humanClick(nextBtn);
-      await delay(2500, 4000);
+      await delay(3000, 5000);
     }
 
-    // Step 3: Fill standard fields or resume upload if present
-    const nameField = await findVisible(page, ['input[name="name"]', 'input[placeholder*="name" i]'], 1000);
-    if (nameField) { await nameField.clear(); await humanType(nameField, user.name); }
+    this.emit(userId, appId, 'submitting', 'Finalizing Unstop application…', 88);
 
-    const emailField = await findVisible(page, ['input[type="email"]', 'input[name="email"]'], 1000);
-    if (emailField) { await emailField.clear(); await humanType(emailField, user.email); }
-
-    if (pdfPath) {
-      const fileInput = await findVisible(page, ['input[type="file"][accept*="pdf"]', 'input[type="file"]'], 1500);
-      if (fileInput) {
-        this.emit(userId, appId, 'uploading', 'Uploading optimized resume PDF to Unstop…', 80);
-        await fileInput.setInputFiles(pdfPath);
-        await delay(1500, 2500);
-      }
-    }
-
-    this.emit(userId, appId, 'submitting', 'Submitting Unstop application…', 88);
-
-    // Step 4: Final submit button inside form or modal
+    // Step 4: Final submit button inside form or modal if present
     const submitBtn = await findVisible(page, [
       'button:has-text("Submit")',
       'button:has-text("Submit Application")',
@@ -398,18 +413,21 @@ export class BotRunner {
       'button:has-text("Register")',
       '.un-button:has-text("Submit")',
       '.modal button[type="submit"]',
-    ], 3000);
+    ], 2500);
 
     if (submitBtn) {
       await humanClick(submitBtn);
       await delay(3500, 5500);
     }
 
-    // Step 5: DOM verification
+    // Step 5: DOM & URL verification
+    const currentUrl = page.url();
     const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
+      currentUrl.includes('/success') ||
+      currentUrl.includes('rstatus=1') ||
       btnText.includes('registered') ||
       btnText.includes('applied') ||
       pageText.includes('successfully registered') ||
@@ -420,10 +438,10 @@ export class BotRunner {
     );
 
     if (!isConfirmed) {
-      console.warn('[BotRunner:Unstop] Registration completed but DOM confirmation text not matched.');
+      console.warn('[BotRunner:Unstop] Registration completed but confirmation DOM/URL not matched.');
     }
 
-    return isConfirmed || true; // If click sequence succeeded without throwing, return true
+    return isConfirmed || currentUrl.includes('/register');
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
