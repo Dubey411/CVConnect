@@ -240,4 +240,86 @@ router.delete('/sessions/:platform', [param('platform').isString()], validate, a
   } catch (e) { next(e); }
 });
 
+// ─── Automation & Application Controls (/automation/*) ───────────────────────
+
+// GET /automation/rules — fetch daily limits, target roles, and today's application metrics
+router.get('/automation/rules', async (req, res, next) => {
+  try {
+    const userId = req.user.sub;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const platforms = ['unstop', 'wellfound', 'linkedin', 'internshala', 'indeed', 'glassdoor', 'naukri'];
+
+    const [rules, todayApps, totalApps] = await Promise.all([
+      prisma.automationRule.findMany({ where: { userId } }),
+      prisma.jobApplication.groupBy({
+        by: ['platform'],
+        where: { userId, createdAt: { gte: startOfToday } },
+        _count: { id: true },
+      }),
+      prisma.jobApplication.groupBy({
+        by: ['platform'],
+        where: { userId },
+        _count: { id: true },
+      }),
+    ]);
+
+    const rulesMap = Object.fromEntries(rules.map(r => [r.platform, r]));
+    const todayMap = Object.fromEntries(todayApps.map(a => [a.platform, a._count.id]));
+    const totalMap = Object.fromEntries(totalApps.map(a => [a.platform, a._count.id]));
+
+    const platformRules = platforms.map(platform => ({
+      platform,
+      dailyLimit: rulesMap[platform]?.dailyLimit ?? 25,
+      targetRole: rulesMap[platform]?.targetRole ?? 'Data Engineer',
+      isEnabled:  rulesMap[platform]?.isEnabled ?? true,
+      appliedToday: todayMap[platform] || 0,
+      totalApplied: totalMap[platform] || 0,
+    }));
+
+    const totalTodayCount = Object.values(todayMap).reduce((a, b) => a + b, 0);
+    const overallTotalCount = Object.values(totalMap).reduce((a, b) => a + b, 0);
+
+    res.json({
+      platformRules,
+      summary: {
+        totalToday: totalTodayCount,
+        overallTotal: overallTotalCount,
+      },
+    });
+  } catch (e) { next(e); }
+});
+
+// PUT /automation/rules/:platform — update daily limit, role & status for a platform
+router.put('/automation/rules/:platform', [
+  param('platform').isString(),
+  body('dailyLimit').optional().isInt({ min: 1, max: 500 }),
+  body('targetRole').optional().trim().isString().isLength({ min: 2, max: 100 }),
+  body('isEnabled').optional().isBoolean(),
+], validate, async (req, res, next) => {
+  try {
+    const { platform } = req.params;
+    const { dailyLimit, targetRole, isEnabled } = req.body;
+
+    const rule = await prisma.automationRule.upsert({
+      where: { userId_platform: { userId: req.user.sub, platform } },
+      update: {
+        ...(dailyLimit !== undefined && { dailyLimit }),
+        ...(targetRole !== undefined && { targetRole }),
+        ...(isEnabled !== undefined && { isEnabled }),
+      },
+      create: {
+        userId: req.user.sub,
+        platform,
+        dailyLimit: dailyLimit ?? 25,
+        targetRole: targetRole ?? 'Data Engineer',
+        isEnabled: isEnabled ?? true,
+      },
+    });
+
+    res.json({ rule, message: `Automation settings updated for ${platform}.` });
+  } catch (e) { next(e); }
+});
+
 export default router;

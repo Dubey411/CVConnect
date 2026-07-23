@@ -18,6 +18,7 @@ model User {
   platformConnections PlatformConnection[]
   jobApplications     JobApplication[]
   browserSessions     BrowserSession[]
+  automationRules     AutomationRule[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -111,6 +112,21 @@ model BrowserSession {
   lastUsedAt   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
+model AutomationRule {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     String
+  dailyLimit   Int      @default(25)
+  targetRole   String   @default("Data Engineer")
+  isEnabled    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@unique([userId, platform])
   @@index([userId])
