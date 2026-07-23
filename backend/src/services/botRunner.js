@@ -292,8 +292,13 @@ export class BotRunner {
 
     this.emit(userId, appId, 'filling', 'Locating Unstop Apply button…', 58);
 
-    // Click apply / register
+    // Click apply / register button (Unstop uses #un-register-btn or .register_btn for "Quick Apply")
     const applyBtn = await findVisible(page, [
+      '#un-register-btn',
+      '.register_btn',
+      'div:has-text("Quick Apply")',
+      'button:has-text("Quick Apply")',
+      'a:has-text("Quick Apply")',
       'button:has-text("Register Now")',
       'button:has-text("Apply Now")',
       'button:has-text("Apply")',
@@ -301,24 +306,31 @@ export class BotRunner {
       '.apply-btn',
       '[data-testid="apply-button"]',
     ]);
-    if (applyBtn) { await humanClick(applyBtn); await delay(1500, 2500); }
 
-    // Fill standard fields
-    const nameField = await findVisible(page, ['input[name="name"]', 'input[placeholder*="name" i]', 'input[id*="name" i]']);
+    if (!applyBtn) {
+      console.warn('[BotRunner:Unstop] Could not find Apply/Register button on page.');
+      return false;
+    }
+
+    await humanClick(applyBtn);
+    await delay(2500, 4000);
+
+    // Fill standard fields if a registration form/modal appeared
+    const nameField = await findVisible(page, ['input[name="name"]', 'input[placeholder*="name" i]', 'input[id*="name" i]'], 1500);
     if (nameField) { await nameField.clear(); await humanType(nameField, user.name); }
 
-    const emailField = await findVisible(page, ['input[type="email"]', 'input[name="email"]', 'input[placeholder*="email" i]']);
+    const emailField = await findVisible(page, ['input[type="email"]', 'input[name="email"]', 'input[placeholder*="email" i]'], 1500);
     if (emailField) { await emailField.clear(); await humanType(emailField, user.email); }
 
     const phone = (resume?.optimized || resume?.original)?.phone || '';
-    const phoneField = await findVisible(page, ['input[type="tel"]', 'input[name="phone"]', 'input[placeholder*="phone" i]', 'input[placeholder*="mobile" i]']);
+    const phoneField = await findVisible(page, ['input[type="tel"]', 'input[name="phone"]', 'input[placeholder*="phone" i]', 'input[placeholder*="mobile" i]'], 1500);
     if (phoneField && phone) { await phoneField.clear(); await humanType(phoneField, phone); }
 
     // Resume PDF upload
     if (pdfPath) {
-      this.emit(userId, appId, 'uploading', 'Uploading optimized resume PDF to Unstop…', 72);
-      const fileInput = await findVisible(page, ['input[type="file"][accept*="pdf"]', 'input[type="file"]'], 3000);
+      const fileInput = await findVisible(page, ['input[type="file"][accept*="pdf"]', 'input[type="file"]'], 2000);
       if (fileInput) {
+        this.emit(userId, appId, 'uploading', 'Uploading optimized resume PDF to Unstop…', 72);
         await fileInput.setInputFiles(pdfPath);
         await delay(1500, 2500);
       }
@@ -326,22 +338,34 @@ export class BotRunner {
 
     this.emit(userId, appId, 'submitting', 'Submitting Unstop application…', 88);
 
-    // Final submit
+    // Final submit button inside modal if present
     const submitBtn = await findVisible(page, [
       'button[type="submit"]:has-text("Submit")',
       'button:has-text("Submit Application")',
       'button:has-text("Confirm Registration")',
-      'button[type="submit"]',
-    ]);
-    if (submitBtn) { await humanClick(submitBtn); await delay(2500, 4000); }
+      'button:has-text("Confirm")',
+      '.modal button[type="submit"]',
+    ], 2000);
+    if (submitBtn) { await humanClick(submitBtn); await delay(3000, 5000); }
 
-    const finalHtml = await page.content();
-    return (
-      finalHtml.toLowerCase().includes('success')    ||
-      finalHtml.toLowerCase().includes('registered') ||
-      finalHtml.toLowerCase().includes('applied')    ||
-      finalHtml.toLowerCase().includes('thank you')
+    // STRICT VERIFICATION: Do NOT check whole page HTML string (causes false positive 'success').
+    // Check specific button text or confirmation dialog elements!
+    const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
+    const modalText = (await page.locator('.mat-dialog-container, .modal, [role="dialog"], .swal2-popup, .toast-message').allTextContents().catch(() => [])).join(' ').toLowerCase();
+
+    const isConfirmed = (
+      btnText.includes('registered') ||
+      btnText.includes('applied') ||
+      modalText.includes('successfully registered') ||
+      modalText.includes('application submitted') ||
+      modalText.includes('thank you for applying')
     );
+
+    if (!isConfirmed) {
+      console.warn('[BotRunner:Unstop] Registration could not be confirmed via DOM state.');
+    }
+
+    return isConfirmed;
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
