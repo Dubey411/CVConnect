@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, ArrowLeft, Globe, UserCheck } from 'lucide-react';
+import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, ArrowLeft, Globe, Sliders } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
@@ -12,8 +12,8 @@ import Editor from './components/Editor';
 import LandingPage from './components/LandingPage';
 import History from './components/History';
 import Insights from './components/Insights';
-import ConnectPlatforms from './components/ConnectPlatforms';
 import PlatformAccounts from './components/PlatformAccounts';
+import AutoApplyControls from './components/AutoApplyControls';
 
 function Auth({ mode, setMode, onBack }) {
   const dispatch = useDispatch();
@@ -141,8 +141,8 @@ function Shell() {
     ['Workspace', Sparkles, 'workspace'],
     ['History', FileText, 'history'],
     ['Insights', BarChart3, 'insights'],
-    ['Accounts', UserCheck, 'accounts'],
     ['Connect Platforms', Globe, 'platforms'],
+    ['Auto-Apply Controls', Sliders, 'controls'],
   ];
 
   return (
@@ -207,12 +207,12 @@ function Shell() {
               <Insights />
             )}
 
-            {activeTab === 'accounts' && (
+            {activeTab === 'platforms' && (
               <PlatformAccounts />
             )}
 
-            {activeTab === 'platforms' && (
-              <ConnectPlatforms />
+            {activeTab === 'controls' && (
+              <AutoApplyControls />
             )}
 
             {activeTab === 'workspace' && (
