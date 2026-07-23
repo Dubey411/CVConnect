@@ -58,21 +58,27 @@ const PLATFORM_CONFIG = {
   },
 
   unstop: {
-    loginUrl: 'https://unstop.com',
+    loginUrl: 'https://unstop.com/auth/login',
     displayName: 'Unstop',
-    isLoggedIn: (url, page) => true, // validated via DOM check below
+    isLoggedIn: (url) => !url.includes('/auth/login') && !url.includes('/login'),
     profileSelector: '.profile-pic, .user_name, .user-profile-image',
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
-          const el = document.querySelector('.user_name, .user-profile-image, [class*="user_"]');
+          const el = document.querySelector('.user_name, .user-profile-image, [class*="user_"], .user-name');
           return el?.textContent?.trim() || null;
         });
       } catch { return null; }
     },
     loginCheck: async (page) => {
       try {
-        const el = await page.$('.eligible-nudge, .profile-pic, [class*="un-navbar"] .user');
+        // Check for access_token cookie
+        const cookies = await page.context().cookies('https://unstop.com');
+        const hasToken = cookies.some(c => c.name === 'access_token' && c.value && c.value.length > 20);
+        if (hasToken) return true;
+
+        // Fallback DOM check for logged in user header/badge
+        const el = await page.$('.profile-pic, [class*="user-profile"], .user_name, a[href*="/user/profile"]');
         return !!el;
       } catch { return false; }
     },
