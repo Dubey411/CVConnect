@@ -477,7 +477,7 @@ export default function PlatformAccounts() {
   }).length;
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>

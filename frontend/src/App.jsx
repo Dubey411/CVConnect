@@ -194,8 +194,8 @@ function Shell() {
           </div>
         </aside>
 
-        <main className="min-w-0 px-5 py-8 md:px-8 lg:px-12">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <main className="min-w-0 px-6 py-8 md:px-10 lg:px-14 flex justify-center">
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto">
             {activeTab === 'history' && (
               <History onLoadResume={(item) => {
                 dispatch(setResume(item));
