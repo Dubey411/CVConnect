@@ -183,21 +183,29 @@ const PLATFORM_CONFIG = {
         const page = pages[0];
         if (!page) return false;
         const url = page.url();
-        if (url.includes('login_input') || url.includes('/login') || isAuthOrOAuthUrl(url)) return false;
-        if (!url.includes('glassdoor.com')) return false;
+        if (url.includes('login_input') || url.includes('/login') || url.includes('/signup') || isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('glassdoor.')) return false;
 
-        const profileEl = await page.$('[data-test="user-account-menu"], [data-test="user-avatar"], #siteHeaderUserMenu, button[aria-label*="Profile"], a[href*="/member/myJobs"]');
+        const profileEl = await page.$('[data-test="user-account-menu"], [data-test="user-avatar"], [data-test="profile-dropdown"], #siteHeaderUserMenu, [class*="HeaderUserMenu"], button[aria-label*="Profile"], a[href*="/member/"], a[href*="/myJobs"]');
         if (profileEl) return true;
 
-        const cookies = await context.cookies('https://www.glassdoor.com');
-        const sess = cookies.find(c => (c.name === 'gdId' || c.name === 'AT' || c.name === 'GSESSIONID' || c.name === 'as_member') && c.value && c.value.length > 5);
-        return !!sess;
+        const cookies = await context.cookies();
+        const sess = cookies.find(c => c.domain.includes('glassdoor') && (
+          c.name === 'gdId' || c.name === 'AT' || c.name === 'GSESSIONID' || c.name === 'as_member' || c.name === 'JSESSIONID' || c.name === 'bs' || c.name === 'goc'
+        ) && c.value && c.value.length > 3);
+        if (sess) return true;
+
+        if ((url.includes('/member/') || url.includes('/Job/') || url.includes('/Overview/') || url.endsWith('glassdoor.com/') || url.endsWith('glassdoor.co.in/')) && !url.includes('login')) {
+          return true;
+        }
+
+        return false;
       } catch { return false; }
     },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
-          const el = document.querySelector('[data-test="user-avatar"], [data-test="user-name"]');
+          const el = document.querySelector('[data-test="user-avatar"], [data-test="user-name"], [class*="UserMenu"]');
           return el?.textContent?.trim() || null;
         });
       } catch { return null; }
