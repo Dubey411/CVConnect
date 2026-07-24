@@ -112,8 +112,16 @@ function Shell() {
   const { user } = useSelector(s => s.auth);
   const { resume, job, analysis, rewrite, status, error } = useSelector(s => s.workspace);
   const [sidebar, setSidebar] = useState(false);
-  const [activeTab, setActiveTab] = useState('workspace'); // 'workspace' | 'history' | 'insights' | 'platforms'
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('cvconnect_active_tab') || 'workspace';
+  });
   const busy = status === 'loading';
+
+  useEffect(() => {
+    if (activeTab) {
+      localStorage.setItem('cvconnect_active_tab', activeTab);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000');
