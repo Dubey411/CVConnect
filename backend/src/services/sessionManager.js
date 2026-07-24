@@ -20,20 +20,34 @@ import { prisma } from '../lib/prisma.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILES_ROOT = path.join(__dirname, '..', '..', 'profiles');
 
+const OAUTH_DOMAINS = ['google.com', 'accounts.google', 'appleid.apple', 'facebook.com', 'github.com', 'microsoftonline.com'];
+
+function isAuthOrOAuthUrl(url) {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  if (OAUTH_DOMAINS.some(d => lower.includes(d))) return true;
+  if (lower.includes('/login') || lower.includes('/auth') || lower.includes('/signin') || lower.includes('/sign_in') || lower.includes('/checkpoint') || lower.includes('/signup') || lower.includes('/oauth')) return true;
+  return false;
+}
+
 // ─── Platform definitions ─────────────────────────────────────────────────────
 
 const PLATFORM_CONFIG = {
   linkedin: {
     loginUrl: 'https://www.linkedin.com/login',
     displayName: 'LinkedIn',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/login') || url.includes('/checkpoint') || url.includes('/signup')) return false;
-        const cookies = await page.context().cookies('https://www.linkedin.com');
-        const hasCookie = cookies.some(c => c.name === 'li_at' && c.value && c.value.length > 10);
-        if (hasCookie) return true;
-        const profileEl = await page.$('.feed-identity-module, [data-control-name="identity_profile_photo"], #global-nav');
-        return !!profileEl;
+        if (pages.length > 1) return false; // Google/OAuth popup window is open
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('linkedin.com')) return false;
+
+        const cookies = await context.cookies('https://www.linkedin.com');
+        const liAt = cookies.find(c => c.name === 'li_at' && c.value && c.value.length > 10);
+        return !!liAt;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -49,14 +63,18 @@ const PLATFORM_CONFIG = {
   wellfound: {
     loginUrl: 'https://wellfound.com/login',
     displayName: 'Wellfound',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/login') || url.includes('/sign_in')) return false;
-        const cookies = await page.context().cookies('https://wellfound.com');
-        const hasCookie = cookies.some(c => (c.name.includes('_wellfound') || c.name.includes('remember_user_token')) && c.value && c.value.length > 5);
-        if (hasCookie) return true;
-        const profileEl = await page.$('[data-test="user-menu"], .userinfo__name');
-        return !!profileEl;
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('wellfound.com') && !url.includes('angel.co')) return false;
+
+        const cookies = await context.cookies('https://wellfound.com');
+        const token = cookies.find(c => (c.name.includes('_wellfound') || c.name.includes('remember_user_token')) && c.value && c.value.length > 5);
+        return !!token;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -72,14 +90,21 @@ const PLATFORM_CONFIG = {
   unstop: {
     loginUrl: 'https://unstop.com/auth/login',
     displayName: 'Unstop',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/auth/login') || url.includes('/login')) return false;
-        const cookies = await page.context().cookies('https://unstop.com');
-        const hasToken = cookies.some(c => (c.name === 'access_token' || c.name.includes('token') || c.name.includes('session')) && c.value && c.value.length > 20);
-        if (hasToken) return true;
-        const el = await page.$('.profile-pic, [class*="user-profile"], .user_name, a[href*="/user/profile"], .user-profile-image');
-        return !!el;
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('unstop.com')) return false;
+
+        const cookies = await context.cookies('https://unstop.com');
+        const token = cookies.find(c => (c.name === 'access_token' || c.name === 'token') && c.value && c.value.length > 20);
+        if (token) return true;
+
+        const profileEl = await page.$('.profile-pic, .user_name, a[href*="/user/profile"], .user-profile-image');
+        return !!profileEl;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -95,14 +120,18 @@ const PLATFORM_CONFIG = {
   internshala: {
     loginUrl: 'https://internshala.com/login/student',
     displayName: 'Internshala',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/login')) return false;
-        const cookies = await page.context().cookies('https://internshala.com');
-        const hasCookie = cookies.some(c => (c.name === 'PHPSESSID' || c.name.includes('student')) && c.value && c.value.length > 5);
-        if (hasCookie) return true;
-        const el = await page.$('.profile_container, .student-name, #profile_name');
-        return !!el;
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('internshala.com')) return false;
+
+        const cookies = await context.cookies('https://internshala.com');
+        const phpSess = cookies.find(c => c.name === 'PHPSESSID' && c.value && c.value.length > 5);
+        return !!phpSess;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -118,11 +147,18 @@ const PLATFORM_CONFIG = {
   indeed: {
     loginUrl: 'https://secure.indeed.com/auth',
     displayName: 'Indeed',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/auth') || url.includes('/login')) return false;
-        const cookies = await page.context().cookies('https://indeed.com');
-        return cookies.some(c => (c.name === 'CTK' || c.name.includes('indeed')) && c.value && c.value.length > 5);
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('indeed.com')) return false;
+
+        const cookies = await context.cookies('https://indeed.com');
+        const ctk = cookies.find(c => (c.name === 'CTK' || c.name.includes('indeed')) && c.value && c.value.length > 5);
+        return !!ctk;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -138,11 +174,18 @@ const PLATFORM_CONFIG = {
   glassdoor: {
     loginUrl: 'https://www.glassdoor.com/profile/login_input.htm',
     displayName: 'Glassdoor',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/login')) return false;
-        const cookies = await page.context().cookies('https://glassdoor.com');
-        return cookies.some(c => c.name.includes('SESSION') || c.name.includes('gd'));
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('glassdoor.com')) return false;
+
+        const cookies = await context.cookies('https://glassdoor.com');
+        const sess = cookies.find(c => c.name.includes('SESSION') || c.name.includes('gd'));
+        return !!sess;
       } catch { return false; }
     },
     accountExtract: async () => null,
@@ -151,11 +194,18 @@ const PLATFORM_CONFIG = {
   naukri: {
     loginUrl: 'https://www.naukri.com/nlogin/login',
     displayName: 'Naukri',
-    isLoggedIn: async (page, url) => {
+    isLoggedIn: async (context, pages) => {
       try {
-        if (url.includes('/login')) return false;
-        const cookies = await page.context().cookies('https://naukri.com');
-        return cookies.some(c => (c.name === 'nauk_at' || c.name.includes('naukri')) && c.value && c.value.length > 5);
+        if (pages.length > 1) return false;
+        const page = pages[0];
+        if (!page) return false;
+        const url = page.url();
+        if (isAuthOrOAuthUrl(url)) return false;
+        if (!url.includes('naukri.com')) return false;
+
+        const cookies = await context.cookies('https://naukri.com');
+        const naukAt = cookies.find(c => (c.name === 'nauk_at' || c.name.includes('naukri')) && c.value && c.value.length > 5);
+        return !!naukAt;
       } catch { return false; }
     },
     accountExtract: async () => null,
@@ -164,13 +214,11 @@ const PLATFORM_CONFIG = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Return the profile directory path for userId + platform */
 export function getProfilePath(userId, platform) {
   const safe = `${userId.replace(/[^a-zA-Z0-9_-]/g, '')}_${platform.replace(/[^a-z]/g, '')}`;
   return path.join(PROFILES_ROOT, safe);
 }
 
-/** Emit a session status event via Socket.IO if available */
 function emitStatus(io, userId, platform, status, message = '') {
   if (!io) return;
   io.to(userId).emit('session:status', { platform, status, message, ts: Date.now() });
@@ -180,12 +228,7 @@ function emitStatus(io, userId, platform, status, message = '') {
 
 /**
  * Launch a non-headless browser to the platform login page.
- * Poll until the user successfully logs in, then save the persistent profile.
- *
- * @param {string}  userId
- * @param {string}  platform   key from PLATFORM_CONFIG
- * @param {object}  io         Socket.IO server instance (optional)
- * @param {number}  timeout    max wait in ms (default: 10 minutes = 600,000 ms)
+ * Poll until the user completes login (including Google/OAuth popups).
  */
 export async function launchLoginSession(userId, platform, io, timeout = 600_000) {
   const cfg = PLATFORM_CONFIG[platform];
@@ -202,7 +245,7 @@ export async function launchLoginSession(userId, platform, io, timeout = 600_000
   });
 
   emitStatus(io, userId, platform, 'connecting',
-    `Opening ${cfg.displayName} login window — log in manually in the browser.`);
+    `Opening ${cfg.displayName} login window — log in with Email or Google in the browser.`);
 
   let browser = null;
   let userClosedManually = false;
@@ -220,8 +263,8 @@ export async function launchLoginSession(userId, platform, io, timeout = 600_000
 
     browser.on('close', () => { userClosedManually = true; });
 
-    const page = browser.pages()[0] || await browser.newPage();
-    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    const initialPage = browser.pages()[0] || await browser.newPage();
+    await initialPage.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
 
     const deadline = Date.now() + timeout;
     let loggedIn = false;
@@ -230,12 +273,12 @@ export async function launchLoginSession(userId, platform, io, timeout = 600_000
       await new Promise(r => setTimeout(r, 2000));
       if (userClosedManually) break;
 
-      const currentUrl = page.url();
-      loggedIn = await cfg.isLoggedIn(page, currentUrl).catch(() => false);
+      const pages = browser.pages();
+      loggedIn = await cfg.isLoggedIn(browser, pages).catch(() => false);
 
       if (loggedIn) break;
 
-      emitStatus(io, userId, platform, 'waiting', `Waiting for you to log in to ${cfg.displayName}…`);
+      emitStatus(io, userId, platform, 'waiting', `Waiting for ${cfg.displayName} login (Email or Google OAuth)…`);
     }
 
     if (!loggedIn) {
@@ -248,7 +291,8 @@ export async function launchLoginSession(userId, platform, io, timeout = 600_000
       return { success: false, reason: userClosedManually ? 'user_closed' : 'timeout' };
     }
 
-    const accountEmail = await cfg.accountExtract(page).catch(() => null);
+    const mainPage = browser.pages()[0] || initialPage;
+    const accountEmail = await cfg.accountExtract(mainPage).catch(() => null);
 
     await prisma.browserSession.update({
       where:  { userId_platform: { userId, platform } },
@@ -264,7 +308,6 @@ export async function launchLoginSession(userId, platform, io, timeout = 600_000
     emitStatus(io, userId, platform, 'connected',
       `${cfg.displayName} connected successfully${accountEmail ? ` as ${accountEmail}` : ''}!`);
 
-    // Give a 2 second grace period before closing context so cookies flush cleanly
     await new Promise(r => setTimeout(r, 2000));
 
     return { success: true, accountEmail };
@@ -303,10 +346,8 @@ export async function validateSession(userId, platform, io) {
       args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
     });
 
-    const page = browser.pages()[0] || await browser.newPage();
-    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' });
-
-    const loggedIn = await cfg.isLoggedIn(page, page.url());
+    const pages = browser.pages();
+    const loggedIn = await cfg.isLoggedIn(browser, pages);
 
     if (!loggedIn) {
       await prisma.browserSession.update({
