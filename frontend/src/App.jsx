@@ -139,10 +139,10 @@ function Shell() {
 
   const nav = [
     ['Workspace', Sparkles, 'workspace'],
-    ['History', FileText, 'history'],
+    ['Connect Platform', Globe, 'platforms'],
+    ['Auto Apply', Sliders, 'controls'],
     ['Insights', BarChart3, 'insights'],
-    ['Connect Platforms', Globe, 'platforms'],
-    ['Auto-Apply Controls', Sliders, 'controls'],
+    ['History', FileText, 'history'],
   ];
 
   return (
