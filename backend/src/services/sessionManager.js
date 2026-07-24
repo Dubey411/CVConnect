@@ -284,12 +284,28 @@ export async function launchLoginSession(userId, platform, io, timeout = 1_800_0
   try {
     browser = await chromium.launchPersistentContext(profilePath, {
       headless: false,
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      viewport: { width: 1280, height: 800 },
+      ignoreHTTPSErrors: true,
       args: [
         '--no-sandbox',
+        '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
         '--disable-infobars',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--use-fake-ui-for-media-stream',
+        '--disable-features=IsolateOrigins,site-per-process',
       ],
-      viewport: { width: 1280, height: 800 },
+    });
+
+    await browser.addInitScript(() => {
+      try {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+        window.chrome = { runtime: {}, loadTimes: function() {}, csi: function() {}, app: {} };
+      } catch {}
     });
 
     browser.on('close', () => { userClosedManually = true; });
@@ -374,7 +390,24 @@ export async function validateSession(userId, platform, io) {
   try {
     browser = await chromium.launchPersistentContext(session.profilePath, {
       headless: true,
-      args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+      ],
+    });
+
+    await browser.addInitScript(() => {
+      try {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+        window.chrome = { runtime: {}, loadTimes: function() {}, csi: function() {}, app: {} };
+      } catch {}
     });
 
     const pages = browser.pages();
