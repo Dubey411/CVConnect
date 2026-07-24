@@ -9,3 +9,6 @@ __pycache__/
 postgres_data/
 test_*
 *.mjs
+profiles/
+backend/profiles/
+artifacts/
