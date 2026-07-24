@@ -183,11 +183,14 @@ const PLATFORM_CONFIG = {
         const page = pages[0];
         if (!page) return false;
         const url = page.url();
-        if (isAuthOrOAuthUrl(url)) return false;
+        if (url.includes('/login') || url.includes('/profile/') || isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('glassdoor.com')) return false;
 
-        const cookies = await context.cookies('https://glassdoor.com');
-        const sess = cookies.find(c => c.name.includes('SESSION') || c.name.includes('gd'));
+        const profileEl = await page.$('[data-test="user-account-menu"], [class*="profile-menu"], a[href*="/member/"]');
+        if (profileEl) return true;
+
+        const cookies = await context.cookies('https://www.glassdoor.com');
+        const sess = cookies.find(c => (c.name === 'gdId' || c.name === 'AT' || c.name === 'GSESSIONID') && c.value && c.value.length > 5);
         return !!sess;
       } catch { return false; }
     },
@@ -203,15 +206,25 @@ const PLATFORM_CONFIG = {
         const page = pages[0];
         if (!page) return false;
         const url = page.url();
-        if (isAuthOrOAuthUrl(url)) return false;
+        if (url.includes('/nlogin') || url.includes('/login') || url.includes('/registration') || isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('naukri.com')) return false;
 
-        const cookies = await context.cookies('https://naukri.com');
-        const naukAt = cookies.find(c => (c.name === 'nauk_at' || c.name.includes('naukri')) && c.value && c.value.length > 5);
+        const profileEl = await page.$('.nI-gNb-drawer__icon, .nI-gNb-user-name, [class*="profile-drawer"], a[href*="/mnjuser/profile"]');
+        if (profileEl) return true;
+
+        const cookies = await context.cookies('https://www.naukri.com');
+        const naukAt = cookies.find(c => (c.name === 'nauk_at' || c.name === 'nauk_user') && c.value && c.value.length > 15);
         return !!naukAt;
       } catch { return false; }
     },
-    accountExtract: async () => null,
+    accountExtract: async (page) => {
+      try {
+        return await page.evaluate(() => {
+          const el = document.querySelector('.nI-gNb-user-name, [class*="user-name"]');
+          return el?.textContent?.trim() || null;
+        });
+      } catch { return null; }
+    },
   },
 };
 
