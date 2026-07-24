@@ -153,18 +153,21 @@ const PLATFORM_CONFIG = {
         const page = pages[0];
         if (!page) return false;
         const url = page.url();
-        if (isAuthOrOAuthUrl(url)) return false;
+        if (url.includes('/auth') || url.includes('/login') || url.includes('/account/') || isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('indeed.com')) return false;
 
+        const userMenu = await page.$('[data-gnav-element-name="user-menu"], [data-testid="gnav-user-button"], .gnav-UserMenu-button, a[href*="/account/myjobs"], a[aria-label*="Profile"]');
+        if (userMenu) return true;
+
         const cookies = await context.cookies('https://indeed.com');
-        const ctk = cookies.find(c => (c.name === 'CTK' || c.name.includes('indeed')) && c.value && c.value.length > 5);
-        return !!ctk;
+        const hasUserSession = cookies.some(c => (c.name === 'sock' || c.name === 'PPID' || c.name === 'SURF') && c.value && c.value.length > 5);
+        return hasUserSession;
       } catch { return false; }
     },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
-          const el = document.querySelector('[data-testid="gnav-user-email"]');
+          const el = document.querySelector('[data-testid="gnav-user-email"], [data-gnav-element-name="user-email"]');
           return el?.textContent?.trim() || null;
         });
       } catch { return null; }
