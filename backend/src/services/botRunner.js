@@ -128,11 +128,23 @@ export class BotRunner {
 
     try {
       // 1. Load all required data
-      const [application, user, resume] = await Promise.all([
+      const [application, user] = await Promise.all([
         prisma.jobApplication.findUnique({ where: { id: applicationId }, include: { job: true } }),
         prisma.user.findUnique({ where: { id: userId } }),
-        resumeId ? prisma.resume.findUnique({ where: { id: resumeId } }) : Promise.resolve(null),
       ]);
+
+      let resume = null;
+      if (resumeId) {
+        resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+      } else {
+        const rule = await prisma.automationRule.findUnique({ where: { userId_platform: { userId, platform } } });
+        if (rule?.resumeId) {
+          resume = await prisma.resume.findUnique({ where: { id: rule.resumeId } });
+        }
+        if (!resume) {
+          resume = await prisma.resume.findFirst({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+        }
+      }
 
       const destination = targetUrl || application?.job?.description?.match(/https?:\/\/[^\s]+/)?.[0];
       if (!destination) throw new Error('No target URL provided. Add a job URL before triggering auto-apply.');

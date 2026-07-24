@@ -40,8 +40,34 @@ router.post('/applications/apply', [body('platform').trim().isString(), body('re
   new BotRunner(io).runApplication({ userId: req.user.sub, applicationId: application.id, jobId, platform, resumeId, targetUrl, useBrowserSession: hasSession }).catch(err => console.error('[BotRunner Async Error]:', err.message));
   res.status(202).json({ application, message: `Automated application to ${platform} initiated.` }); } catch (e) { next(e); } });
 router.post('/jobs/scrape', [body('url').trim().isURL()], validate, async (req, res, next) => { try { const jobData = await new JobScraper().scrape(req.body.url); res.json({ job: jobData }); } catch (e) { if (e.code === 'SITE_PROTECTED' || e.status === 400) { return res.status(400).json({ error: { code: e.code || 'JOB_SCRAPE_FAILED', message: e.message, guessedTitle: e.guessedTitle || '', guessedCompany: e.guessedCompany || '', isProtected: Boolean(e.code === 'SITE_PROTECTED') } }); } next(e); } });
-router.post('/resumes/upload', upload.single('resume'), async (req, res, next) => { try { if (!req.file) return res.status(400).json({ error: { code: 'FILE_REQUIRED', message: 'Choose a resume to upload.' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { stage: 'parsing', percent: 35 }); const [original, sourceUrl] = await Promise.all([new ResumeParser().parse(req.file), storeResumeSource(req.file, req.user.sub)]); const resume = await prisma.resume.create({ data: { userId: req.user.sub, original, sourceUrl, status: 'completed' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'complete', percent: 100 }); res.status(201).json({ resume }); } catch (e) { next(e); } });
-router.get('/resumes', async (req, res, next) => { try { const page = Math.max(1, Number(req.query.page) || 1); const take = Math.min(20, Math.max(1, Number(req.query.limit) || 20)); const where = { userId: req.user.sub }; const [items, total] = await prisma.$transaction([prisma.resume.findMany({ where, orderBy: { updatedAt: 'desc' }, skip: (page - 1) * take, take, include: { job: { select: { title: true, company: true } } } }), prisma.resume.count({ where })]); res.json({ items, pagination: { page, limit: take, total, pages: Math.ceil(total / take) } }); } catch (e) { next(e); } });
+router.post('/resumes/upload', upload.single('resume'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: { code: 'FILE_REQUIRED', message: 'Choose a resume to upload.' } });
+    const category = req.body.category || 'General';
+    const title = req.body.title || req.file.originalname || 'Resume.pdf';
+    req.app.get('io')?.to(req.user.sub).emit('resume:progress', { stage: 'parsing', percent: 35 });
+    const [original, sourceUrl] = await Promise.all([new ResumeParser().parse(req.file), storeResumeSource(req.file, req.user.sub)]);
+    const resume = await prisma.resume.create({ data: { userId: req.user.sub, category, title, original, sourceUrl, status: 'completed' } });
+    req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'complete', percent: 100 });
+    res.status(201).json({ resume });
+  } catch (e) { next(e); }
+});
+
+router.patch('/resumes/:id/category', [param('id').isString(), body('category').isString(), body('title').optional().isString()], validate, async (req, res, next) => {
+  try {
+    const resume = await ownedResume(req.params.id, req.user.sub);
+    const updated = await prisma.resume.update({
+      where: { id: resume.id },
+      data: {
+        category: req.body.category,
+        ...(req.body.title && { title: req.body.title })
+      }
+    });
+    res.json({ resume: updated, message: `Resume category updated to ${req.body.category}.` });
+  } catch (e) { next(e); }
+});
+
+router.get('/resumes', async (req, res, next) => { try { const page = Math.max(1, Number(req.query.page) || 1); const take = Math.min(20, Math.max(1, Number(req.query.limit) || 20)); const category = req.query.category ? String(req.query.category) : undefined; const where = { userId: req.user.sub, ...(category && { category }) }; const [items, total] = await prisma.$transaction([prisma.resume.findMany({ where, orderBy: { updatedAt: 'desc' }, skip: (page - 1) * take, take, include: { job: { select: { title: true, company: true } } } }), prisma.resume.count({ where })]); res.json({ items, pagination: { page, limit: take, total, pages: Math.ceil(total / take) } }); } catch (e) { next(e); } });
 router.get('/resumes/:id', [param('id').isString()], validate, async (req, res, next) => { try { res.json({ resume: await ownedResume(req.params.id, req.user.sub) }); } catch (e) { next(e); } });
 router.delete('/resumes/:id', [param('id').isString()], validate, async (req, res, next) => { try { const resume = await ownedResume(req.params.id, req.user.sub); await prisma.resume.delete({ where: { id: resume.id } }); res.json({ success: true, id: resume.id, message: 'Resume deleted successfully.' }); } catch (e) { next(e); } });
 router.post('/jobs/analyze', [body('title').trim().isLength({ min: 2, max: 140 }), body('description').trim().isLength({ min: 20, max: 50000 }), body('company').optional().trim().isLength({ max: 140 })], validate, async (req, res, next) => { try { const { title, description, company } = req.body; const nlp = await cached(`job:${Buffer.from(description).toString('base64').slice(0, 80)}`, 86400, () => analyzeText(description)); const requirements = { responsibilities: description.split(/[.!?]\s/).filter(s => /responsib|experience|build|lead|deliver/i.test(s)).slice(0, 8), mustHave: nlp.skills.slice(0, Math.ceil(nlp.skills.length * .65)), niceToHave: nlp.skills.slice(Math.ceil(nlp.skills.length * .65)) }; const job = await prisma.job.create({ data: { userId: req.user.sub, title, company, description, skills: nlp.skills, requirements } }); res.status(201).json({ job }); } catch (e) { next(e); } });
@@ -273,6 +299,7 @@ router.get('/automation/rules', async (req, res, next) => {
       platform,
       dailyLimit: rulesMap[platform]?.dailyLimit ?? 25,
       targetRole: rulesMap[platform]?.targetRole ?? 'Data Engineer',
+      resumeId:   rulesMap[platform]?.resumeId ?? null,
       isEnabled:  rulesMap[platform]?.isEnabled ?? true,
       appliedToday: todayMap[platform] || 0,
       totalApplied: totalMap[platform] || 0,
@@ -291,22 +318,24 @@ router.get('/automation/rules', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PUT /automation/rules/:platform — update daily limit, role & status for a platform
+// PUT /automation/rules/:platform — update daily limit, role, assigned resume & status
 router.put('/automation/rules/:platform', [
   param('platform').isString(),
   body('dailyLimit').optional().isInt({ min: 1, max: 500 }),
   body('targetRole').optional().trim().isString().isLength({ min: 2, max: 100 }),
+  body('resumeId').optional().nullable().isString(),
   body('isEnabled').optional().isBoolean(),
 ], validate, async (req, res, next) => {
   try {
     const { platform } = req.params;
-    const { dailyLimit, targetRole, isEnabled } = req.body;
+    const { dailyLimit, targetRole, resumeId, isEnabled } = req.body;
 
     const rule = await prisma.automationRule.upsert({
       where: { userId_platform: { userId: req.user.sub, platform } },
       update: {
         ...(dailyLimit !== undefined && { dailyLimit }),
         ...(targetRole !== undefined && { targetRole }),
+        ...(resumeId !== undefined && { resumeId }),
         ...(isEnabled !== undefined && { isEnabled }),
       },
       create: {
@@ -314,6 +343,7 @@ router.put('/automation/rules/:platform', [
         platform,
         dailyLimit: dailyLimit ?? 25,
         targetRole: targetRole ?? 'Data Engineer',
+        resumeId: resumeId ?? null,
         isEnabled: isEnabled ?? true,
       },
     });

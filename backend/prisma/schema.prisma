@@ -27,6 +27,8 @@ model Resume {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String   @default("General") // "Full Stack", "Data", "ML", "General"
+  title       String?  // e.g. "FullStack_Resume.pdf"
   original    Json
   optimized   Json?
   sourceUrl   String?
@@ -43,6 +45,7 @@ model Resume {
   updatedAt   DateTime @updatedAt
 
   @@index([userId, createdAt])
+  @@index([userId, category])
   @@index([matchScore])
 }
 
@@ -124,6 +127,7 @@ model AutomationRule {
   platform     String
   dailyLimit   Int      @default(25)
   targetRole   String   @default("Data Engineer")
+  resumeId     String?  // Mapped category resume for auto-apply
   isEnabled    Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -131,3 +135,4 @@ model AutomationRule {
   @@unique([userId, platform])
   @@index([userId])
 }
+
