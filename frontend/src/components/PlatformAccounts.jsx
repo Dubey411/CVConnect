@@ -338,7 +338,7 @@ function PlatformCard({ platform, browserSession, tokenConnection, onRefresh }) 
     setStatusMsg(`Opening ${meta.name} login window on your computer…`);
     try {
       await request({ method: 'post', url: `/sessions/${platform}/launch` });
-      setStatusMsg(`${meta.name} browser opened. Log in and the window will close automatically.`);
+      setStatusMsg(`${meta.name} browser opened! Complete your login in the window (waits 10 mins).`);
     } catch (err) {
       setIsConnecting(false);
       setStatusMsg(`Failed: ${err.response?.data?.error?.message || err.message}`);
