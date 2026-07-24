@@ -26,15 +26,20 @@ const PLATFORM_CONFIG = {
   linkedin: {
     loginUrl: 'https://www.linkedin.com/login',
     displayName: 'LinkedIn',
-    /** Returns true once login is confirmed (URL changes away from /login) */
-    isLoggedIn: (url) => !url.includes('/login') && !url.includes('/checkpoint') &&
-      (url.includes('/feed') || url.includes('/jobs') || url.includes('/mynetwork') || url.includes('linkedin.com/')),
-    /** CSS selector to extract logged-in email/name for display */
-    profileSelector: '[data-control-name="identity_profile_photo"]',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/login') || url.includes('/checkpoint') || url.includes('/signup')) return false;
+        const cookies = await page.context().cookies('https://www.linkedin.com');
+        const hasCookie = cookies.some(c => c.name === 'li_at' && c.value && c.value.length > 10);
+        if (hasCookie) return true;
+        const profileEl = await page.$('.feed-identity-module, [data-control-name="identity_profile_photo"], #global-nav');
+        return !!profileEl;
+      } catch { return false; }
+    },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
-          const el = document.querySelector('.feed-identity-module__actor-meta .t-R, .profile-nav-item__title');
+          const el = document.querySelector('.feed-identity-module__actor-meta .t-R, .profile-nav-item__title, .nav-settings__member-name');
           return el?.textContent?.trim() || null;
         });
       } catch { return null; }
@@ -44,9 +49,16 @@ const PLATFORM_CONFIG = {
   wellfound: {
     loginUrl: 'https://wellfound.com/login',
     displayName: 'Wellfound',
-    isLoggedIn: (url) => !url.includes('/login') && !url.includes('/users/sign_in') &&
-      (url.includes('wellfound.com') || url.includes('angel.co')),
-    profileSelector: '[data-test="user-menu"]',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/login') || url.includes('/sign_in')) return false;
+        const cookies = await page.context().cookies('https://wellfound.com');
+        const hasCookie = cookies.some(c => (c.name.includes('_wellfound') || c.name.includes('remember_user_token')) && c.value && c.value.length > 5);
+        if (hasCookie) return true;
+        const profileEl = await page.$('[data-test="user-menu"], .userinfo__name');
+        return !!profileEl;
+      } catch { return false; }
+    },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
@@ -60,8 +72,16 @@ const PLATFORM_CONFIG = {
   unstop: {
     loginUrl: 'https://unstop.com/auth/login',
     displayName: 'Unstop',
-    isLoggedIn: (url) => !url.includes('/auth/login') && !url.includes('/login'),
-    profileSelector: '.profile-pic, .user_name, .user-profile-image',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/auth/login') || url.includes('/login')) return false;
+        const cookies = await page.context().cookies('https://unstop.com');
+        const hasToken = cookies.some(c => (c.name === 'access_token' || c.name.includes('token') || c.name.includes('session')) && c.value && c.value.length > 20);
+        if (hasToken) return true;
+        const el = await page.$('.profile-pic, [class*="user-profile"], .user_name, a[href*="/user/profile"], .user-profile-image');
+        return !!el;
+      } catch { return false; }
+    },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
@@ -70,25 +90,21 @@ const PLATFORM_CONFIG = {
         });
       } catch { return null; }
     },
-    loginCheck: async (page) => {
-      try {
-        // Check for access_token cookie
-        const cookies = await page.context().cookies('https://unstop.com');
-        const hasToken = cookies.some(c => c.name === 'access_token' && c.value && c.value.length > 20);
-        if (hasToken) return true;
-
-        // Fallback DOM check for logged in user header/badge
-        const el = await page.$('.profile-pic, [class*="user-profile"], .user_name, a[href*="/user/profile"]');
-        return !!el;
-      } catch { return false; }
-    },
   },
 
   internshala: {
     loginUrl: 'https://internshala.com/login/student',
     displayName: 'Internshala',
-    isLoggedIn: (url) => !url.includes('/login') && url.includes('internshala.com'),
-    profileSelector: '.profile_container, .student-name',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/login')) return false;
+        const cookies = await page.context().cookies('https://internshala.com');
+        const hasCookie = cookies.some(c => (c.name === 'PHPSESSID' || c.name.includes('student')) && c.value && c.value.length > 5);
+        if (hasCookie) return true;
+        const el = await page.$('.profile_container, .student-name, #profile_name');
+        return !!el;
+      } catch { return false; }
+    },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
@@ -102,8 +118,13 @@ const PLATFORM_CONFIG = {
   indeed: {
     loginUrl: 'https://secure.indeed.com/auth',
     displayName: 'Indeed',
-    isLoggedIn: (url) => !url.includes('/auth') && !url.includes('/login') && url.includes('indeed.com'),
-    profileSelector: '[data-testid="gnav-user-button"]',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/auth') || url.includes('/login')) return false;
+        const cookies = await page.context().cookies('https://indeed.com');
+        return cookies.some(c => (c.name === 'CTK' || c.name.includes('indeed')) && c.value && c.value.length > 5);
+      } catch { return false; }
+    },
     accountExtract: async (page) => {
       try {
         return await page.evaluate(() => {
@@ -117,16 +138,26 @@ const PLATFORM_CONFIG = {
   glassdoor: {
     loginUrl: 'https://www.glassdoor.com/profile/login_input.htm',
     displayName: 'Glassdoor',
-    isLoggedIn: (url) => !url.includes('/login') && url.includes('glassdoor.com'),
-    profileSelector: '[data-test="user-account-menu"]',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/login')) return false;
+        const cookies = await page.context().cookies('https://glassdoor.com');
+        return cookies.some(c => c.name.includes('SESSION') || c.name.includes('gd'));
+      } catch { return false; }
+    },
     accountExtract: async () => null,
   },
 
   naukri: {
     loginUrl: 'https://www.naukri.com/nlogin/login',
     displayName: 'Naukri',
-    isLoggedIn: (url) => !url.includes('/login') && url.includes('naukri.com'),
-    profileSelector: '.nI-gNb-drawer__icon',
+    isLoggedIn: async (page, url) => {
+      try {
+        if (url.includes('/login')) return false;
+        const cookies = await page.context().cookies('https://naukri.com');
+        return cookies.some(c => (c.name === 'nauk_at' || c.name.includes('naukri')) && c.value && c.value.length > 5);
+      } catch { return false; }
+    },
     accountExtract: async () => null,
   },
 };
@@ -135,7 +166,6 @@ const PLATFORM_CONFIG = {
 
 /** Return the profile directory path for userId + platform */
 export function getProfilePath(userId, platform) {
-  // Sanitize so it can't escape the profiles dir
   const safe = `${userId.replace(/[^a-zA-Z0-9_-]/g, '')}_${platform.replace(/[^a-z]/g, '')}`;
   return path.join(PROFILES_ROOT, safe);
 }
@@ -151,14 +181,13 @@ function emitStatus(io, userId, platform, status, message = '') {
 /**
  * Launch a non-headless browser to the platform login page.
  * Poll until the user successfully logs in, then save the persistent profile.
- * Emits `session:status` events via Socket.IO throughout.
  *
  * @param {string}  userId
  * @param {string}  platform   key from PLATFORM_CONFIG
  * @param {object}  io         Socket.IO server instance (optional)
- * @param {number}  timeout    max wait in ms for the user to finish logging in (default: 3 min)
+ * @param {number}  timeout    max wait in ms (default: 10 minutes = 600,000 ms)
  */
-export async function launchLoginSession(userId, platform, io, timeout = 180_000) {
+export async function launchLoginSession(userId, platform, io, timeout = 600_000) {
   const cfg = PLATFORM_CONFIG[platform];
   if (!cfg) throw new Error(`Unknown platform: ${platform}`);
 
@@ -166,7 +195,6 @@ export async function launchLoginSession(userId, platform, io, timeout = 180_000
   await fs.mkdir(profilePath, { recursive: true });
   await fs.mkdir(PROFILES_ROOT, { recursive: true });
 
-  // Mark as connecting in DB
   await prisma.browserSession.upsert({
     where:  { userId_platform: { userId, platform } },
     create: { userId, platform, profilePath, status: 'connecting' },
@@ -174,9 +202,11 @@ export async function launchLoginSession(userId, platform, io, timeout = 180_000
   });
 
   emitStatus(io, userId, platform, 'connecting',
-    `Opening ${cfg.displayName} login page — log in manually in the browser window.`);
+    `Opening ${cfg.displayName} login window — log in manually in the browser.`);
 
   let browser = null;
+  let userClosedManually = false;
+
   try {
     browser = await chromium.launchPersistentContext(profilePath, {
       headless: false,
@@ -188,40 +218,36 @@ export async function launchLoginSession(userId, platform, io, timeout = 180_000
       viewport: { width: 1280, height: 800 },
     });
 
+    browser.on('close', () => { userClosedManually = true; });
+
     const page = browser.pages()[0] || await browser.newPage();
-    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' });
+    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
 
     const deadline = Date.now() + timeout;
     let loggedIn = false;
 
-    while (Date.now() < deadline) {
-      await page.waitForTimeout(1500);
+    while (Date.now() < deadline && !userClosedManually) {
+      await new Promise(r => setTimeout(r, 2000));
+      if (userClosedManually) break;
+
       const currentUrl = page.url();
+      loggedIn = await cfg.isLoggedIn(page, currentUrl).catch(() => false);
 
-      // Check URL-based login detection
-      if (cfg.isLoggedIn(currentUrl)) {
-        // Some platforms need an extra DOM check
-        if (cfg.loginCheck) {
-          loggedIn = await cfg.loginCheck(page).catch(() => false);
-        } else {
-          loggedIn = true;
-        }
-        if (loggedIn) break;
-      }
+      if (loggedIn) break;
 
-      emitStatus(io, userId, platform, 'waiting', `Waiting for ${cfg.displayName} login…`);
+      emitStatus(io, userId, platform, 'waiting', `Waiting for you to log in to ${cfg.displayName}…`);
     }
 
     if (!loggedIn) {
       await prisma.browserSession.update({
         where: { userId_platform: { userId, platform } },
-        data: { status: 'failed' },
+        data: { status: userClosedManually ? 'pending' : 'failed' },
       });
-      emitStatus(io, userId, platform, 'failed', 'Login timed out. Please try again.');
-      return { success: false, reason: 'timeout' };
+      emitStatus(io, userId, platform, userClosedManually ? 'pending' : 'failed',
+        userClosedManually ? 'Browser closed.' : 'Login timed out. Please try again.');
+      return { success: false, reason: userClosedManually ? 'user_closed' : 'timeout' };
     }
 
-    // Try to capture account email/name
     const accountEmail = await cfg.accountExtract(page).catch(() => null);
 
     await prisma.browserSession.update({
@@ -236,9 +262,20 @@ export async function launchLoginSession(userId, platform, io, timeout = 180_000
     });
 
     emitStatus(io, userId, platform, 'connected',
-      `${cfg.displayName} connected${accountEmail ? ` as ${accountEmail}` : ''}!`);
+      `${cfg.displayName} connected successfully${accountEmail ? ` as ${accountEmail}` : ''}!`);
+
+    // Give a 2 second grace period before closing context so cookies flush cleanly
+    await new Promise(r => setTimeout(r, 2000));
 
     return { success: true, accountEmail };
+  } catch (err) {
+    console.error(`[sessionManager] Error in launchLoginSession for ${platform}:`, err.message);
+    await prisma.browserSession.update({
+      where: { userId_platform: { userId, platform } },
+      data: { status: 'failed' },
+    }).catch(() => {});
+    emitStatus(io, userId, platform, 'failed', err.message);
+    return { success: false, reason: err.message };
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
@@ -246,79 +283,62 @@ export async function launchLoginSession(userId, platform, io, timeout = 180_000
 
 /**
  * Open the saved profile in headless mode and verify the user is still logged in.
- * Updates DB status to 'expired' if session has been invalidated.
  */
 export async function validateSession(userId, platform, io) {
   const cfg = PLATFORM_CONFIG[platform];
-  if (!cfg) return { valid: false };
+  if (!cfg) return { valid: false, reason: 'Unknown platform' };
 
   const session = await prisma.browserSession.findUnique({
     where: { userId_platform: { userId, platform } },
   });
 
-  if (!session || session.status === 'pending') return { valid: false, reason: 'not_connected' };
-
-  const profilePath = session.profilePath;
-
-  // Check dir still exists
-  const dirExists = await fs.access(profilePath).then(() => true).catch(() => false);
-  if (!dirExists) {
-    await prisma.browserSession.update({
-      where: { userId_platform: { userId, platform } },
-      data: { status: 'failed' },
-    });
-    return { valid: false, reason: 'profile_missing' };
+  if (!session || session.status !== 'connected') {
+    return { valid: false, reason: 'No active session' };
   }
 
   let browser = null;
   try {
-    browser = await chromium.launchPersistentContext(profilePath, { headless: true });
+    browser = await chromium.launchPersistentContext(session.profilePath, {
+      headless: true,
+      args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
+    });
+
     const page = browser.pages()[0] || await browser.newPage();
+    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded' });
 
-    await page.goto(cfg.loginUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForTimeout(2000);
+    const loggedIn = await cfg.isLoggedIn(page, page.url());
 
-    const currentUrl = page.url();
-    let valid = cfg.isLoggedIn(currentUrl);
-    if (valid && cfg.loginCheck) {
-      valid = await cfg.loginCheck(page).catch(() => false);
-    }
-
-    if (!valid) {
+    if (!loggedIn) {
       await prisma.browserSession.update({
-        where: { userId_platform: { userId, platform } },
-        data: { status: 'expired' },
+        where: { id: session.id },
+        data:  { status: 'expired' },
       });
-      emitStatus(io, userId, platform, 'expired', `${cfg.displayName} session expired. Please reconnect.`);
-      return { valid: false, reason: 'session_expired' };
+      emitStatus(io, userId, platform, 'expired', 'Session expired. Please reconnect.');
+      return { valid: false, reason: 'Session expired' };
     }
 
     await prisma.browserSession.update({
-      where: { userId_platform: { userId, platform } },
-      data: { status: 'connected', lastUsedAt: new Date() },
+      where: { id: session.id },
+      data:  { lastUsedAt: new Date() },
     });
 
     return { valid: true };
+  } catch (err) {
+    return { valid: false, reason: err.message };
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
 }
 
 /**
- * Delete the persisted browser profile and remove the DB record.
+ * Disconnect a browser session: delete profile files from disk + update DB.
  */
 export async function deleteSession(userId, platform) {
-  const session = await prisma.browserSession.findUnique({
-    where: { userId_platform: { userId, platform } },
-  });
-
-  if (session?.profilePath) {
-    await fs.rm(session.profilePath, { recursive: true, force: true }).catch(() => {});
-  }
-
+  const profilePath = getProfilePath(userId, platform);
+  await fs.rm(profilePath, { recursive: true, force: true }).catch(() => {});
   await prisma.browserSession.deleteMany({
     where: { userId, platform },
-  });
+  }).catch(() => {});
 }
 
 /**
@@ -327,18 +347,17 @@ export async function deleteSession(userId, platform) {
 export async function getSessions(userId) {
   return prisma.browserSession.findMany({
     where: { userId },
-    orderBy: { platform: 'asc' },
+    select: {
+      platform:     true,
+      status:       true,
+      accountEmail: true,
+      connectedAt:  true,
+      lastUsedAt:   true,
+    },
   });
 }
 
-/**
- * Get all supported platforms with their display info.
- */
+/** List supported platform keys */
 export function getSupportedPlatforms() {
-  return Object.entries(PLATFORM_CONFIG).map(([key, cfg]) => ({
-    key,
-    displayName: cfg.displayName,
-  }));
+  return Object.keys(PLATFORM_CONFIG);
 }
-
-export { PLATFORM_CONFIG };
