@@ -24,7 +24,50 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const validate = (req, res, next) => { const e = validationResult(req); return e.isEmpty() ? next() : res.status(422).json({ error: { code: 'VALIDATION_ERROR', details: e.array() } }); };
 const ownedResume = async (id, userId) => { const resume = await prisma.resume.findFirst({ where: { id, userId }, include: { job: true } }); if (!resume) { const err = new Error('Resume not found.'); err.status = 404; throw err; } return resume; };
 router.use(authenticate);
-router.get('/applications', async (req, res, next) => { try { const applications = await prisma.jobApplication.findMany({ where: { userId: req.user.sub }, orderBy: { createdAt: 'desc' }, take: 50, include: { job: { select: { title: true, company: true } } } }); res.json({ applications }); } catch (e) { next(e); } });
+router.get('/applications', async (req, res, next) => {
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const [applications, todayCount, statusGroups, platformGroups] = await Promise.all([
+      prisma.jobApplication.findMany({
+        where: { userId: req.user.sub },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        include: { job: { select: { title: true, company: true, skills: true } } }
+      }),
+      prisma.jobApplication.count({
+        where: { userId: req.user.sub, createdAt: { gte: startOfToday } }
+      }),
+      prisma.jobApplication.groupBy({
+        by: ['status'],
+        where: { userId: req.user.sub },
+        _count: { id: true }
+      }),
+      prisma.jobApplication.groupBy({
+        by: ['platform'],
+        where: { userId: req.user.sub },
+        _count: { id: true }
+      })
+    ]);
+
+    const statusMap = Object.fromEntries(statusGroups.map(g => [g.status, g._count.id]));
+    const platformMap = Object.fromEntries(platformGroups.map(g => [g.platform, g._count.id]));
+
+    res.json({
+      applications,
+      summary: {
+        total: applications.length,
+        todayCount,
+        submitted: statusMap['submitted'] || 0,
+        failed: statusMap['failed'] || 0,
+        applying: statusMap['applying'] || 0,
+        pending: statusMap['pending'] || 0,
+        platforms: platformMap
+      }
+    });
+  } catch (e) { next(e); }
+});
 router.post('/applications/apply', [body('platform').trim().isString(), body('resumeId').isString(), body('jobId').optional().isString(), body('targetUrl').optional().isString()], validate, async (req, res, next) => { try { const { platform, resumeId, jobId, targetUrl } = req.body;
   if (!targetUrl) return res.status(400).json({ error: { code: 'URL_REQUIRED', message: 'No target URL provided. Add a job URL before triggering auto-apply.' } });
   // Check browser session first, then fall back to token connection
