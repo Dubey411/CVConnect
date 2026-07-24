@@ -139,7 +139,7 @@ function Shell() {
 
   const nav = [
     ['Workspace', Sparkles, 'workspace'],
-    ['Connect Platform', Globe, 'platforms'],
+    ['Platforms', Globe, 'platforms'],
     ['Auto Apply', Sliders, 'controls'],
     ['Insights', BarChart3, 'insights'],
     ['History', FileText, 'history'],
@@ -170,7 +170,7 @@ function Shell() {
       </header>
 
       <div className="mx-auto grid max-w-[1500px] md:grid-cols-[200px_1fr]">
-        <aside className={`${sidebar ? 'block' : 'hidden'} fixed inset-x-0 top-16 z-10 border-b border-line bg-ink p-4 md:static md:block md:min-h-[calc(100vh-4rem)] md:border-b-0 md:border-r`}>
+        <aside className={`${sidebar ? 'block' : 'hidden'} fixed inset-x-0 top-16 z-10 border-b border-line bg-ink p-4 md:sticky md:top-16 md:block md:h-[calc(100vh-4rem)] md:overflow-y-auto md:border-b-0 md:border-r flex flex-col justify-between`}>
           <nav className="space-y-1">
             {nav.map(([label, Icon, key]) => (
               <button 
