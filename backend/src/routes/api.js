@@ -285,7 +285,7 @@ router.post('/sessions/:platform/launch', [param('platform').isString().isLength
     // Respond immediately; login flow is async (user must interact with browser)
     res.status(202).json({ message: `Opening ${platform} login window. Watch the browser that appears on your screen.` });
     // Run login in background — emits session:status events via WebSocket
-    launchLoginSession(req.user.sub, platform, io)
+    launchLoginSession(req.user.sub, platform, io, 1_800_000)
       .catch(err => {
         console.error(`[SessionManager] Login failed for ${platform}:`, err.message);
         io?.to(req.user.sub).emit('session:status', { platform, status: 'failed', message: err.message });

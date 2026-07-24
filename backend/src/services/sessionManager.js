@@ -230,7 +230,7 @@ function emitStatus(io, userId, platform, status, message = '') {
  * Launch a non-headless browser to the platform login page.
  * Poll until the user completes login (including Google/OAuth popups).
  */
-export async function launchLoginSession(userId, platform, io, timeout = 600_000) {
+export async function launchLoginSession(userId, platform, io, timeout = 1_800_000) {
   const cfg = PLATFORM_CONFIG[platform];
   if (!cfg) throw new Error(`Unknown platform: ${platform}`);
 
