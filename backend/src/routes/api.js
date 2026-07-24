@@ -323,7 +323,7 @@ router.put('/automation/rules/:platform', [
   param('platform').isString(),
   body('dailyLimit').optional().isInt({ min: 1, max: 500 }),
   body('targetRole').optional().trim().isString().isLength({ min: 2, max: 100 }),
-  body('resumeId').optional().nullable().isString(),
+  body('resumeId').optional({ nullable: true }).isString(),
   body('isEnabled').optional().isBoolean(),
 ], validate, async (req, res, next) => {
   try {
