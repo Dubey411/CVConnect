@@ -183,18 +183,25 @@ const PLATFORM_CONFIG = {
         const page = pages[0];
         if (!page) return false;
         const url = page.url();
-        if (url.includes('/login') || url.includes('/profile/') || isAuthOrOAuthUrl(url)) return false;
+        if (url.includes('login_input') || url.includes('/login') || isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('glassdoor.com')) return false;
 
-        const profileEl = await page.$('[data-test="user-account-menu"], [class*="profile-menu"], a[href*="/member/"]');
+        const profileEl = await page.$('[data-test="user-account-menu"], [data-test="user-avatar"], #siteHeaderUserMenu, button[aria-label*="Profile"], a[href*="/member/myJobs"]');
         if (profileEl) return true;
 
         const cookies = await context.cookies('https://www.glassdoor.com');
-        const sess = cookies.find(c => (c.name === 'gdId' || c.name === 'AT' || c.name === 'GSESSIONID') && c.value && c.value.length > 5);
+        const sess = cookies.find(c => (c.name === 'gdId' || c.name === 'AT' || c.name === 'GSESSIONID' || c.name === 'as_member') && c.value && c.value.length > 5);
         return !!sess;
       } catch { return false; }
     },
-    accountExtract: async () => null,
+    accountExtract: async (page) => {
+      try {
+        return await page.evaluate(() => {
+          const el = document.querySelector('[data-test="user-avatar"], [data-test="user-name"]');
+          return el?.textContent?.trim() || null;
+        });
+      } catch { return null; }
+    },
   },
 
   naukri: {
