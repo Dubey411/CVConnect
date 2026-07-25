@@ -277,49 +277,14 @@ export class BotRunner {
         default:            success = await this.applyGeneric(page, destination, user, resume, userId, applicationId);
       }
 
-      // 8. Re-verification step: Reload job page & verify "Applied" / "Registered" status
+      // 8. Persist result
       if (success) {
-        this.emit(userId, applicationId, 'verifying', `Re-verifying completed application on ${platform}…`, 95);
-        await delay(2000, 3000);
-        try {
-          await page.goto(destination, { waitUntil: 'load', timeout: 25000 }).catch(() => {});
-          await delay(3500, 5000);
-
-          const recheckBodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
-          const hasExactBtnText = await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button, a, .register_btn, .apply_btn'));
-            return btns.some(b => {
-              const txt = (b.textContent || '').trim().toLowerCase();
-              return txt === 'registered' || txt === 'applied' || txt === 'already registered' || txt === 'application submitted';
-            });
-          }).catch(() => false);
-
-          const verified = (
-            hasExactBtnText ||
-            recheckBodyText.includes('successfully registered') ||
-            recheckBodyText.includes('you have registered') ||
-            recheckBodyText.includes('application submitted') ||
-            recheckBodyText.includes('already registered') ||
-            recheckBodyText.includes('registered successfully') ||
-            recheckBodyText.includes('registration confirmed')
-          );
-
-          if (verified) {
-            console.log(`[BotRunner:${platform}] Post-submission re-verification CONFIRMED for app ${applicationId}!`);
-          } else {
-            console.warn(`[BotRunner:${platform}] Post-submission re-verification warning: Page did not explicitly display "Applied" phrase.`);
-          }
-        } catch (e) {
-          console.warn(`[BotRunner:${platform}] Re-verification reload skipped:`, e.message);
-        }
-
         const updates = [
           prisma.jobApplication.update({
             where: { id: applicationId },
             data: { status: 'submitted', submittedAt: new Date() },
           }),
         ];
-        // Increment applicationsCount on token connection if used
         if (!useBrowserSession) {
           const conn = await prisma.platformConnection.findUnique({
             where: { userId_platform: { userId, platform } }
@@ -332,9 +297,9 @@ export class BotRunner {
           }
         }
         await Promise.all(updates);
-        this.emit(userId, applicationId, 'complete', `Application 100% verified & submitted on ${platform}! 🎉`, 100);
+        this.emit(userId, applicationId, 'complete', `Application submitted on ${platform}! 🎉`, 100);
       } else {
-        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission on platform.' } });
+        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission.' } });
         this.emit(userId, applicationId, 'failed', 'Bot completed but submission could not be confirmed. Check platform manually.', 0);
       }
 
@@ -348,8 +313,6 @@ export class BotRunner {
       this.emit(userId, applicationId, 'failed', `Auto-apply failed: ${err.message}`, 0, err.message);
       throw err;
     } finally {
-      // For persistent context: close the context itself
-      // For fresh browser: close the browser (which closes all contexts)
       if (browser) await browser.close().catch(() => {});
       if (pdfPath) await fs.unlink(pdfPath).catch(() => {});
     }
@@ -358,28 +321,13 @@ export class BotRunner {
   // ── Unstop ────────────────────────────────────────────────────────────────
 
   async applyUnstop(page, url, user, resume, pdfPath, userId, appId) {
-    await page.goto(url, { waitUntil: 'load', timeout: 35000 }).catch(() => {});
-    await delay(3500, 5000);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
+    await delay(1500, 3000);
 
     // CAPTCHA check
     if (hasCaptcha(await page.content())) {
       this.emit(userId, appId, 'captcha_detected', '⚠️ CAPTCHA detected on Unstop — please solve it in your browser within 60s.', 50, 'CAPTCHA_REQUIRED');
       await delay(60000, 62000);
-    }
-
-    const initialBodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
-
-    // Check if user is logged into Unstop session in Playwright profile
-    const isLoggedIn = (
-      initialBodyText.includes('logout') ||
-      initialBodyText.includes('my profile') ||
-      initialBodyText.includes('shubham') ||
-      (await page.locator('.profile-pic, .user_name, a[href*="/user/profile"], .user-profile-image, [class*="user-name"]').count().catch(() => 0)) > 0
-    );
-
-    if (!isLoggedIn) {
-      this.emit(userId, appId, 'failed', 'Unstop session is not logged in inside CVConnect. Please visit Platforms -> Unstop -> Reconnect.', 0, 'SESSION_NOT_LOGGED_IN');
-      throw new Error('Unstop browser session is not logged in. Please visit Platforms tab, click Reconnect under Unstop, and complete login in the opened browser window.');
     }
 
     this.emit(userId, appId, 'filling', 'Locating Unstop Apply button…', 58);
@@ -390,7 +338,7 @@ export class BotRunner {
       bodyText.includes('already registered') ||
       bodyText.includes('you have registered') ||
       bodyText.includes('application submitted') ||
-      bodyText.includes('registered successfully')
+      bodyText.includes('already applied')
     );
 
     if (alreadySubmitted) {
@@ -400,10 +348,9 @@ export class BotRunner {
 
     // Step 1: Click Quick Apply / Register button (exact button selectors, avoid container div matching)
     const applyBtn = await findVisible(page, [
+      '#un-register-btn',
       'button:has-text("Quick Apply")',
       'a:has-text("Quick Apply")',
-      'div:has-text("Quick Apply") button',
-      '#un-register-btn',
       '.register_btn',
       'button:has-text("Register Now")',
       'button:has-text("Apply Now")',
@@ -412,10 +359,10 @@ export class BotRunner {
       '.apply-btn',
       '[data-testid="apply-button"]',
       'a[href*="/register"]',
-    ], 15000);
+    ], 10000);
 
     if (!applyBtn) {
-      if (alreadySubmitted) {
+      if (bodyText.includes('registered') || bodyText.includes('applied')) {
         this.emit(userId, appId, 'complete', 'Application is already submitted on Unstop! 🎉', 100);
         return true;
       }
@@ -457,7 +404,7 @@ export class BotRunner {
       }
     }
 
-    // Step 3: Click Next button if multi-step form
+    // Step 3: Click Next button if present
     const nextBtn = await findVisible(page, [
       'button:has-text("Next")',
       '.un-button:has-text("Next")',
@@ -489,14 +436,15 @@ export class BotRunner {
       await delay(3500, 5500);
     }
 
-    // Step 5: Strict DOM & URL verification
-    await delay(3000, 4500);
-    const updatedUrl = page.url().toLowerCase();
+    const currentUrl = page.url();
+    const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
-      updatedUrl.includes('/success') ||
-      updatedUrl.includes('rstatus=1') ||
+      currentUrl.includes('/success') ||
+      currentUrl.includes('rstatus=1') ||
+      btnText.includes('registered') ||
+      btnText.includes('applied') ||
       pageText.includes('successfully registered') ||
       pageText.includes('application submitted') ||
       pageText.includes('thank you for applying') ||
