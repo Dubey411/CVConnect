@@ -52,19 +52,10 @@ export class ResumeParser {
 
     const skillsRaw = section(text, ['technical skills', 'skills', 'core competencies']);
     
-    // Parse skills line by line to preserve category headers (e.g. Languages:, Frontend:, Backend:)
+    // Preserve skills section line-by-line exactly as structured in the user's resume
     const parseSkillsLines = (raw) => {
       if (!raw) return [];
-      const rawLines = raw.split(/\n+/).map(clean).filter(Boolean);
-      const res = [];
-      rawLines.forEach(l => {
-        if (l.includes(':')) {
-          res.push(l);
-        } else {
-          l.split(/[,;|]/).map(clean).filter(Boolean).forEach(s => res.push(s));
-        }
-      });
-      return res;
+      return raw.split(/\n+/).map(clean).filter(Boolean);
     };
 
     const toBullets = (value) => value.split(/\n|•|(?<!\d)\s[-–]\s/).map(clean).filter(Boolean);
