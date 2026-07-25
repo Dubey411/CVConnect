@@ -51,12 +51,28 @@ export class ResumeParser {
     const portfolio = embeddedLinks.find(l => /vercel\.app|github\.io|\.dev|\.me/i.test(l)) || text.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?vercel\.app\b|(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?github\.io\b/i)?.[0] || '';
 
     const skillsRaw = section(text, ['technical skills', 'skills', 'core competencies']);
+    
+    // Parse skills line by line to preserve category headers (e.g. Languages:, Frontend:, Backend:)
+    const parseSkillsLines = (raw) => {
+      if (!raw) return [];
+      const rawLines = raw.split(/\n+/).map(clean).filter(Boolean);
+      const res = [];
+      rawLines.forEach(l => {
+        if (l.includes(':')) {
+          res.push(l);
+        } else {
+          l.split(/[,;|]/).map(clean).filter(Boolean).forEach(s => res.push(s));
+        }
+      });
+      return res;
+    };
+
     const toBullets = (value) => value.split(/\n|•|(?<!\d)\s[-–]\s/).map(clean).filter(Boolean);
 
     return {
       contact: { name: lines[0] || '', email, phone, location, linkedin, github, portfolio, links: embeddedLinks },
       summary: section(text, ['summary', 'profile', 'professional summary', 'objective']),
-      skills: skillsRaw.split(/[,;|\n]/).map(clean).filter(Boolean),
+      skills: parseSkillsLines(skillsRaw),
       experience: toBullets(section(text, ['work experience', 'experience', 'employment', 'work history'])),
       education: toBullets(section(text, ['education', 'academic background'])),
       projects: toBullets(section(text, ['projects', 'selected projects'])),
