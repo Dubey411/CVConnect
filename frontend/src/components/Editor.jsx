@@ -81,99 +81,97 @@ const parseExperience = (rawLines) => {
     const cleanLine = typeof line === 'string' ? line.trim() : String(line).trim();
     if (!cleanLine) return;
 
-    const isRole = cleanLine.toLowerCase().startsWith('role:');
-    const isStack = cleanLine.toLowerCase().includes('stack:') || cleanLine.toLowerCase().startsWith('tools and stack:');
-    const isBullet = !isRole && !isStack && (
-      cleanLine.match(/^(completed|engineered|collaborated|architected|led|designed|developed|built|managed|implemented|optimized|monitored|applied|generated|owned|assisted|helped|created|worked|delivered)\b/i) ||
-      cleanLine.length > 85 ||
-      (currentBlock && currentBlock.bullets.length > 0)
-    );
+    const lower = cleanLine.toLowerCase();
+    const isRole = lower.startsWith('role:');
+    const isStack = lower.includes('stack:') || lower.startsWith('tools and stack:') || lower.startsWith('tech stack:');
+    
+    // Bullet check: starts with action verb or bullet symbol
+    const isBulletAction = cleanLine.match(/^(?:[•\-\*]\s*)?(completed|engineered|collaborated|architected|led|designed|developed|built|managed|implemented|optimized|monitored|applied|generated|owned|assisted|helped|created|worked|delivered|reduced|integrated|drove|spearheaded)\b/i);
 
-    if (!isBullet && !isRole && !isStack) {
-      if (!currentBlock || currentBlock.bullets.length > 0) {
-        const date = extractDate(cleanLine);
-        const titleWithoutDate = date ? cleanLine.replace(date, '').replace(/[-–]$/, '').trim() : cleanLine;
-        currentBlock = {
-          title: titleWithoutDate,
-          date: date || '',
-          role: '',
-          stack: '',
-          bullets: []
-        };
-        blocks.push(currentBlock);
-      } else {
-        const date = extractDate(cleanLine);
-        if (date) currentBlock.date = date;
-        const cleanPart = date ? cleanLine.replace(date, '').trim() : cleanLine;
-        if (cleanPart) {
-          currentBlock.title += ' - ' + cleanPart;
-        }
-      }
-    } else if (isRole) {
-      currentBlock.role = cleanLine;
+    if (isRole) {
+      if (currentBlock) currentBlock.role = cleanLine;
     } else if (isStack) {
-      currentBlock.stack = cleanLine;
-    } else {
+      if (currentBlock) currentBlock.stack = cleanLine;
+    } else if (isBulletAction || (currentBlock && cleanLine.startsWith('•'))) {
+      const bulletText = cleanLine.replace(/^[•\-\*]\s*/, '').trim();
       if (currentBlock) {
-        currentBlock.bullets.push(cleanLine);
+        currentBlock.bullets.push(bulletText);
       } else {
-        currentBlock = { title: 'Experience', date: '', role: '', stack: '', bullets: [cleanLine] };
+        currentBlock = { title: 'Project / Experience', date: '', role: '', stack: '', bullets: [bulletText] };
         blocks.push(currentBlock);
       }
+    } else {
+      // New Block (Project Title or Company Title)
+      const date = extractDate(cleanLine);
+      let titlePart = date ? cleanLine.replace(date, '').replace(/\s*\|\s*$/, '').replace(/\s*[-–]\s*$/, '').trim() : cleanLine;
+      titlePart = titlePart.replace(/\|\s*\.$/, '').replace(/\|\s*$/, '').trim();
+
+      currentBlock = {
+        title: titlePart,
+        date: date || '',
+        role: '',
+        stack: '',
+        bullets: []
+      };
+      blocks.push(currentBlock);
     }
   });
 
   return blocks;
 };
 
-// Helper to parse flat education details
-const parseEducationAndCerts = (rawLines) => {
-  const lines = flattenLines(rawLines);
+// Helper to parse flat education details and separate certifications
+const parseEducationAndCerts = (rawEduLines, rawCertLines = []) => {
+  const eduLines = flattenLines(rawEduLines);
+  const certLinesFromProps = flattenLines(rawCertLines);
+  
   const eduBlocks = [];
-  let certsLine = '';
-  let currentBlock = null;
+  const certsList = [];
 
-  lines.forEach(line => {
+  let currentEdu = null;
+  eduLines.forEach(line => {
     const cleanLine = typeof line === 'string' ? line.trim() : String(line).trim();
     if (!cleanLine) return;
 
-    if (cleanLine.toUpperCase().includes('CERTIFICATIONS') || cleanLine.toUpperCase().includes('AWARDS')) {
-      return;
-    }
-    
-    if (cleanLine.includes(' | ') || cleanLine.toLowerCase().startsWith('ai and ml') || cleanLine.toLowerCase().startsWith('advanced frontend') || cleanLine.toLowerCase().startsWith('backend architecture')) {
-      certsLine = cleanLine;
+    const lower = cleanLine.toLowerCase();
+
+    if (lower.startsWith('ai and ml') || lower.startsWith('advanced frontend') || lower.startsWith('backend architecture') || lower.includes('freecodecamp') || lower.includes('odin project')) {
+      certsList.push(cleanLine);
       return;
     }
 
-    const isDegree = cleanLine.toLowerCase().includes('bachelor') || 
-                     cleanLine.toLowerCase().includes('b.e.') || 
-                     cleanLine.toLowerCase().includes('hsc') || 
-                     cleanLine.toLowerCase().includes('ssc') ||
-                     cleanLine.toLowerCase().includes('degree') ||
-                     cleanLine.toLowerCase().includes('science stream');
+    const isDegreeOrCoursework = lower.includes('bachelor') || lower.includes('b.e.') || lower.includes('hsc') || lower.includes('ssc') || lower.includes('degree') || lower.includes('relevant coursework') || lower.includes('science stream');
 
-    if (!isDegree) {
+    if (!isDegreeOrCoursework) {
       const date = extractDate(cleanLine);
-      const instWithoutDate = date ? cleanLine.replace(date, '').trim() : cleanLine;
-      currentBlock = {
-        institution: instWithoutDate,
+      const instName = date ? cleanLine.replace(date, '').replace(/\s*\|\s*$/, '').trim() : cleanLine;
+      currentEdu = {
+        institution: instName,
         date: date || '',
-        degree: ''
+        degree: '',
+        details: []
       };
-      eduBlocks.push(currentBlock);
+      eduBlocks.push(currentEdu);
     } else {
       const date = extractDate(cleanLine);
-      const degWithoutDate = date ? cleanLine.replace(date, '').trim() : cleanLine;
-      if (currentBlock) {
-        if (date) currentBlock.date = date;
-        currentBlock.degree += (currentBlock.degree ? ', ' : '') + degWithoutDate;
+      const cleanDegree = date ? cleanLine.replace(date, '').trim() : cleanLine;
+      if (currentEdu) {
+        if (date && !currentEdu.date) currentEdu.date = date;
+        currentEdu.details.push(cleanDegree);
       } else {
-        currentBlock = { institution: 'Education', date: date || '', degree: degWithoutDate };
-        eduBlocks.push(currentBlock);
+        currentEdu = {
+          institution: 'Education',
+          date: date || '',
+          degree: cleanDegree,
+          details: [cleanDegree]
+        };
+        eduBlocks.push(currentEdu);
       }
     }
   });
+
+  const allCerts = [...certLinesFromProps, ...certsList];
+  const certsLine = allCerts.length > 0 ? allCerts.join(' | ') : '';
 
   return { eduBlocks, certsLine };
 };
@@ -839,12 +837,17 @@ export default function Editor({ rewrite }) {
                     <section>
                       <h2>Education</h2>
                       {eduBlocks.map((edu, i) => (
-                        <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '2px' }}>
+                        <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '4px' }}>
                           <div className="job-header">
                             <span className="job-title">{edu.institution}</span>
                             <span className="job-date">{edu.date}</span>
                           </div>
-                          {edu.degree && <div>{edu.degree}</div>}
+                          {edu.details && edu.details.map((detail, dIdx) => (
+                            <div key={dIdx} className={detail.toLowerCase().includes('coursework') ? 'stack-line' : 'job-sub'}>
+                              {detail}
+                            </div>
+                          ))}
+                          {(!edu.details || edu.details.length === 0) && edu.degree && <div className="job-sub">{edu.degree}</div>}
                         </div>
                       ))}
                     </section>
@@ -1075,12 +1078,17 @@ export default function Editor({ rewrite }) {
               <section>
                 <h2>Education</h2>
                 {eduBlocks.map((edu, i) => (
-                  <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '2px' }}>
+                  <div key={i} className="job-block" style={{ marginBottom: i === eduBlocks.length - 1 ? '0' : '4px' }}>
                     <div className="job-header">
                       <span className="job-title">{edu.institution}</span>
                       <span className="job-date">{edu.date}</span>
                     </div>
-                    {edu.degree && <div>{edu.degree}</div>}
+                    {edu.details && edu.details.map((detail, dIdx) => (
+                      <div key={dIdx} className={detail.toLowerCase().includes('coursework') ? 'stack-line' : 'job-sub'}>
+                        {detail}
+                      </div>
+                    ))}
+                    {(!edu.details || edu.details.length === 0) && edu.degree && <div className="job-sub">{edu.degree}</div>}
                   </div>
                 ))}
               </section>
