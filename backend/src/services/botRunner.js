@@ -136,7 +136,14 @@ export class BotRunner {
       let resume = null;
       if (resumeId) {
         resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-      } else {
+      }
+      if (!resume && jobId) {
+        resume = await prisma.resume.findFirst({
+          where: { userId, jobId },
+          orderBy: { updatedAt: 'desc' }
+        });
+      }
+      if (!resume) {
         const rule = await prisma.automationRule.findUnique({ where: { userId_platform: { userId, platform } } });
         if (rule?.resumeId) {
           resume = await prisma.resume.findUnique({ where: { id: rule.resumeId } });
