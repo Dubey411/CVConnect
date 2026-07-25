@@ -72,9 +72,20 @@ const PLATFORM_CONFIG = {
         if (isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('wellfound.com') && !url.includes('angel.co')) return false;
 
-        const cookies = await context.cookies('https://wellfound.com');
-        const token = cookies.find(c => (c.name.includes('_wellfound') || c.name.includes('remember_user_token')) && c.value && c.value.length > 5);
-        return !!token;
+        const profileEl = await page.$('[data-test="user-menu"], .userinfo__name, [aria-label*="Profile"], [aria-label*="user menu"], a[href*="/jobs"]');
+        if (profileEl) return true;
+
+        const cookies = await context.cookies();
+        const token = cookies.find(c => (c.domain.includes('wellfound') || c.domain.includes('angel')) && (
+          c.name.includes('_wellfound') || c.name.includes('remember_user_token') || c.name.includes('session') || c.name === '_al_session'
+        ) && c.value && c.value.length > 5);
+        if (token) return true;
+
+        if ((url.includes('/jobs') || url.includes('/overview') || url.includes('/dashboard')) && !url.includes('login')) {
+          return true;
+        }
+
+        return false;
       } catch { return false; }
     },
     accountExtract: async (page) => {
@@ -99,12 +110,20 @@ const PLATFORM_CONFIG = {
         if (isAuthOrOAuthUrl(url)) return false;
         if (!url.includes('unstop.com')) return false;
 
-        const cookies = await context.cookies('https://unstop.com');
-        const token = cookies.find(c => (c.name === 'access_token' || c.name === 'token') && c.value && c.value.length > 20);
+        const profileEl = await page.$('.profile-pic, .user_name, a[href*="/user/profile"], .user-profile-image, [class*="user_"], [class*="profile_"]');
+        if (profileEl) return true;
+
+        const cookies = await context.cookies();
+        const token = cookies.find(c => c.domain.includes('unstop') && (
+          c.name === 'access_token' || c.name === 'token' || c.name === 'session' || c.name === '_unstop_session' || c.name === 'user_id' || c.name === 'at' || c.name === 'u_at' || c.name === 'auth_token'
+        ) && c.value && c.value.length > 5);
         if (token) return true;
 
-        const profileEl = await page.$('.profile-pic, .user_name, a[href*="/user/profile"], .user-profile-image');
-        return !!profileEl;
+        if ((url.includes('/competitions') || url.includes('/internships') || url.includes('/jobs') || url.includes('/dashboard')) && !url.includes('login')) {
+          return true;
+        }
+
+        return false;
       } catch { return false; }
     },
     accountExtract: async (page) => {
