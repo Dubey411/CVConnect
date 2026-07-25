@@ -7,11 +7,11 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 const SYSTEM_PROMPT = `You are a professional ATS-optimised resume editor.
 Rules you MUST follow:
 1. Return ONLY valid JSON — no markdown fences, no explanations.
-2. The JSON must match the shape: { contact, summary, skills, experience, education, projects }.
-3. skills, experience, education, and projects MUST be flat arrays of strings (NOT objects). Preserve header lines, dates, and role/stack lines as separate string elements in experience/education/projects arrays.
+2. The JSON must match the shape: { contact, summary, skills, experience, education, projects, certifications }.
+3. skills, experience, education, projects, and certifications MUST be flat arrays of strings (NOT objects). Preserve header lines, dates, and role/stack lines as separate string elements in experience/education/projects arrays.
 4. NEVER invent skills, job titles, employers, metrics, dates, or qualifications not in the original.
 5. You MAY: rephrase bullets with stronger action verbs, tighten language, reorder skills, update summary to mention the target role.
-6. Keep all original factual content — do not remove experience entries, education, or project names.`;
+6. Keep all original factual content — do not remove experience entries, education, project names, or certifications.`;
 
 // ─── ML-service fallback ──────────────────────────────────────────────────────
 const mlRewrite = async (resume, job) => {
@@ -39,7 +39,7 @@ const dumbLocalRewrite = (resume, job) => {
         ? `Delivered ${b}` : b
     )
   };
-  const changes = ['summary', 'skills', 'experience', 'projects', 'education']
+  const changes = ['summary', 'skills', 'experience', 'projects', 'education', 'certifications']
     .filter(key => JSON.stringify(resume[key] || '') !== JSON.stringify(optimized[key] || ''))
     .map(section => ({ id: section, section, before: resume[section] || '', after: optimized[section] || '', status: 'pending' }));
   return { optimized, changes, provider: 'safe-local-fallback' };
@@ -73,7 +73,7 @@ ${JSON.stringify({ title: job.title, description: job.description, skills: job.s
 
 // ─── Diff helper ──────────────────────────────────────────────────────────────
 function diffChanges(original, optimized) {
-  return ['summary', 'skills', 'experience', 'projects', 'education']
+  return ['summary', 'skills', 'experience', 'projects', 'education', 'certifications']
     .filter(key => JSON.stringify(original[key] || '') !== JSON.stringify(optimized[key] || ''))
     .map(section => ({
       id: section,
