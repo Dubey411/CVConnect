@@ -185,18 +185,21 @@ const parseSkills = (rawSkills) => {
     const cleanSkill = typeof skill === 'string' ? skill.trim() : String(skill).trim();
     if (!cleanSkill) return;
 
-    if (cleanSkill.includes(':')) {
-      const parts = cleanSkill.split(':');
+    const bulletCleaned = cleanSkill.replace(/^[•\-\*]\s*/, '').trim();
+    if (!bulletCleaned) return;
+
+    if (bulletCleaned.includes(':')) {
+      const parts = bulletCleaned.split(':');
       const catName = parts[0].trim();
       const rawItems = parts.slice(1).join(':').trim();
-      const items = rawItems.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+      const items = rawItems ? rawItems.split(/[,;|]/).map(s => s.trim()).filter(Boolean) : [];
       
       categories.push({
         name: catName,
         items
       });
     } else {
-      const items = cleanSkill.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+      const items = bulletCleaned.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
       if (categories.length > 0) {
         categories[categories.length - 1].items.push(...items);
       } else {
@@ -208,7 +211,7 @@ const parseSkills = (rawSkills) => {
     }
   });
 
-  return categories;
+  return categories.filter(cat => cat.items.length > 0 || cat.name);
 };
 
 // Helper to render text containing Live Demo, GitHub, or URLs as clickable anchor links
