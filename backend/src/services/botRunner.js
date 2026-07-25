@@ -317,8 +317,8 @@ export class BotRunner {
   // ── Unstop ────────────────────────────────────────────────────────────────
 
   async applyUnstop(page, url, user, resume, pdfPath, userId, appId) {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
-    await delay(1500, 3000);
+    await page.goto(url, { waitUntil: 'load', timeout: 35000 }).catch(() => {});
+    await delay(3500, 5000);
 
     // CAPTCHA check
     if (hasCaptcha(await page.content())) {
@@ -356,7 +356,7 @@ export class BotRunner {
       '.apply-btn',
       '[data-testid="apply-button"]',
       'a[href*="/register"]',
-    ]);
+    ], 15000);
 
     if (!applyBtn) {
       // Re-check if page says registered after checking buttons
