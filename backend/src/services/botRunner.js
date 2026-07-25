@@ -252,8 +252,7 @@ export class BotRunner {
 
       const page = await context.newPage();
 
-      // Block heavy assets / tracking
-      await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,ico,woff,woff2,ttf,eot,otf}', r => r.abort());
+      // Block tracking & ads only (do NOT block images/fonts needed for UI layout)
       await page.route('**/analytics*', r => r.abort());
       await page.route('**/hotjar*',    r => r.abort());
       await page.route('**/gtag*',      r => r.abort());
@@ -345,9 +344,10 @@ export class BotRunner {
 
     // Step 1: Click Quick Apply / Register button (exact button selectors, avoid container div matching)
     const applyBtn = await findVisible(page, [
-      '#un-register-btn',
       'button:has-text("Quick Apply")',
       'a:has-text("Quick Apply")',
+      'div:has-text("Quick Apply") button',
+      '#un-register-btn',
       '.register_btn',
       'button:has-text("Register Now")',
       'button:has-text("Apply Now")',
@@ -355,6 +355,7 @@ export class BotRunner {
       'button:has-text("Register")',
       '.apply-btn',
       '[data-testid="apply-button"]',
+      'a[href*="/register"]',
     ]);
 
     if (!applyBtn) {
