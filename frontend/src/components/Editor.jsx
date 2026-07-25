@@ -219,9 +219,9 @@ const extractLinks = (text) => {
   if (!text) return {};
   const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
   const phone = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0] || '';
-  const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i)?.[0] || 'https://linkedin.com';
-  const github = text.match(/https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i)?.[0] || 'https://github.com';
-  const portfolio = text.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?vercel\.app\b|https?:\/\/[a-zA-Z0-9_-]+\.github\.io\b/i)?.[0] || '';
+  const linkedin = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i)?.[0] || '';
+  const github = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i)?.[0] || '';
+  const portfolio = text.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?vercel\.app\b|(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?github\.io\b/i)?.[0] || '';
 
   return { email, phone, linkedin, github, portfolio };
 };
@@ -238,9 +238,11 @@ export default function Editor({ rewrite }) {
     return (
       <div className="panel grid min-h-80 place-items-center p-6 text-center">
         <div>
-          <p className="eyebrow">Review studio</p>
-          <p className="mt-3 text-lg font-semibold">Your changes will appear here.</p>
-          <p className="mt-1 text-sm text-slate-400">Every suggestion remains editable and under your control.</p>
+          <p className="eyebrow">Studio Offline</p>
+          <h2 className="mt-2 text-xl font-semibold text-white">No draft loaded</h2>
+          <p className="mt-2 max-w-sm text-xs text-slate-400">
+            Upload your source resume and analyze a target job description to open the Tailoring Studio.
+          </p>
         </div>
       </div>
     );
@@ -271,6 +273,7 @@ export default function Editor({ rewrite }) {
       experience: getSection('experience') || [],
       education: getSection('education') || [],
       projects: getSection('projects') || [],
+      certifications: getSection('certifications') || original.certifications || [],
       sourceText: original.sourceText || ''
     };
   };
@@ -327,6 +330,15 @@ export default function Editor({ rewrite }) {
       lines.push('');
     }
     
+    if (resObj.certifications && resObj.certifications.length > 0) {
+      lines.push('CERTIFICATIONS AND AWARDS');
+      lines.push('========================');
+      flattenLines(resObj.certifications).forEach(cert => {
+        lines.push(`• ${cert}`);
+      });
+      lines.push('');
+    }
+    
     return lines.join('\n');
   };
 
@@ -368,18 +380,43 @@ export default function Editor({ rewrite }) {
   };
 
   const resumeData = compileResume();
-  const links = extractLinks(resumeData.sourceText);
+  const rawLinks = extractLinks(resumeData.sourceText);
+  const contactObj = typeof resumeData.contact === 'object' ? resumeData.contact : {};
+  const links = {
+    name: contactObj.name || 'SHUBHAM DUBEY',
+    email: contactObj.email || rawLinks.email,
+    phone: contactObj.phone || rawLinks.phone,
+    location: contactObj.location || rawLinks.location || 'Mumbai, Maharashtra',
+    linkedin: contactObj.linkedin || rawLinks.linkedin,
+    github: contactObj.github || rawLinks.github,
+    portfolio: contactObj.portfolio || rawLinks.portfolio,
+  };
 
   // Parsed sections for structure layout
   const parsedExp = parseExperience(resumeData.experience || []);
   const parsedProj = parseExperience(resumeData.projects || []);
-  const { eduBlocks, certsLine } = parseEducationAndCerts(resumeData.education || []);
+  const { eduBlocks, certsLine: fallbackCertsLine } = parseEducationAndCerts(resumeData.education || []);
+  const certsFromData = flattenLines(resumeData.certifications || []);
+  const certsLine = certsFromData.length > 0 ? certsFromData.join(' | ') : fallbackCertsLine;
   const parsedSkills = parseSkills(resumeData.skills || []);
 
   return (
     <section className="panel overflow-hidden">
-      {/* Inline Calibri style definitions */}
+      {/* Inline Calibri style definitions & Print Optimization */}
       <style>{`
+        @media print {
+          @page {
+            margin: 8mm 10mm;
+            size: A4 portrait;
+          }
+          body {
+            background: #fff !important;
+            color: #000 !important;
+          }
+          .no-print, header, nav, aside {
+            display: none !important;
+          }
+        }
         .calibri-resume {
           font-family: Calibri, Arial, sans-serif;
           font-size: 9.8pt;
@@ -692,19 +729,19 @@ export default function Editor({ rewrite }) {
               {selectedTemplate === 'calibri' && (
                 <div className="calibri-resume">
                   <header>
-                    <h1>{resumeData.contact?.name || 'Resume'}</h1>
+                    <h1>{links.name || resumeData.contact?.name || 'SHUBHAM DUBEY'}</h1>
                     <div className="contact-row">
-                      {resumeData.contact?.location && <span>{resumeData.contact.location}</span>}
-                      {resumeData.contact?.location && (links.email || resumeData.contact?.email) && <span>&nbsp; | &nbsp;</span>}
+                      {(links.location || resumeData.contact?.location) && <span>{links.location || resumeData.contact.location}</span>}
+                      {(links.location || resumeData.contact?.location) && links.email && <span>&nbsp; | &nbsp;</span>}
                       
-                      {(links.email || resumeData.contact?.email) && (
-                        <a href={`mailto:${links.email || resumeData.contact.email}`}>{links.email || resumeData.contact.email}</a>
+                      {links.email && (
+                        <a href={`mailto:${links.email}`}>{links.email}</a>
                       )}
                       
-                      {(links.email || resumeData.contact?.email) && (links.phone || resumeData.contact?.phone) && <span>&nbsp; | &nbsp;</span>}
+                      {links.email && links.phone && <span>&nbsp; | &nbsp;</span>}
                       
-                      {(links.phone || resumeData.contact?.phone) && (
-                        <a href={`tel:${links.phone || resumeData.contact.phone}`}>{links.phone || resumeData.contact.phone}</a>
+                      {links.phone && (
+                        <a href={`tel:${links.phone}`}>{links.phone}</a>
                       )}
 
                       {links.linkedin && <span>&nbsp; | &nbsp;</span>}
@@ -940,16 +977,16 @@ export default function Editor({ rewrite }) {
         {selectedTemplate === 'calibri' && (
           <div className="calibri-resume" style={{ padding: 0 }}>
             <header>
-              <h1>{resumeData.contact?.name || 'Resume'}</h1>
+              <h1>{links.name || resumeData.contact?.name || 'SHUBHAM DUBEY'}</h1>
               <div className="contact-row">
-                {resumeData.contact?.location && <span>{resumeData.contact.location}</span>}
-                {resumeData.contact?.location && (links.email || resumeData.contact?.email) && <span>&nbsp; | &nbsp;</span>}
-                {(links.email || resumeData.contact?.email) && (
-                  <a href={`mailto:${links.email || resumeData.contact.email}`}>{links.email || resumeData.contact.email}</a>
+                {(links.location || resumeData.contact?.location) && <span>{links.location || resumeData.contact.location}</span>}
+                {(links.location || resumeData.contact?.location) && links.email && <span>&nbsp; | &nbsp;</span>}
+                {links.email && (
+                  <a href={`mailto:${links.email}`}>{links.email}</a>
                 )}
-                {(links.email || resumeData.contact?.email) && (links.phone || resumeData.contact?.phone) && <span>&nbsp; | &nbsp;</span>}
-                {(links.phone || resumeData.contact?.phone) && (
-                  <a href={`tel:${links.phone || resumeData.contact.phone}`}>{links.phone || resumeData.contact.phone}</a>
+                {links.email && links.phone && <span>&nbsp; | &nbsp;</span>}
+                {links.phone && (
+                  <a href={`tel:${links.phone}`}>{links.phone}</a>
                 )}
                 {links.linkedin && <span>&nbsp; | &nbsp;</span>}
                 {links.linkedin && <a href={links.linkedin}>{links.linkedin}</a>}
