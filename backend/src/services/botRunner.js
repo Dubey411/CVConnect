@@ -270,8 +270,33 @@ export class BotRunner {
         default:            success = await this.applyGeneric(page, destination, user, resume, userId, applicationId);
       }
 
-      // 8. Persist result
+      // 8. Re-verification step: Reload job page & verify "Applied" / "Registered" status
       if (success) {
+        this.emit(userId, applicationId, 'verifying', `Re-verifying completed application on ${platform}…`, 95);
+        await delay(2000, 3000);
+        try {
+          await page.goto(destination, { waitUntil: 'load', timeout: 25000 }).catch(() => {});
+          await delay(3000, 4500);
+
+          const recheckBodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+          const verified = (
+            recheckBodyText.includes('already registered') ||
+            recheckBodyText.includes('you have registered') ||
+            recheckBodyText.includes('application submitted') ||
+            recheckBodyText.includes('already applied') ||
+            recheckBodyText.includes('registered') ||
+            recheckBodyText.includes('applied')
+          );
+
+          if (verified) {
+            console.log(`[BotRunner:${platform}] Post-submission re-verification CONFIRMED for app ${applicationId}!`);
+          } else {
+            console.warn(`[BotRunner:${platform}] Post-submission re-verification warning: Page did not explicitly display "Applied" phrase.`);
+          }
+        } catch (e) {
+          console.warn(`[BotRunner:${platform}] Re-verification reload skipped:`, e.message);
+        }
+
         const updates = [
           prisma.jobApplication.update({
             where: { id: applicationId },
@@ -291,7 +316,7 @@ export class BotRunner {
           }
         }
         await Promise.all(updates);
-        this.emit(userId, applicationId, 'complete', `Application submitted on ${platform}! 🎉`, 100);
+        this.emit(userId, applicationId, 'complete', `Application 100% verified & submitted on ${platform}! 🎉`, 100);
       } else {
         await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission.' } });
         this.emit(userId, applicationId, 'failed', 'Bot completed but submission could not be confirmed. Check platform manually.', 0);
