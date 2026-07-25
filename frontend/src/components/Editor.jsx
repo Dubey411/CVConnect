@@ -380,11 +380,15 @@ export default function Editor({ rewrite }) {
   const resumeData = compileResume();
   const rawLinks = extractLinks(resumeData.sourceText);
   const contactObj = typeof resumeData.contact === 'object' ? resumeData.contact : {};
+  
+  const rawLoc = contactObj.location || rawLinks.location || 'Mumbai, Maharashtra';
+  const cleanLoc = rawLoc.split('|')[0].replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i, '').replace(/(?:\+?\d[\d\s().-]{7,}\d)/, '').trim();
+
   const links = {
     name: contactObj.name || 'SHUBHAM DUBEY',
     email: contactObj.email || rawLinks.email,
     phone: contactObj.phone || rawLinks.phone,
-    location: contactObj.location || rawLinks.location || 'Mumbai, Maharashtra',
+    location: cleanLoc,
     linkedin: contactObj.linkedin || rawLinks.linkedin,
     github: contactObj.github || rawLinks.github,
     portfolio: contactObj.portfolio || rawLinks.portfolio,
