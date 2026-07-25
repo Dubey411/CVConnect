@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { AlertTriangle, CheckCircle2, Sparkles, Zap, Check } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Sparkles, Zap, Check, Loader2 } from 'lucide-react';
+import { io as ioClient } from 'socket.io-client';
+import { useSelector } from 'react-redux';
 import { request } from '../api';
 
 const labels = { skills: 'Skills', experience: 'Experience', keywords: 'Keywords', domain: 'Domain', education: 'Education' };
@@ -21,11 +23,35 @@ const detectPlatform = (urlStr) => {
 };
 
 export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId, targetUrl }) {
+  const user = useSelector(s => s.auth.user);
   const [applyState, setApplyState] = useState('idle'); // idle | selecting | applying | done | error
+  const [progressMsg, setProgressMsg] = useState('Initializing stealth bot…');
+  const [progressPercent, setProgressPercent] = useState(10);
   const [jobUrl, setJobUrl] = useState(targetUrl || '');
   const [selectedPlatform, setSelectedPlatform] = useState(detectPlatform(targetUrl || ''));
   const [urlError, setUrlError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Socket.io real-time progress updates
+  useEffect(() => {
+    if (!user?.id) return;
+    const socket = ioClient(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000');
+    socket.emit('subscribe', user.id);
+
+    socket.on('application:progress', (data) => {
+      if (data.message) setProgressMsg(data.message);
+      if (data.percent !== undefined) setProgressPercent(data.percent);
+
+      if (data.status === 'complete' || data.stage === 'complete' || data.percent === 100) {
+        setApplyState('done');
+      } else if (data.status === 'failed' || data.stage === 'failed') {
+        setErrorMsg(data.message || 'Auto-apply process failed.');
+        setApplyState('error');
+      }
+    });
+
+    return () => socket.close();
+  }, [user?.id]);
 
   if (!analysis) return (
     <div className="panel flex min-h-72 flex-col justify-between p-5">
@@ -58,6 +84,8 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
     setSelectedPlatform(targetPlatform);
     setUrlError('');
     setApplyState('applying');
+    setProgressMsg(`Starting bot for ${targetPlatform.toUpperCase()}…`);
+    setProgressPercent(10);
     setErrorMsg('');
 
     try {
@@ -71,8 +99,6 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
           targetUrl: finalUrl
         }
       });
-      setApplyState('done');
-      setTimeout(() => { setApplyState('idle'); }, 6000);
     } catch (err) {
       setErrorMsg(err.response?.data?.error?.message || `Platform ${targetPlatform} account not connected. Please visit Connect Platforms.`);
       setApplyState('error');
@@ -171,9 +197,29 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
               Cancel
             </button>
           </div>
+        ) : applyState === 'applying' ? (
+          <div className="p-3 bg-aqua/10 border border-aqua/30 rounded space-y-2">
+            <div className="flex items-center justify-between text-xs text-aqua font-medium">
+              <span className="flex items-center gap-1.5">
+                <Loader2 size={14} className="animate-spin" />
+                {selectedPlatform.toUpperCase()} Bot Progress
+              </span>
+              <span className="font-mono">{progressPercent}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+              <div className="h-full bg-aqua transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p className="text-[11px] text-slate-300 truncate">{progressMsg}</p>
+          </div>
         ) : applyState === 'done' ? (
-          <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-center text-xs text-emerald-400 font-medium flex items-center justify-center gap-1.5">
-            <Check size={14} /> Auto-Apply Initiated for {selectedPlatform.toUpperCase()}! Check Activity Tracker.
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded space-y-1 text-center">
+            <div className="text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
+              <Check size={15} /> Application Submitted & Completed on {selectedPlatform.toUpperCase()}! 🎉
+            </div>
+            <p className="text-[10px] text-slate-400">Recorded in Activity Tracker</p>
+            <button onClick={() => setApplyState('idle')} className="text-[10px] text-aqua hover:underline mt-1 block w-full text-center">
+              Apply to another position
+            </button>
           </div>
         ) : (
           <button 
@@ -182,7 +228,7 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
             className="button bg-aqua/10 hover:bg-aqua/20 text-aqua border border-aqua/30 w-full text-xs py-2 flex items-center justify-center gap-1.5"
           >
             <Zap size={14}/>
-            {applyState === 'applying' ? `Launching ${selectedPlatform.toUpperCase()} Bot...` : `⚡ 1-Click Auto-Apply on ${selectedPlatform.toUpperCase()}`}
+            ⚡ 1-Click Auto-Apply on {selectedPlatform.toUpperCase()}
           </button>
         )}
       </div>
