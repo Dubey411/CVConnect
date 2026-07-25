@@ -5,10 +5,25 @@ import { request } from '../api';
 
 const labels = { skills: 'Skills', experience: 'Experience', keywords: 'Keywords', domain: 'Domain', education: 'Education' };
 
-export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId }) {
+const ALL_PLATFORMS = ['unstop', 'internshala', 'wellfound', 'linkedin', 'indeed', 'naukri', 'glassdoor'];
+
+const detectPlatform = (urlStr) => {
+  if (!urlStr) return 'unstop';
+  const u = urlStr.toLowerCase();
+  if (u.includes('unstop.com')) return 'unstop';
+  if (u.includes('internshala.com')) return 'internshala';
+  if (u.includes('wellfound.com') || u.includes('angel.co')) return 'wellfound';
+  if (u.includes('linkedin.com')) return 'linkedin';
+  if (u.includes('indeed.')) return 'indeed';
+  if (u.includes('naukri.com')) return 'naukri';
+  if (u.includes('glassdoor.')) return 'glassdoor';
+  return 'unstop';
+};
+
+export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId, targetUrl }) {
   const [applyState, setApplyState] = useState('idle'); // idle | selecting | applying | done | error
-  const [selectedPlatform, setSelectedPlatform] = useState('unstop');
-  const [jobUrl, setJobUrl] = useState('');
+  const [jobUrl, setJobUrl] = useState(targetUrl || '');
+  const [selectedPlatform, setSelectedPlatform] = useState(detectPlatform(targetUrl || ''));
   const [urlError, setUrlError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -26,34 +41,40 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId 
   const data = Object.entries(analysis.components).map(([key, value]) => ({ dimension: labels[key], value }));
   const color = analysis.score >= 75 ? 'text-aqua' : analysis.score >= 55 ? 'text-amber-300' : 'text-coral';
 
-  const triggerAutoApply = async (platform) => {
-    // Validate URL
-    if (!jobUrl.trim()) {
-      setUrlError('Please paste the job URL from the platform.');
+  const triggerAutoApply = async (plat) => {
+    const finalUrl = jobUrl.trim() || targetUrl || '';
+    if (!finalUrl) {
+      setUrlError('Please paste the job listing URL before applying.');
+      setApplyState('selecting');
       return;
     }
-    try { new URL(jobUrl.trim()); } catch {
+    try { new URL(finalUrl); } catch {
       setUrlError('Please enter a valid URL (e.g. https://unstop.com/jobs/...).');
+      setApplyState('selecting');
       return;
     }
+    
+    const targetPlatform = plat || detectPlatform(finalUrl);
+    setSelectedPlatform(targetPlatform);
     setUrlError('');
     setApplyState('applying');
     setErrorMsg('');
+
     try {
       await request({
         method: 'post',
         url: '/applications/apply',
         data: {
-          platform,
+          platform: targetPlatform,
           resumeId,
           jobId,
-          targetUrl: jobUrl.trim()
+          targetUrl: finalUrl
         }
       });
       setApplyState('done');
-      setTimeout(() => { setApplyState('idle'); setJobUrl(''); }, 5000);
+      setTimeout(() => { setApplyState('idle'); }, 6000);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error?.message || 'Platform account not connected. Please visit Connect Platforms.');
+      setErrorMsg(err.response?.data?.error?.message || `Platform ${targetPlatform} account not connected. Please visit Connect Platforms.`);
       setApplyState('error');
     }
   };
@@ -115,46 +136,53 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId 
 
         {applyState === 'selecting' ? (
           <div className="panel p-3 bg-surface/60 border border-line space-y-3">
-            <p className="text-[11px] text-slate-300 font-medium">1. Paste the job listing URL:</p>
+            <p className="text-[11px] text-slate-300 font-medium">1. Target job listing URL:</p>
             <div>
               <input
                 type="url"
                 className="input text-xs w-full"
                 placeholder="https://unstop.com/jobs/... or internshala.com/..."
                 value={jobUrl}
-                onChange={e => { setJobUrl(e.target.value); setUrlError(''); }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setJobUrl(val);
+                  setSelectedPlatform(detectPlatform(val));
+                  setUrlError('');
+                }}
                 autoFocus
               />
               {urlError && <p className="text-[10px] text-coral mt-1">{urlError}</p>}
             </div>
-            <p className="text-[11px] text-slate-300 font-medium">2. Select platform:</p>
+            <p className="text-[11px] text-slate-300 font-medium">2. Platform detected: <span className="text-aqua uppercase font-semibold">{selectedPlatform}</span></p>
             <div className="grid grid-cols-2 gap-1.5">
-              {['unstop', 'internshala', 'linkedin', 'indeed'].map(p => (
+              {ALL_PLATFORMS.map(p => (
                 <button
                   key={p}
                   onClick={() => { setSelectedPlatform(p); triggerAutoApply(p); }}
-                  className="button-quiet text-[11px] py-1 px-2 capitalize justify-center"
+                  className={`button-quiet text-[11px] py-1 px-2 capitalize justify-center border ${
+                    selectedPlatform === p ? 'border-aqua text-aqua font-semibold bg-aqua/10' : 'border-line text-slate-400'
+                  }`}
                 >
                   {p}
                 </button>
               ))}
             </div>
-            <button onClick={() => { setApplyState('idle'); setUrlError(''); setJobUrl(''); }} className="text-[10px] text-slate-400 hover:text-white w-full text-center">
+            <button onClick={() => { setApplyState('idle'); setUrlError(''); }} className="text-[10px] text-slate-400 hover:text-white w-full text-center">
               Cancel
             </button>
           </div>
         ) : applyState === 'done' ? (
           <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-center text-xs text-emerald-400 font-medium flex items-center justify-center gap-1.5">
-            <Check size={14} /> Auto-Apply Initiated! Check Activity Tracker.
+            <Check size={14} /> Auto-Apply Initiated for {selectedPlatform.toUpperCase()}! Check Activity Tracker.
           </div>
         ) : (
           <button 
-            onClick={() => setApplyState('selecting')} 
+            onClick={() => triggerAutoApply(selectedPlatform)} 
             disabled={busy || applyState === 'applying'} 
             className="button bg-aqua/10 hover:bg-aqua/20 text-aqua border border-aqua/30 w-full text-xs py-2 flex items-center justify-center gap-1.5"
           >
             <Zap size={14}/>
-            {applyState === 'applying' ? 'Launching Auto-Apply Bot...' : '⚡ 1-Click Auto-Apply Now'}
+            {applyState === 'applying' ? `Launching ${selectedPlatform.toUpperCase()} Bot...` : `⚡ 1-Click Auto-Apply on ${selectedPlatform.toUpperCase()}`}
           </button>
         )}
       </div>

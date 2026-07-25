@@ -118,7 +118,7 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
       <button
         type="button"
         disabled={busy || description.length < 20 || title.length < 2}
-        onClick={() => onAnalyze({ title, company, description })}
+        onClick={() => onAnalyze({ title, company, description, jobUrl })}
         className="button-primary mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? 'Reading role…' : (

@@ -136,7 +136,10 @@ function Shell() {
     }
   };
   
+  const [lastTargetUrl, setLastTargetUrl] = useState('');
+
   const doAnalyze = async data => {
+    if (data.jobUrl) setLastTargetUrl(data.jobUrl);
     const action = await dispatch(analyzeJob(data));
     if (analyzeJob.fulfilled.match(action) && resume) {
       dispatch(matchResume({ resumeId: resume.id, jobId: action.payload.job.id }));
@@ -159,84 +162,86 @@ function Shell() {
         <button onClick={() => setSidebar(!sidebar)} className="button-quiet p-2 md:hidden" aria-label="Toggle navigation">
           {sidebar ? <X size={18}/> : <Menu size={18}/>}
         </button>
-        <div className="flex items-center gap-2 font-semibold tracking-tight">
-          <img src="/logo.png" alt="Logo" className="h-7 w-7 object-contain rounded" />
-          CVConnect
-        </div>
-        <div className="flex items-center gap-3">
-          <button aria-label="Notifications" className="hidden text-slate-400 hover:text-aqua sm:block">
-            <Bell size={17}/>
-          </button>
-          <div className="hidden h-7 w-7 place-items-center rounded-full bg-line text-xs font-semibold sm:grid">
-            {user.name?.[0]?.toUpperCase()}
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aqua/10 text-aqua font-bold text-lg border border-aqua/30">
+            CV
           </div>
-          <button onClick={() => dispatch(signOut())} className="text-xs text-slate-400 hover:text-coral flex items-center gap-1">
-            <LogOut size={16}/>
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
+          <span className="font-semibold tracking-tight text-white">CVConnect</span>
+          <span className="ml-2 rounded-full border border-aqua/30 bg-aqua/10 px-2 py-0.5 font-mono text-[10px] font-medium text-aqua uppercase">
+            v2.4 Production
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="hidden text-xs text-slate-400 md:inline">{user.email}</span>
+              <button onClick={() => dispatch(signOut())} className="button-quiet text-xs py-1.5 px-3">
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => { /* setAuthMode('login'); setShowAuth(true); */ }} className="button-quiet text-xs py-1.5 px-3">
+                Log in
+              </button>
+              <button onClick={() => { /* setAuthMode('register'); setShowAuth(true); */ }} className="button-primary text-xs py-1.5 px-3">
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1500px] md:grid-cols-[200px_1fr]">
-        <aside className={`${sidebar ? 'block' : 'hidden'} fixed inset-x-0 top-16 z-10 border-b border-line bg-ink p-4 md:sticky md:top-16 md:block md:h-[calc(100vh-4rem)] md:overflow-y-auto md:border-b-0 md:border-r flex flex-col justify-between`}>
-          <nav className="space-y-1">
-            {nav.map(([label, Icon, key]) => (
-              <button 
-                key={key} 
-                onClick={() => {
-                  setActiveTab(key);
-                  setSidebar(false);
-                }}
-                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                  activeTab === key ? 'bg-aqua text-ink font-semibold rounded' : 'text-slate-400 hover:bg-white/5 hover:text-mist'
-                }`}
-              >
-                <Icon size={16}/>
-                {label}
-              </button>
-            ))}
-          </nav>
-          <div className="mt-10 border-t border-line pt-4">
-            <p className="px-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">Signed in as</p>
-            <p className="mt-2 truncate px-3 text-xs text-slate-300">{user.email}</p>
+      <div className="flex">
+        {/* Sticky Desktop Navigation Sidebar */}
+        <aside className={`fixed inset-y-0 left-0 z-30 w-64 transform border-r border-line bg-surface/95 p-5 transition-transform duration-200 ease-in-out md:static md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebar ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex h-full flex-col justify-between">
+            <nav className="space-y-1">
+              {nav.map(([label, Icon, tabKey]) => (
+                <button
+                  key={tabKey}
+                  onClick={() => { setActiveTab(tabKey); setSidebar(false); }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                    activeTab === tabKey ? 'bg-aqua/10 text-aqua border border-aqua/30' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              ))}
+            </nav>
+
+            <div className="rounded-lg border border-line bg-black/20 p-3 text-xs text-slate-400">
+              <p className="font-semibold text-white">System Status</p>
+              <p className="mt-1 text-[11px] text-emerald-400 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"/>
+                All 7 Bots Active & Ready
+              </p>
+            </div>
           </div>
         </aside>
 
-        <main className="min-w-0 px-6 py-8 md:px-10 lg:px-14 flex justify-center">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto">
+        <main className="flex-1 p-5 md:p-8 overflow-x-hidden">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+            {activeTab === 'platforms' && <PlatformAccounts />}
+            {activeTab === 'controls' && <AutoApplyControls />}
+            {activeTab === 'insights' && <Insights />}
             {activeTab === 'history' && (
               <History onLoadResume={(item) => {
                 dispatch(setResume(item));
                 setActiveTab('workspace');
               }} />
             )}
-
-            {activeTab === 'insights' && (
-              <Insights />
-            )}
-
-            {activeTab === 'platforms' && (
-              <PlatformAccounts />
-            )}
-
-            {activeTab === 'controls' && (
-              <AutoApplyControls />
-            )}
-
             {activeTab === 'workspace' && (
               <>
-                <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <p className="eyebrow">Workspace / new application</p>
-                    <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] text-white">Make every word count.</h1>
-                  </div>
-                  <p className="max-w-xs text-sm leading-6 text-slate-400">Upload your source resume, target the role, then decide on each proposed edit.</p>
+                <div className="mb-6 max-w-5xl mx-auto">
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Tailoring Studio & Auto-Apply</h1>
+                  <p className="text-xs text-slate-400 mt-1">Upload your resume, paste a target job URL, and trigger 1-click auto-apply across platforms.</p>
                 </div>
 
-                {error && <div role="alert" className="mb-5 border-l-2 border-coral bg-coral/10 p-3 text-sm text-coral">{error}</div>}
-
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_350px]">
-                  <div className="space-y-5">
+                <div className="grid gap-6 xl:grid-cols-[1fr_360px] max-w-5xl mx-auto">
+                  <div className="space-y-6">
                     <section className="grid gap-5 lg:grid-cols-2">
                       <div>
                         <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">01 / Source resume</p>
@@ -255,7 +260,7 @@ function Shell() {
                       )}
                     </AnimatePresence>
                   </div>
-                  <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy} resumeId={resume?.id} jobId={job?.id}/>
+                  <ScorePanel analysis={analysis} onRewrite={doRewrite} busy={busy} resumeId={resume?.id} jobId={job?.id} targetUrl={lastTargetUrl}/>
                 </div>
               </>
             )}
