@@ -180,7 +180,6 @@ const parseEducationAndCerts = (rawEduLines, rawCertLines = []) => {
 const parseSkills = (rawSkills) => {
   const skills = flattenLines(rawSkills);
   const categories = [];
-  let currentCategory = null;
 
   skills.forEach(skill => {
     const cleanSkill = typeof skill === 'string' ? skill.trim() : String(skill).trim();
@@ -189,27 +188,64 @@ const parseSkills = (rawSkills) => {
     if (cleanSkill.includes(':')) {
       const parts = cleanSkill.split(':');
       const catName = parts[0].trim();
-      const firstSkill = parts.slice(1).join(':').trim();
+      const rawItems = parts.slice(1).join(':').trim();
+      const items = rawItems.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
       
-      currentCategory = {
+      categories.push({
         name: catName,
-        items: [firstSkill]
-      };
-      categories.push(currentCategory);
+        items
+      });
     } else {
-      if (currentCategory) {
-        currentCategory.items.push(cleanSkill);
+      const items = cleanSkill.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+      if (categories.length > 0) {
+        categories[categories.length - 1].items.push(...items);
       } else {
-        currentCategory = {
+        categories.push({
           name: 'Core Skills',
-          items: [cleanSkill]
-        };
-        categories.push(currentCategory);
+          items
+        });
       }
     }
   });
 
   return categories;
+};
+
+// Helper to render text containing Live Demo, GitHub, or URLs as clickable anchor links
+const renderWithHyperlinks = (text, embeddedLinks = []) => {
+  if (!text) return null;
+  const str = String(text);
+
+  const parts = str.split(/(\bLive Demo\b|\bGitHub\b|https?:\/\/[^\s|]+)/i);
+  if (parts.length === 1) return str;
+
+  return parts.map((part, idx) => {
+    const lower = part.toLowerCase();
+    if (lower === 'live demo') {
+      const demoUrl = embeddedLinks.find(l => !/github\.com/i.test(l) && !/linkedin\.com/i.test(l) && !/mailto:/i.test(l)) || '#';
+      return (
+        <a key={idx} href={demoUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+          Live Demo
+        </a>
+      );
+    }
+    if (lower === 'github') {
+      const ghUrl = embeddedLinks.find(l => /github\.com/i.test(l)) || 'https://github.com';
+      return (
+        <a key={idx} href={ghUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+          GitHub
+        </a>
+      );
+    }
+    if (part.match(/^https?:\/\//i)) {
+      return (
+        <a key={idx} href={part} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
 };
 
 // Simple link parser
@@ -816,10 +852,10 @@ export default function Editor({ rewrite }) {
                       {parsedProj.map((proj, i) => (
                         <div key={i} className="job-block">
                           <div className="job-header">
-                            <span className="job-title">{proj.title}</span>
+                            <span className="job-title">{renderWithHyperlinks(proj.title, resumeData.contact?.links)}</span>
                             <span className="job-date">{proj.date}</span>
                           </div>
-                          {proj.role && <div className="job-sub">{proj.role}</div>}
+                          {proj.role && <div className="job-sub">{renderWithHyperlinks(proj.role, resumeData.contact?.links)}</div>}
                           {proj.stack && <div className="stack-line">{proj.stack}</div>}
                           <ul>
                             {proj.bullets.map((bullet, j) => {
@@ -1057,10 +1093,10 @@ export default function Editor({ rewrite }) {
                 {parsedProj.map((proj, i) => (
                   <div key={i} className="job-block">
                     <div className="job-header">
-                      <span className="job-title">{proj.title}</span>
+                      <span className="job-title">{renderWithHyperlinks(proj.title, resumeData.contact?.links)}</span>
                       <span className="job-date">{proj.date}</span>
                     </div>
-                    {proj.role && <div className="job-sub">{proj.role}</div>}
+                    {proj.role && <div className="job-sub">{renderWithHyperlinks(proj.role, resumeData.contact?.links)}</div>}
                     {proj.stack && <div className="stack-line">{proj.stack}</div>}
                     <ul>
                       {proj.bullets.map((bullet, j) => {
