@@ -4,7 +4,7 @@ import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, Arr
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
-import { analyzeJob, matchResume, rewriteResume, setResume, signIn, signOut, uploadResume } from './store';
+import { analyzeJob, fetchLatestResume, matchResume, rewriteResume, setResume, signIn, signOut, uploadResume } from './store';
 import ResumeUpload from './components/ResumeUpload';
 import JobDescriptionInput from './components/JobDescriptionInput';
 import ScorePanel from './components/ScorePanel';
@@ -48,48 +48,67 @@ function Auth({ mode, setMode, onBack }) {
       <section className="relative hidden overflow-hidden bg-surface p-10 lg:block">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#3be0c5 1px, transparent 1px)', backgroundSize: '25px 25px' }}/>
         <div className="relative flex h-full max-w-xl flex-col justify-between">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors w-fit">
-            <ArrowLeft size={14} />
-            Back to Home
-          </button>
-          <div>
-            <p className="eyebrow">Apply with precision</p>
-            <h1 className="mt-4 max-w-lg text-5xl font-semibold leading-[.98] tracking-[-.055em] text-white">Give your best evidence a clearer voice.</h1>
-            <p className="mt-5 max-w-md text-base leading-7 text-slate-300">Bring a resume and a role. Leave with an honest, tailored draft you can stand behind.</p>
+          <div className="flex items-center gap-2 font-semibold tracking-tight text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-aqua/10 text-aqua font-bold text-base border border-aqua/30">
+              CV
+            </div>
+            CVConnect
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-[.16em] text-slate-500">Truth-first optimisation / v1.0</p>
+
+          <div className="space-y-6">
+            <span className="eyebrow">Enterprise-grade application automation</span>
+            <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white font-sans">
+              Tailor every resume. <br />
+              <span className="text-aqua">Auto-apply with total proof.</span>
+            </h1>
+            <p className="max-w-md text-sm leading-relaxed text-slate-400">
+              Transform your raw CV into precision-targeted applications for Unstop, LinkedIn, Wellfound, Internshala, Indeed, Naukri, and Glassdoor.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-mono text-slate-500">
+            <span>✓ DeepSeek V3 AI</span>
+            <span>•</span>
+            <span>✓ Anti-Bot Stealth</span>
+            <span>•</span>
+            <span>✓ Live Proof logs</span>
+          </div>
         </div>
       </section>
 
-      {/* Auth panel */}
-      <section className="flex flex-col justify-center p-6 sm:p-10 relative">
-        <button onClick={onBack} className="absolute top-6 left-6 flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors lg:hidden">
-          <ArrowLeft size={14} />
-          Back
-        </button>
+      {/* Form panel */}
+      <section className="flex flex-col justify-between p-6 sm:p-10 lg:p-12 bg-ink">
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="button-quiet text-xs py-1.5 px-3 flex items-center gap-1.5">
+            <ArrowLeft size={14}/> Back
+          </button>
+        </div>
 
-        <motion.form initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} onSubmit={submit} className="w-full max-w-sm mx-auto">
-          <div className="mb-10 flex items-center gap-2 text-lg font-semibold lg:hidden">
-            <img src="/logo.png" alt="Logo" className="h-7 w-7 object-contain rounded" />
-            CVConnect
+        <motion.form key={mode} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} onSubmit={submit} className="mx-auto w-full max-w-sm my-auto space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {mode === 'login' ? 'Sign in to access your Tailoring Studio and Auto-Apply bots.' : 'Get started with automated job applications in under 2 minutes.'}
+            </p>
           </div>
-          <p className="eyebrow">Your workspace</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">{mode === 'login' ? 'Welcome back.' : 'Start with your best work.'}</h2>
-          <p className="mt-2 text-sm text-slate-400">{mode === 'login' ? 'Sign in to continue optimising.' : 'Create a secure CVConnect account.'}</p>
-          
+
           {mode === 'register' && (
-            <label className="mt-7 block text-xs text-slate-400">
-              Name
-              <input required className="input mt-1.5" value={name} onChange={e => setName(e.target.value)} autoComplete="name"/>
+            <label className="block text-xs text-slate-400">
+              Full name
+              <input required type="text" className="input mt-1.5" value={name} onChange={e => setName(e.target.value)} placeholder="Shubham Dubey"/>
             </label>
           )}
-          <label className="mt-4 block text-xs text-slate-400">
-            Email
-            <input required type="email" className="input mt-1.5" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email"/>
+
+          <label className="block text-xs text-slate-400">
+            Email address
+            <input required type="email" className="input mt-1.5" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="username"/>
           </label>
+
           <label className="mt-4 block text-xs text-slate-400">
             Password
-            <input required minLength="10" type="password" className="input mt-1.5" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
+            <input required minLength="6" type="password" className="input mt-1.5" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
           </label>
 
           {error && <p role="alert" className="mt-4 border-l-2 border-coral bg-coral/10 p-3 text-xs text-coral">{error}</p>}
@@ -116,6 +135,10 @@ function Shell() {
     return localStorage.getItem('cvconnect_active_tab') || 'workspace';
   });
   const busy = status === 'loading';
+
+  useEffect(() => {
+    dispatch(fetchLatestResume());
+  }, [dispatch]);
 
   useEffect(() => {
     if (activeTab) {

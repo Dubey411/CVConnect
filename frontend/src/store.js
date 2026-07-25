@@ -1,11 +1,13 @@
 import { configureStore, createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { request } from './api';
 export const uploadResume = createAsyncThunk('workspace/upload', async (file) => { const data = new FormData(); data.append('resume', file); return request({ method: 'post', url: '/resumes/upload', data }); });
+export const fetchLatestResume = createAsyncThunk('workspace/fetchLatest', async () => { const res = await request({ method: 'get', url: '/resumes?limit=1' }); return res.items?.[0] || null; });
 export const analyzeJob = createAsyncThunk('workspace/job', async (payload) => request({ method: 'post', url: '/jobs/analyze', data: payload }));
 export const matchResume = createAsyncThunk('workspace/match', async ({ resumeId, jobId }) => request({ method: 'post', url: `/resumes/${resumeId}/match`, data: { jobId } }));
 export const rewriteResume = createAsyncThunk('workspace/rewrite', async ({ resumeId, jobId }) => request({ method: 'post', url: `/resumes/${resumeId}/rewrite`, data: { jobId } }));
 const workspace = createSlice({ name: 'workspace', initialState: { resume: null, job: null, analysis: null, rewrite: null, status: 'idle', error: null, accepted: {} }, reducers: { setResume(state, action) { state.resume = action.payload; }, clearResume(state) { state.resume = null; state.analysis = null; state.rewrite = null; state.accepted = {}; }, resolveChange(state, action) { state.accepted[action.payload.id] = action.payload.accept; } }, extraReducers: builder => builder
   .addCase(uploadResume.fulfilled, (s, a) => { s.status = 'ready'; s.resume = a.payload.resume; s.rewrite = null; s.accepted = {}; })
+  .addCase(fetchLatestResume.fulfilled, (s, a) => { if (a.payload && !s.resume) { s.status = 'ready'; s.resume = a.payload; } })
   .addCase(analyzeJob.fulfilled, (s, a) => { s.status = 'ready'; s.job = a.payload.job; s.rewrite = null; s.accepted = {}; })
   .addCase(matchResume.fulfilled, (s, a) => { s.status = 'ready'; s.resume = a.payload.resume; s.analysis = a.payload.analysis; s.rewrite = null; s.accepted = {}; })
   .addCase(rewriteResume.fulfilled, (s, a) => { s.status = 'ready'; s.resume = a.payload.resume; s.rewrite = a.payload; })
