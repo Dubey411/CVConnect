@@ -353,7 +353,7 @@ def rewrite(payload: RewriteRequest):
 
     # 7. Diff changes
     changes = []
-    for key in ["summary", "skills", "experience", "projects", "education"]:
+    for key in ["summary", "skills", "experience", "projects", "education", "certifications"]:
         before = resume.get(key, "")
         after  = optimized.get(key, "")
         if before != after:
