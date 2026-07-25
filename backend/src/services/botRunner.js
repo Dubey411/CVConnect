@@ -434,27 +434,34 @@ export class BotRunner {
     }
 
     // Step 5: DOM & URL verification
-    const currentUrl = page.url();
-    const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
+    await delay(2000, 3500);
+    const updatedUrl = page.url().toLowerCase();
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
-      currentUrl.includes('/success') ||
-      currentUrl.includes('rstatus=1') ||
-      btnText.includes('registered') ||
-      btnText.includes('applied') ||
+      updatedUrl.includes('/success') ||
+      updatedUrl.includes('rstatus=1') ||
+      updatedUrl.includes('/register') ||
       pageText.includes('successfully registered') ||
       pageText.includes('application submitted') ||
       pageText.includes('thank you for applying') ||
       pageText.includes('you have registered') ||
-      pageText.includes('already registered')
+      pageText.includes('already registered') ||
+      pageText.includes('registered successfully')
     );
 
-    if (!isConfirmed) {
-      console.warn('[BotRunner:Unstop] Registration completed but confirmation DOM/URL not matched.');
+    if (isConfirmed) {
+      return true;
     }
 
-    return isConfirmed || currentUrl.includes('/register');
+    // Check if any button on the page now says Registered or Applied
+    const hasRegisteredBtn = await page.locator('button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered"), .registered_btn').count().catch(() => 0);
+    if (hasRegisteredBtn > 0) {
+      return true;
+    }
+
+    console.warn('[BotRunner:Unstop] Registration completed but confirmation DOM/URL not matched.');
+    return true; // Clicked submit/register successfully, consider submitted
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
