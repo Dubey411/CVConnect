@@ -276,16 +276,25 @@ export class BotRunner {
         await delay(2000, 3000);
         try {
           await page.goto(destination, { waitUntil: 'load', timeout: 25000 }).catch(() => {});
-          await delay(3000, 4500);
+          await delay(3500, 5000);
 
           const recheckBodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+          const hasExactBtnText = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, a, .register_btn, .apply_btn'));
+            return btns.some(b => {
+              const txt = (b.textContent || '').trim().toLowerCase();
+              return txt === 'registered' || txt === 'applied' || txt === 'already registered' || txt === 'application submitted';
+            });
+          }).catch(() => false);
+
           const verified = (
-            recheckBodyText.includes('already registered') ||
+            hasExactBtnText ||
+            recheckBodyText.includes('successfully registered') ||
             recheckBodyText.includes('you have registered') ||
             recheckBodyText.includes('application submitted') ||
-            recheckBodyText.includes('already applied') ||
-            recheckBodyText.includes('registered') ||
-            recheckBodyText.includes('applied')
+            recheckBodyText.includes('already registered') ||
+            recheckBodyText.includes('registered successfully') ||
+            recheckBodyText.includes('registration confirmed')
           );
 
           if (verified) {
@@ -318,7 +327,7 @@ export class BotRunner {
         await Promise.all(updates);
         this.emit(userId, applicationId, 'complete', `Application 100% verified & submitted on ${platform}! 🎉`, 100);
       } else {
-        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission.' } });
+        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission on platform.' } });
         this.emit(userId, applicationId, 'failed', 'Bot completed but submission could not be confirmed. Check platform manually.', 0);
       }
 
@@ -359,7 +368,7 @@ export class BotRunner {
       bodyText.includes('already registered') ||
       bodyText.includes('you have registered') ||
       bodyText.includes('application submitted') ||
-      bodyText.includes('already applied')
+      bodyText.includes('registered successfully')
     );
 
     if (alreadySubmitted) {
@@ -384,8 +393,7 @@ export class BotRunner {
     ], 15000);
 
     if (!applyBtn) {
-      // Re-check if page says registered after checking buttons
-      if (bodyText.includes('registered') || bodyText.includes('applied')) {
+      if (alreadySubmitted) {
         this.emit(userId, appId, 'complete', 'Application is already submitted on Unstop! 🎉', 100);
         return true;
       }
@@ -427,7 +435,7 @@ export class BotRunner {
       }
     }
 
-    // Step 3: Click Next button
+    // Step 3: Click Next button if multi-step form
     const nextBtn = await findVisible(page, [
       'button:has-text("Next")',
       '.un-button:has-text("Next")',
@@ -451,22 +459,22 @@ export class BotRunner {
       'button:has-text("Register")',
       '.un-button:has-text("Submit")',
       '.modal button[type="submit"]',
-    ], 2500);
+      'button[type="submit"]',
+    ], 3000);
 
     if (submitBtn) {
       await humanClick(submitBtn);
       await delay(3500, 5500);
     }
 
-    // Step 5: DOM & URL verification
-    await delay(2000, 3500);
+    // Step 5: Strict DOM & URL verification
+    await delay(3000, 4500);
     const updatedUrl = page.url().toLowerCase();
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
       updatedUrl.includes('/success') ||
       updatedUrl.includes('rstatus=1') ||
-      updatedUrl.includes('/register') ||
       pageText.includes('successfully registered') ||
       pageText.includes('application submitted') ||
       pageText.includes('thank you for applying') ||
