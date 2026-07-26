@@ -380,40 +380,85 @@ export class BotRunner {
     }
 
     await humanClick(applyBtn);
-    await delay(2500, 4000);
+    await delay(3000, 5000);
 
-    // Step 2: Fulfill Angular form controls if redirected to /register
-    if (page.url().includes('/register') || page.url().includes('/competitions')) {
-      this.emit(userId, appId, 'filling', 'Fulfilling Unstop registration form controls…', 70);
+    // Step 2: Fulfill Angular form controls if redirected to /register or form present
+    const currentUrl = page.url().toLowerCase();
+    if (currentUrl.includes('/register') || currentUrl.includes('/competitions') || (await page.locator('input, button:has-text("Submit")').count().catch(() => 0)) > 0) {
+      this.emit(userId, appId, 'filling', 'Fulfilling Unstop application form fields & uploading resume…', 70);
 
-      // Fulfill Location, Differently Abled, and Acceptance checkbox in DOM
+      // 1. Upload CV / Resume PDF if file input is present
+      if (pdfPath) {
+        try {
+          const fileInp = page.locator('input[type="file"]').first();
+          if (await fileInp.count().catch(() => 0) > 0) {
+            console.log('[BotRunner:Unstop] Uploading tailored PDF resume to Unstop form...');
+            await fileInp.setInputFiles(pdfPath).catch(e => console.warn('[BotRunner:Unstop] File set error:', e.message));
+            await delay(2000, 3500);
+          }
+        } catch (e) {
+          console.warn('[BotRunner:Unstop] Resume upload skipped:', e.message);
+        }
+      }
+
+      // 2. Fill Location if field is present and blank
       await page.evaluate(() => {
-        // Location input
-        const loc = document.querySelector('#cities_input, input[name="player_location"]');
-        if (loc) {
-          loc.value = 'Delhi, India';
+        const loc = document.querySelector('#cities_input, input[name="player_location"], input[placeholder*="location" i], input[id*="location"]');
+        if (loc && !loc.value) {
+          loc.value = 'Kopar Khairane, Maharashtra, India';
           loc.dispatchEvent(new Event('input', { bubbles: true }));
           loc.dispatchEvent(new Event('change', { bubbles: true }));
         }
-
-        // Differently abled radio ("No")
-        const r = document.querySelector('un-radio-group[name="user_differently_abled"] input[type="radio"]');
-        if (r) {
-          r.checked = true;
-          r.dispatchEvent(new Event('change', { bubbles: true }));
-          r.dispatchEvent(new Event('input', { bubbles: true }));
-        }
       }).catch(() => {});
 
-      // Click Acceptance checkbox label
-      const checkLabel = page.locator('un-checkbox[name="acceptance"] label, #acceptance label, un-checkbox label').first();
-      if (await checkLabel.isVisible().catch(() => false)) {
-        await checkLabel.click().catch(() => {});
+      // 3. Fill Skills input if empty
+      const skillsInp = page.locator('input[placeholder*="skills" i], input[placeholder*="Search and add" i]').first();
+      if (await skillsInp.isVisible().catch(() => false)) {
+        const skillsVal = await skillsInp.inputValue().catch(() => '');
+        if (!skillsVal) {
+          await skillsInp.fill('Full Stack Development').catch(() => {});
+          await page.keyboard.press('Enter').catch(() => {});
+          await delay(400, 800);
+          await skillsInp.fill('Node.js').catch(() => {});
+          await page.keyboard.press('Enter').catch(() => {});
+          await delay(400, 800);
+        }
+      }
+
+      // 4. Select Differently Abled ("No")
+      const noRadio = page.locator('un-radio-group[name="user_differently_abled"] label:has-text("No"), label:has-text("No")').first();
+      if (await noRadio.isVisible().catch(() => false)) {
+        await noRadio.click({ force: true }).catch(() => {});
         await delay(300, 600);
+      }
+
+      // 5. Accept Terms & Conditions checkboxes
+      const checkboxes = page.locator('input[type="checkbox"], un-checkbox input');
+      const cbCount = await checkboxes.count().catch(() => 0);
+      for (let i = 0; i < cbCount; i++) {
+        const cb = checkboxes.nth(i);
+        if (await cb.isVisible().catch(() => false)) {
+          const isChecked = await cb.isChecked().catch(() => false);
+          if (!isChecked) {
+            await cb.click({ force: true }).catch(() => {});
+            await delay(300, 500);
+          }
+        }
+      }
+
+      // Fallback click on Terms & Conditions labels
+      const checkLabels = page.locator('un-checkbox label, label:has-text("agree"), label:has-text("terms"), label:has-text("Stay in the loop")');
+      const labelCount = await checkLabels.count().catch(() => 0);
+      for (let i = 0; i < labelCount; i++) {
+        const lbl = checkLabels.nth(i);
+        if (await lbl.isVisible().catch(() => false)) {
+          await lbl.click().catch(() => {});
+          await delay(300, 500);
+        }
       }
     }
 
-    // Step 3: Click Next button if present
+    // Step 3: Click Next button if multi-step form
     const nextBtn = await findVisible(page, [
       'button:has-text("Next")',
       '.un-button:has-text("Next")',
@@ -428,7 +473,7 @@ export class BotRunner {
 
     this.emit(userId, appId, 'submitting', 'Finalizing Unstop application…', 88);
 
-    // Step 4: Final submit button inside form or modal if present
+    // Step 4: Final submit button inside form or modal
     const submitBtn = await findVisible(page, [
       'button:has-text("Submit")',
       'button:has-text("Submit Application")',
@@ -438,7 +483,7 @@ export class BotRunner {
       '.un-button:has-text("Submit")',
       '.modal button[type="submit"]',
       'button[type="submit"]',
-    ], 3000);
+    ], 3500);
 
     if (submitBtn) {
       await humanClick(submitBtn);
