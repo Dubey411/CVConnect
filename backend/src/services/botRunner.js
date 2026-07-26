@@ -332,8 +332,17 @@ export class BotRunner {
 
     this.emit(userId, appId, 'filling', 'Locating Unstop Apply button…', 58);
 
-    // Check if user has ALREADY APPLIED to this listing
+    // Check if user is logged into Unstop profile in Playwright context
     const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+    const hasLoginBtn = await page.locator('header a:has-text("Login"), header button:has-text("Login"), .top-header button:has-text("Login"), a:has-text("Login")').first().isVisible().catch(() => false);
+    const hasLoggedInText = bodyText.includes('logout') || bodyText.includes('my profile') || bodyText.includes('shubham');
+
+    if (hasLoginBtn && !hasLoggedInText) {
+      console.warn('[BotRunner:Unstop] Playwright profile is not logged into Unstop.');
+      throw new Error('Unstop session is not logged in inside CVConnect. Please visit Platforms tab -> Unstop -> Reconnect and log in.');
+    }
+
+    // Check if user has ALREADY APPLIED to this listing
     const alreadySubmitted = (
       bodyText.includes('already registered') ||
       bodyText.includes('you have registered') ||
