@@ -369,6 +369,8 @@ export class BotRunner {
     await delay(1500, 3000);
     await dismissOverlays(page);
 
+    let applyBtn = null;
+
     // CAPTCHA check
     if (hasCaptcha(await page.content())) {
       this.emit(userId, appId, 'captcha_detected', '⚠️ CAPTCHA detected on Unstop — please solve it in your browser within 60s.', 50, 'CAPTCHA_REQUIRED');
@@ -387,45 +389,27 @@ export class BotRunner {
       throw new Error('Unstop session is not logged in inside CVConnect. Please visit Platforms tab -> Unstop -> Reconnect and log in.');
     }
 
-    // Check if user has ALREADY APPLIED to this listing
-    const alreadySubmitted = (
-      bodyText.includes('already registered') ||
-      bodyText.includes('you have registered') ||
-      bodyText.includes('application submitted') ||
-      bodyText.includes('already applied')
-    );
+    // Step 1: Click Quick Apply / Register button if on listing page (bypass if already on /register)
+    if (!page.url().toLowerCase().includes('/register')) {
+      applyBtn = await findVisible(page, [
+        '#un-register-btn',
+        'button:has-text("Quick Apply")',
+        'a:has-text("Quick Apply")',
+        '.register_btn',
+        'button:has-text("Register Now")',
+        'button:has-text("Apply Now")',
+        'button:has-text("Apply")',
+        'button:has-text("Register")',
+        '.apply-btn',
+        '[data-testid="apply-button"]',
+        'a[href*="/register"]',
+      ], 8000);
 
-    if (alreadySubmitted) {
-      this.emit(userId, appId, 'complete', 'You have already applied for this position on Unstop! 🎉', 100);
-      return true;
-    }
-
-    // Step 1: Click Quick Apply / Register button (exact button selectors, avoid container div matching)
-    const applyBtn = await findVisible(page, [
-      '#un-register-btn',
-      'button:has-text("Quick Apply")',
-      'a:has-text("Quick Apply")',
-      '.register_btn',
-      'button:has-text("Register Now")',
-      'button:has-text("Apply Now")',
-      'button:has-text("Apply")',
-      'button:has-text("Register")',
-      '.apply-btn',
-      '[data-testid="apply-button"]',
-      'a[href*="/register"]',
-    ], 10000);
-
-    if (!applyBtn) {
-      if (bodyText.includes('registered') || bodyText.includes('applied')) {
-        this.emit(userId, appId, 'complete', 'Application is already submitted on Unstop! 🎉', 100);
-        return true;
+      if (applyBtn) {
+        await humanClick(applyBtn);
+        await delay(3000, 5000);
       }
-      console.warn('[BotRunner:Unstop] Could not find Apply/Register button on page.');
-      return false;
     }
-
-    await humanClick(applyBtn);
-    await delay(3000, 5000);
 
     // Step 2: Fulfill Angular form controls if redirected to /register or form present
     const currentUrl = page.url().toLowerCase();
@@ -536,7 +520,7 @@ export class BotRunner {
     }
 
     const finalUrl = page.url();
-    const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
+    const btnText = applyBtn ? (await applyBtn.textContent().catch(() => '')).toLowerCase() : '';
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
