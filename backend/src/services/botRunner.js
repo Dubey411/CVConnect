@@ -82,10 +82,54 @@ async function humanType(locator, text) {
   }
 }
 
-/** Click with pre- and post-delay */
+/** Dismiss cookie banners and floating overlays that block clicks */
+async function dismissOverlays(page) {
+  if (!page) return;
+  try {
+    await page.evaluate(() => {
+      // 1. Click accept cookie buttons if present
+      const selectors = [
+        '.GTM_ACCEPT_COOKIE',
+        'button.GTM_ACCEPT_COOKIE',
+        '#onetrust-accept-btn-handler',
+        '.cookie-banner button',
+      ];
+      for (const sel of selectors) {
+        const btns = document.querySelectorAll(sel);
+        btns.forEach(b => { if (b && b.offsetWidth > 0) b.click(); });
+      }
+
+      // 2. Hide fixed cookie banners / notifications that obscure pointer events
+      const banners = document.querySelectorAll('app-notification, .cookie-banner, .cookie-consent, #onetrust-banner-sdk');
+      banners.forEach(b => {
+        b.style.display = 'none';
+        b.style.pointerEvents = 'none';
+      });
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+/** Robust human-like click with cookie overlay dismissal and force fallback */
 async function humanClick(locator) {
   await delay(120, 350);
-  await locator.click();
+  try {
+    await locator.scrollIntoViewIfNeeded().catch(() => {});
+    await locator.click({ timeout: 4000 });
+  } catch (err) {
+    if (err.message.includes('intercepts pointer events') || err.message.includes('Timeout') || err.message.includes('not visible')) {
+      console.warn('[BotRunner:humanClick] Click obscured by overlay. Dismissing overlays & force-clicking element…');
+      try {
+        const page = locator.page ? locator.page() : null;
+        if (page) await dismissOverlays(page);
+      } catch (_) {}
+
+      await locator.click({ force: true }).catch(async () => {
+        await locator.evaluate(el => el.click()).catch(() => {});
+      });
+    } else {
+      throw err;
+    }
+  }
   await delay(200, 500);
 }
 
@@ -323,6 +367,7 @@ export class BotRunner {
   async applyUnstop(page, url, user, resume, pdfPath, userId, appId) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
     await delay(1500, 3000);
+    await dismissOverlays(page);
 
     // CAPTCHA check
     if (hasCaptcha(await page.content())) {
