@@ -490,13 +490,13 @@ export class BotRunner {
       await delay(3500, 5500);
     }
 
-    const currentUrl = page.url();
+    const finalUrl = page.url();
     const btnText = (await applyBtn.textContent().catch(() => '')).toLowerCase();
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
-      currentUrl.includes('/success') ||
-      currentUrl.includes('rstatus=1') ||
+      finalUrl.includes('/success') ||
+      finalUrl.includes('rstatus=1') ||
       btnText.includes('registered') ||
       btnText.includes('applied') ||
       pageText.includes('successfully registered') ||
@@ -518,7 +518,7 @@ export class BotRunner {
     }
 
     console.warn('[BotRunner:Unstop] Registration completed but confirmation DOM/URL not matched.');
-    return true; // Clicked submit/register successfully, consider submitted
+    return isConfirmed || finalUrl.includes('/register');
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
