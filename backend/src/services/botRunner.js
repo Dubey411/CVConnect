@@ -504,39 +504,43 @@ export class BotRunner {
       }
     }
 
-    // Step 3: Click Next button if multi-step form
-    const nextBtn = await findVisible(page, [
-      'button:has-text("Next")',
-      '.un-button:has-text("Next")',
-      'button span:has-text("Next")',
-    ], 2500);
-
-    if (nextBtn) {
-      this.emit(userId, appId, 'filling', 'Submitting Unstop form step 1…', 78);
-      await humanClick(nextBtn);
-      await delay(4000, 6000);
-    }
-
-    this.emit(userId, appId, 'submitting', 'Finalizing Unstop application…', 88);
-
-    // Step 4: Final submit button inside form or modal
-    const submitBtn = await findVisible(page, [
+    // Step 3 & 4: Locate Next / Submit / Save Form action button
+    const actionBtn = await findVisible(page, [
+      '[data-test="save-form-btn"]',
+      'button[data-test*="save"]',
+      'button[data-test*="submit"]',
       'button:has-text("Submit")',
       'button:has-text("Submit Application")',
       'button:has-text("Confirm Registration")',
       'button:has-text("Confirm")',
       'button:has-text("Register")',
+      'button:has-text("Next")',
       '.un-button:has-text("Submit")',
+      '.un-button:has-text("Next")',
+      '.un-button',
       '.modal button[type="submit"]',
       'button[type="submit"]',
-    ], 3500);
+    ], 4000);
 
     let submitted = false;
-    if (submitBtn) {
-      this.emit(userId, appId, 'submitting', 'Submitting Unstop application form…', 92);
-      await humanClick(submitBtn);
+    if (actionBtn) {
+      this.emit(userId, appId, 'submitting', 'Submitting Unstop application form…', 90);
+      await humanClick(actionBtn);
       await delay(4000, 6000);
       submitted = true;
+
+      // Check if a second step Next/Submit appeared
+      const secondSubmitBtn = await findVisible(page, [
+        '[data-test="save-form-btn"]',
+        'button:has-text("Submit")',
+        'button:has-text("Confirm")',
+        'button[type="submit"]',
+      ], 2000);
+
+      if (secondSubmitBtn) {
+        await humanClick(secondSubmitBtn);
+        await delay(4000, 6000);
+      }
     }
 
     const finalUrl = page.url();
