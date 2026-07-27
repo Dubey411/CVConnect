@@ -25,24 +25,36 @@ const mlRewrite = async (resume, job) => {
 };
 
 // ─── Last-resort local rewrite ────────────────────────────────────────────────
-const dumbLocalRewrite = (resume, job) => {
-  const keywords = (job.skills || []).slice(0, 6).join(', ');
-  const summary = `${resume.summary || 'Results-oriented professional.'} Tailored for ${job.title}, with demonstrated experience aligned to ${keywords}.`;
-  const optimized = {
-    ...resume, summary,
-    skills: [...new Set([
-      ...(resume.skills || []),
-      ...(job.skills || []).filter(s => (resume.sourceText || '').toLowerCase().includes(s.toLowerCase()))
-    ])],
-    experience: (resume.experience || []).map(b =>
-      typeof b === 'string' && !b.match(/^\s*(led|built|designed|delivered|managed|improved|created|developed)/i)
-        ? `Delivered ${b}` : b
-    )
-  };
-  const changes = ['summary', 'skills', 'experience', 'projects', 'education', 'certifications']
-    .filter(key => JSON.stringify(resume[key] || '') !== JSON.stringify(optimized[key] || ''))
-    .map(section => ({ id: section, section, before: resume[section] || '', after: optimized[section] || '', status: 'pending' }));
-  return { optimized, changes, provider: 'safe-local-fallback' };
+const dumbLocalRewrite = (resume = {}, job = {}) => {
+  try {
+    const r = typeof resume === 'object' && resume !== null ? resume : {};
+    const j = typeof job === 'object' && job !== null ? job : {};
+    const keywords = Array.isArray(j.skills) ? j.skills.slice(0, 6).join(', ') : 'key technologies';
+    const summary = `${r.summary || 'Results-oriented professional.'} Tailored for ${j.title || 'the target position'}, with demonstrated experience aligned to ${keywords}.`;
+    const optimized = {
+      ...r,
+      summary,
+      skills: [...new Set([
+        ...(Array.isArray(r.skills) ? r.skills : []),
+        ...(Array.isArray(j.skills) ? j.skills.filter(s => (r.sourceText || '').toLowerCase().includes(String(s).toLowerCase())) : [])
+      ])],
+      experience: (Array.isArray(r.experience) ? r.experience : []).map(b =>
+        typeof b === 'string' && !b.match(/^\s*(led|built|designed|delivered|managed|improved|created|developed)/i)
+          ? `Delivered ${b}` : b
+      )
+    };
+    const changes = ['summary', 'skills', 'experience', 'projects', 'education', 'certifications']
+      .filter(key => JSON.stringify(r[key] || '') !== JSON.stringify(optimized[key] || ''))
+      .map(section => ({ id: section, section, before: r[section] || '', after: optimized[section] || '', status: 'pending' }));
+    return { optimized, changes, provider: 'safe-local-fallback' };
+  } catch (err) {
+    console.error('[ResumeRewriter] Local fallback error:', err.message);
+    return {
+      optimized: typeof resume === 'object' && resume !== null ? resume : { summary: 'Professional resume' },
+      changes: [],
+      provider: 'safe-empty-fallback'
+    };
+  }
 };
 
 // ─── LLM call helper ──────────────────────────────────────────────────────────
