@@ -562,12 +562,19 @@ export class BotRunner {
       }
     }
 
+    // Step 5: Double-verify by reloading the listing page to confirm button text
+    if (submitted) {
+      this.emit(userId, appId, 'verifying', 'Reloading Unstop page to double-verify registration status…', 96);
+      await delay(3000, 4000);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+      await delay(2000, 3000);
+    }
+
     const finalUrl = page.url();
     const btnText = applyBtn ? (await applyBtn.textContent().catch(() => '')).toLowerCase() : '';
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
-      submitted ||
       finalUrl.includes('/success') ||
       finalUrl.includes('rstatus=1') ||
       btnText.includes('registered') ||
@@ -586,7 +593,7 @@ export class BotRunner {
       return true;
     }
 
-    // Check if any button on the page now says Registered or Applied
+    // Check if any button on the page now strictly says Registered or Applied
     const hasRegisteredBtn = await page.locator('button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered"), .registered_btn').count().catch(() => 0);
     if (hasRegisteredBtn > 0) {
       return true;
