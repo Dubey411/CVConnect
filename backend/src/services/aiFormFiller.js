@@ -144,7 +144,7 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
         }
       },
       {
-        description: 'Fulfilling location fields…',
+        description: 'Fulfilling location fields with autocomplete selection…',
         progress: 75,
         action: async (p) => {
           if (formData?.location) {
@@ -152,8 +152,25 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
             if (locField) {
               const currentVal = await locField.inputValue().catch(() => '');
               if (!currentVal) {
-                await locField.fill(formData.location).catch(() => {});
-                await p.keyboard.press('Enter').catch(() => {});
+                await locField.click({ force: true }).catch(() => {});
+                await locField.fill('Mumbai').catch(() => {});
+                await p.waitForTimeout(1000);
+
+                // Select first Angular mat-option or Google places autocomplete suggestion
+                const option = p.locator('mat-option, un-option, .cdk-overlay-container mat-option, .pac-item, li.location-item, div.option').first();
+                if (await option.isVisible().catch(() => false)) {
+                  await option.click({ force: true }).catch(() => {});
+                } else {
+                  await p.keyboard.press('ArrowDown').catch(() => {});
+                  await p.waitForTimeout(300);
+                  await p.keyboard.press('Enter').catch(() => {});
+                }
+
+                await locField.evaluate(el => {
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                  el.dispatchEvent(new Event('blur', { bubbles: true }));
+                }).catch(() => {});
                 await p.waitForTimeout(500);
               }
             }
