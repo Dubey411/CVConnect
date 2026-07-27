@@ -42,7 +42,11 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
       if (data.message) setProgressMsg(data.message);
       if (data.percent !== undefined) setProgressPercent(data.percent);
 
-      if (data.stage === 'verifying' || data.status === 'verifying') {
+      if (data.stage === 'ai_analyzing') {
+        setApplyState('ai_analyzing');
+      } else if (data.stage === 'ai_filling') {
+        setApplyState('ai_filling');
+      } else if (data.stage === 'verifying' || data.status === 'verifying') {
         setApplyState('verifying');
       } else if (data.status === 'complete' || data.stage === 'complete' || data.percent === 100) {
         setApplyState('verified');
@@ -210,6 +214,24 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
             </div>
             <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
               <div className="h-full bg-aqua transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p className="text-[11px] text-slate-300 truncate">{progressMsg}</p>
+          </div>
+        ) : applyState === 'ai_analyzing' ? (
+          <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded text-center text-xs text-blue-400 font-medium flex items-center justify-center gap-1.5">
+            <Loader2 size={14} className="animate-spin" /> AI is analyzing form structure...
+          </div>
+        ) : applyState === 'ai_filling' ? (
+          <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded space-y-2">
+            <div className="flex items-center justify-between text-xs text-blue-400 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Loader2 size={14} className="animate-spin" />
+                AI Form Filler Engine
+              </span>
+              <span className="font-mono">{progressPercent}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-400 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
             <p className="text-[11px] text-slate-300 truncate">{progressMsg}</p>
           </div>
