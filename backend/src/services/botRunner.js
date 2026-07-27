@@ -546,8 +546,8 @@ export class BotRunner {
       return true;
     }
 
-    console.warn('[BotRunner:Unstop] Registration completed but confirmation DOM/URL not matched.');
-    return isConfirmed || finalUrl.includes('/register');
+    console.warn('[BotRunner:Unstop] Registration steps executed, but confirmation could not be verified on DOM/URL.');
+    return false;
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
