@@ -68,20 +68,70 @@ router.get('/applications', async (req, res, next) => {
     });
   } catch (e) { next(e); }
 });
-router.post('/applications/apply', [body('platform').trim().isString(), body('resumeId').isString(), body('jobId').optional().isString(), body('targetUrl').optional().isString()], validate, async (req, res, next) => { try { const { platform, resumeId, jobId, targetUrl } = req.body;
-  if (!targetUrl) return res.status(400).json({ error: { code: 'URL_REQUIRED', message: 'No target URL provided. Add a job URL before triggering auto-apply.' } });
-  // Check browser session first, then fall back to token connection
-  const [browserSession, tokenConnection] = await Promise.all([
-    prisma.browserSession.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }),
-    prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }),
-  ]);
-  const hasSession = browserSession?.status === 'connected';
-  const hasToken   = tokenConnection?.status === 'connected';
-  if (!hasSession && !hasToken) return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${platform} account in Accounts or Connect Platforms first.` } });
-  const application = await prisma.jobApplication.create({ data: { userId: req.user.sub, jobId: jobId || null, platform, targetUrl, status: 'pending' } });
-  const io = req.app.get('io');
-  new BotRunner(io).runApplication({ userId: req.user.sub, applicationId: application.id, jobId, platform, resumeId, targetUrl, useBrowserSession: hasSession }).catch(err => console.error('[BotRunner Async Error]:', err.message));
-  res.status(202).json({ application, message: `Automated application to ${platform} initiated.` }); } catch (e) { next(e); } });
+router.post('/applications/apply', [body('platform').trim().isString(), body('resumeId').optional().isString(), body('jobId').optional().isString(), body('targetUrl').optional().isString()], validate, async (req, res, next) => {
+  try {
+    const { platform, resumeId, jobId, targetUrl } = req.body;
+    if (!targetUrl) return res.status(400).json({ error: { code: 'URL_REQUIRED', message: 'No target URL provided. Add a job URL before triggering auto-apply.' } });
+
+    // Validate resume
+    let validResumeId = resumeId;
+    if (!validResumeId || validResumeId === 'undefined') {
+      const latestResume = await prisma.resume.findFirst({
+        where: { userId: req.user.sub },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (!latestResume) {
+        return res.status(400).json({ error: { code: 'RESUME_REQUIRED', message: 'Please upload a resume first before applying.' } });
+      }
+      validResumeId = latestResume.id;
+    }
+
+    // Validate job ID exists in DB before linking foreign key
+    let validJobId = null;
+    if (jobId && typeof jobId === 'string' && jobId !== 'undefined' && jobId.trim() !== '') {
+      const jobExists = await prisma.job.findUnique({ where: { id: jobId } }).catch(() => null);
+      if (jobExists) validJobId = jobId;
+    }
+
+    // Check browser session first, then fall back to token connection
+    const [browserSession, tokenConnection] = await Promise.all([
+      prisma.browserSession.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }).catch(() => null),
+      prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }).catch(() => null),
+    ]);
+
+    const hasSession = browserSession?.status === 'connected';
+    const hasToken   = tokenConnection?.status === 'connected';
+
+    if (!hasSession && !hasToken) {
+      return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${platform} account in Accounts or Connect Platforms first.` } });
+    }
+
+    const application = await prisma.jobApplication.create({
+      data: {
+        userId: req.user.sub,
+        jobId: validJobId,
+        platform,
+        targetUrl,
+        status: 'pending'
+      }
+    });
+
+    const io = req.app.get('io');
+    new BotRunner(io).runApplication({
+      userId: req.user.sub,
+      applicationId: application.id,
+      jobId: validJobId,
+      platform,
+      resumeId: validResumeId,
+      targetUrl,
+      useBrowserSession: hasSession
+    }).catch(err => console.error('[BotRunner Async Error]:', err.message));
+
+    res.status(202).json({ application, message: `Automated application to ${platform} initiated.` });
+  } catch (e) {
+    next(e);
+  }
+});
 router.post('/jobs/scrape', [body('url').trim().isURL()], validate, async (req, res, next) => { try { const jobData = await new JobScraper().scrape(req.body.url); res.json({ job: jobData }); } catch (e) { if (e.code === 'SITE_PROTECTED' || e.status === 400) { return res.status(400).json({ error: { code: e.code || 'JOB_SCRAPE_FAILED', message: e.message, guessedTitle: e.guessedTitle || '', guessedCompany: e.guessedCompany || '', isProtected: Boolean(e.code === 'SITE_PROTECTED') } }); } next(e); } });
 router.post('/resumes/upload', upload.single('resume'), async (req, res, next) => {
   try {
