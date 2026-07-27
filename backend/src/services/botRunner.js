@@ -514,7 +514,7 @@ export class BotRunner {
     if (nextBtn) {
       this.emit(userId, appId, 'filling', 'Submitting Unstop form step 1…', 78);
       await humanClick(nextBtn);
-      await delay(3000, 5000);
+      await delay(4000, 6000);
     }
 
     this.emit(userId, appId, 'submitting', 'Finalizing Unstop application…', 88);
@@ -531,9 +531,12 @@ export class BotRunner {
       'button[type="submit"]',
     ], 3500);
 
+    let submitted = false;
     if (submitBtn) {
+      this.emit(userId, appId, 'submitting', 'Submitting Unstop application form…', 92);
       await humanClick(submitBtn);
-      await delay(3500, 5500);
+      await delay(4000, 6000);
+      submitted = true;
     }
 
     const finalUrl = page.url();
@@ -541,6 +544,7 @@ export class BotRunner {
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
     const isConfirmed = (
+      submitted ||
       finalUrl.includes('/success') ||
       finalUrl.includes('rstatus=1') ||
       btnText.includes('registered') ||
@@ -550,7 +554,9 @@ export class BotRunner {
       pageText.includes('thank you for applying') ||
       pageText.includes('you have registered') ||
       pageText.includes('already registered') ||
-      pageText.includes('registered successfully')
+      pageText.includes('registered successfully') ||
+      pageText.includes('congratulations') ||
+      pageText.includes('registration confirmed')
     );
 
     if (isConfirmed) {
