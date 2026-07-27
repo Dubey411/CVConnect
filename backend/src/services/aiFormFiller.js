@@ -178,16 +178,28 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
         }
       },
       {
-        description: 'Adding candidate skills…',
+        description: 'Adding candidate skills with dropdown tag selection…',
         progress: 82,
         action: async (p) => {
           if (Array.isArray(formData?.skills) && formData.skills.length > 0) {
             const skillsField = await findField(p, 'skills');
             if (skillsField) {
               for (const skill of formData.skills.slice(0, 4)) {
+                await skillsField.click({ force: true }).catch(() => {});
                 await skillsField.fill(skill).catch(() => {});
-                await p.keyboard.press('Enter').catch(() => {});
-                await p.waitForTimeout(400);
+                await p.waitForTimeout(800);
+
+                // Select Angular mat-option / skill tag suggestion dropdown
+                const skillOpt = p.locator('mat-option, un-option, .cdk-overlay-container mat-option, .skills-list li, div.skill-option, [role="option"]').first();
+                if (await skillOpt.isVisible().catch(() => false)) {
+                  await skillOpt.click({ force: true }).catch(() => {});
+                } else {
+                  await p.keyboard.press('ArrowDown').catch(() => {});
+                  await p.waitForTimeout(300);
+                  await p.keyboard.press('Enter').catch(() => {});
+                }
+
+                await p.waitForTimeout(500);
               }
             }
           }
