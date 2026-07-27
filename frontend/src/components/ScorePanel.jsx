@@ -42,11 +42,13 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
       if (data.message) setProgressMsg(data.message);
       if (data.percent !== undefined) setProgressPercent(data.percent);
 
-      if (data.status === 'complete' || data.stage === 'complete' || data.percent === 100) {
-        setApplyState('done');
+      if (data.stage === 'verifying' || data.status === 'verifying') {
+        setApplyState('verifying');
+      } else if (data.status === 'complete' || data.stage === 'complete' || data.percent === 100) {
+        setApplyState('verified');
       } else if (data.status === 'failed' || data.stage === 'failed') {
-        setErrorMsg(data.message || 'Auto-apply process failed.');
-        setApplyState('error');
+        setErrorMsg(data.message || 'Auto-apply verification failed.');
+        setApplyState('failed');
       }
     });
 
@@ -211,14 +213,27 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
             </div>
             <p className="text-[11px] text-slate-300 truncate">{progressMsg}</p>
           </div>
-        ) : applyState === 'done' ? (
+        ) : applyState === 'verifying' ? (
+          <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded text-center text-xs text-blue-400 font-medium flex items-center justify-center gap-1.5">
+            <Loader2 size={14} className="animate-spin" /> Verifying with Unstop API...
+          </div>
+        ) : applyState === 'verified' || applyState === 'done' ? (
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded space-y-1 text-center">
             <div className="text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
-              <Check size={15} /> Application Submitted & Completed on {selectedPlatform.toUpperCase()}! 🎉
+              <Check size={15} /> ✅ Application verified on {selectedPlatform.toUpperCase()}! 🎉
             </div>
             <p className="text-[10px] text-slate-400">Recorded in Activity Tracker</p>
             <button onClick={() => setApplyState('idle')} className="text-[10px] text-aqua hover:underline mt-1 block w-full text-center">
               Apply to another position
+            </button>
+          </div>
+        ) : applyState === 'failed' || applyState === 'error' ? (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded space-y-1 text-center font-medium">
+            <div className="text-xs text-coral flex items-center justify-center gap-1.5">
+              <AlertTriangle size={15} /> ❌ {errorMsg || 'Verification failed'}
+            </div>
+            <button onClick={() => setApplyState('idle')} className="text-[10px] text-slate-400 hover:text-white mt-1 block w-full text-center">
+              Try again
             </button>
           </div>
         ) : (
