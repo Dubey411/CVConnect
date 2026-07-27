@@ -543,6 +543,25 @@ export class BotRunner {
       }
     }
 
+    // Live API Verification with Unstop Server
+    const extractedOppId = url.match(/\/competitions\/(\d+)/)?.[1] || url.match(/\/internships\/[^-]+-(\d+)/)?.[1] || extractOpportunityId(url);
+    if (extractedOppId) {
+      this.emit(userId, appId, 'verifying', 'Verifying registration status with Unstop API…', 95);
+      const apiStatus = await page.evaluate(async (id) => {
+        try {
+          const res = await fetch(`/api/v1/opportunity/${id}/status`, {
+            headers: { 'Accept': 'application/json' }
+          }).catch(() => null);
+          return res ? res.json().catch(() => null) : null;
+        } catch { return null; }
+      }, extractedOppId).catch(() => null);
+
+      if (apiStatus?.isRegistered || apiStatus?.registered || apiStatus?.data?.isRegistered || apiStatus?.data?.registered) {
+        this.emit(userId, appId, 'complete', 'Application verified on Unstop API! 🎉', 100);
+        return true;
+      }
+    }
+
     const finalUrl = page.url();
     const btnText = applyBtn ? (await applyBtn.textContent().catch(() => '')).toLowerCase() : '';
     const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();

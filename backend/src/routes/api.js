@@ -395,4 +395,30 @@ router.put('/automation/rules/:platform', [
   } catch (e) { next(e); }
 });
 
+// GET /platforms/unstop/status — check token status & session health
+router.get('/platforms/unstop/status', async (req, res, next) => {
+  try {
+    const conn = await prisma.platformConnection.findUnique({
+      where: { userId_platform: { userId: req.user.sub, platform: 'unstop' } }
+    });
+
+    if (!conn) {
+      return res.json({ connected: false, message: 'Unstop is not connected' });
+    }
+
+    const isExpired = conn.tokenExpiresAt ? conn.tokenExpiresAt < new Date() : false;
+
+    res.json({
+      connected: conn.status === 'connected',
+      accountEmail: conn.accountEmail,
+      tokenValid: !isExpired,
+      expiresAt: conn.tokenExpiresAt,
+      lastSyncAt: conn.lastSyncAt,
+      lastVerifiedAt: conn.lastVerifiedAt,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

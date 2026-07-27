@@ -77,6 +77,7 @@ model PlatformConnection {
   status            String    @default("connected")
   applicationsCount Int       @default(0)
   tokenExpiresAt    DateTime?                     // populated for JWT platforms (Unstop)
+  lastVerifiedAt   DateTime?                     // timestamp of last live API verification
   lastSyncAt        DateTime  @default(now())
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

@@ -107,24 +107,19 @@ const PLATFORM_CONFIG = {
         if (!page) return false;
         const url = page.url();
         if (isAuthOrOAuthUrl(url)) return false;
-        if (!url.includes('unstop.com')) return false;
 
-        // Inspect cookies
-        const cookies = await context.cookies();
-        const hasAuthCookie = cookies.some(c => 
-          c.domain.includes('unstop') && 
-          (c.name.includes('token') || c.name.includes('session') || c.name.includes('auth') || c.name.includes('user') || c.name === 'at') &&
-          c.value && c.value.length > 5
+        // Check for actual auth cookie
+        const cookies = await context.cookies('https://unstop.com').catch(() => []);
+        const hasValidToken = cookies.some(c => 
+          (c.name === 'access_token' || c.name === 'token' || c.name === 'session' || c.name === 'at') && 
+          c.value && c.value.length > 20
         );
 
-        // Inspect DOM
-        const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
-        const hasLoggedInText = bodyText.includes('logout') || bodyText.includes('my profile') || bodyText.includes('shubham');
-        const hasLoginBtn = await page.locator('a:has-text("Login"), button:has-text("Login")').first().isVisible().catch(() => false);
+        if (hasValidToken) return true;
 
-        if (hasLoginBtn && !hasLoggedInText) return false;
-
-        return hasAuthCookie || hasLoggedInText;
+        // Check for logged-in DOM elements
+        const loggedInEl = await page.locator('.profile-pic, .user_name, button:has-text("Logout"), a[href*="/user/profile"]').count().catch(() => 0);
+        return loggedInEl > 0;
       } catch { return false; }
     },
     accountExtract: async (page) => {

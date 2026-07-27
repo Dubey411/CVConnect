@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import axios from 'axios';
+import { prisma } from './prisma.js';
 
 // Derive a 32-byte key for AES-256 encryption
 const SECRET_KEY = crypto.scryptSync(process.env.JWT_SECRET || 'cvconnect_vault_secret_key_2026', 'cvconnect_salt', 32);
@@ -325,4 +326,33 @@ export async function verifyPlatformToken(platform, token) {
       return { verified: true, method: 'structural' };
     }
   }
+}
+
+/**
+ * Retrieve & decrypt Unstop session access_token for a user
+ */
+export async function getUnstopToken(userId) {
+  if (!userId) return null;
+  const conn = await prisma.platformConnection.findUnique({
+    where: { userId_platform: { userId, platform: 'unstop' } }
+  }).catch(() => null);
+
+  if (!conn) return null;
+
+  const token = decryptToken({
+    encryptedToken: conn.encryptedToken,
+    iv: conn.iv,
+    authTag: conn.authTag
+  });
+
+  const isExpired = conn.tokenExpiresAt ? new Date(conn.tokenExpiresAt) < new Date() : false;
+
+  return {
+    token,
+    status: conn.status,
+    accountEmail: conn.accountEmail,
+    expiresAt: conn.tokenExpiresAt,
+    isExpired,
+    lastSyncAt: conn.lastSyncAt,
+  };
 }
