@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { decryptToken } from '../lib/vault.js';
 import { generateResumePdf } from '../lib/resumePdf.js';
 import { getProfilePath } from './sessionManager.js';
+import { extractOpportunityId, registerUnstopViaApi } from './unstopApi.js';
 
 // ─── Stealth fingerprint override script ─────────────────────────────────────
 // Injected into every page before any JS runs to defeat automation detection.
@@ -387,6 +388,22 @@ export class BotRunner {
     if (hasLoginBtn && !hasLoggedInText) {
       console.warn('[BotRunner:Unstop] Playwright profile is not logged into Unstop.');
       throw new Error('Unstop session is not logged in inside CVConnect. Please visit Platforms tab -> Unstop -> Reconnect and log in.');
+    }
+
+    // Attempt Direct API Engine first (instant background payload)
+    const oppId = extractOpportunityId(url);
+    if (oppId) {
+      this.emit(userId, appId, 'filling', `Executing Direct API Auto-Apply payload for opportunity #${oppId}…`, 65);
+      const apiRes = await registerUnstopViaApi({ userId, opportunityId: oppId, targetUrl: url, user, resume, pdfPath }).catch(err => {
+        console.warn('[BotRunner:Unstop] Direct API engine fallback:', err.message);
+        return null;
+      });
+
+      if (apiRes?.success) {
+        this.emit(userId, appId, 'submitting', 'Direct API registration payload accepted by Unstop! 🎉', 92);
+        await delay(2000, 3000);
+        return true;
+      }
     }
 
     // Step 1: Click Quick Apply / Register button if on listing page (bypass if already on /register)
