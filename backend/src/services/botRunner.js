@@ -5,6 +5,7 @@ import { decryptToken } from '../lib/vault.js';
 import { generateResumePdf } from '../lib/resumePdf.js';
 import { getProfilePath } from './sessionManager.js';
 import { extractOpportunityId, registerUnstopViaApi } from './unstopApi.js';
+import { fillUnstopForm, verifyUnstopRegistration } from './aiFormFiller.js';
 
 // ─── Stealth fingerprint override script ─────────────────────────────────────
 // Injected into every page before any JS runs to defeat automation detection.
@@ -406,201 +407,35 @@ export class BotRunner {
       }
     }
 
-    // Step 1: Click Quick Apply / Register button if on listing page (bypass if already on /register)
-    if (!page.url().toLowerCase().includes('/register')) {
-      applyBtn = await findVisible(page, [
-        '#un-register-btn',
-        'button:has-text("Quick Apply")',
-        'a:has-text("Quick Apply")',
-        '.register_btn',
-        'button:has-text("Register Now")',
-        'button:has-text("Apply Now")',
-        'button:has-text("Apply")',
-        'button:has-text("Register")',
-        '.apply-btn',
-        '[data-testid="apply-button"]',
-        'a[href*="/register"]',
-      ], 8000);
-
-      if (applyBtn) {
-        await humanClick(applyBtn);
-        await delay(3000, 5000);
+      // Step 2: Use AI Form Filler engine to complete application fields and submission
+    const formData = {
+      resumePath: pdfPath,
+      location: 'Kopar Khairane, Maharashtra, India',
+      skills: ['Full Stack Development', 'React.js', 'Node.js', 'JavaScript'],
+      userDetails: {
+        name: user?.name || 'Candidate',
+        email: user?.email || '',
       }
+    };
+
+    const filled = await fillUnstopForm(page, formData, userId, appId, this.io);
+    if (!filled) {
+      this.emit(userId, appId, 'failed', 'AI form filling failed. Check platform manually.', 0);
+      return false;
     }
 
-    // Step 2: Fulfill Angular form controls if redirected to /register or form present
-    const currentUrl = page.url().toLowerCase();
-    if (currentUrl.includes('/register') || currentUrl.includes('/competitions') || (await page.locator('input, button:has-text("Submit")').count().catch(() => 0)) > 0) {
-      this.emit(userId, appId, 'filling', 'Fulfilling Unstop application form fields & uploading resume…', 70);
+    // Step 3: Verify registration status with AI & Unstop API
+    this.emit(userId, appId, 'verifying', 'Verifying application status with Unstop…', 95);
+    const oppIdMatch = url.match(/\/competitions\/(\d+)/)?.[1] || url.match(/\/internships\/[^-]+-(\d+)/)?.[1] || extractOpportunityId(url);
+    const verified = await verifyUnstopRegistration(page, oppIdMatch);
 
-      // 1. Upload CV / Resume PDF if file input is present
-      if (pdfPath) {
-        try {
-          const fileInp = page.locator('input[type="file"]').first();
-          if (await fileInp.count().catch(() => 0) > 0) {
-            console.log('[BotRunner:Unstop] Uploading tailored PDF resume to Unstop form...');
-            await fileInp.setInputFiles(pdfPath).catch(e => console.warn('[BotRunner:Unstop] File set error:', e.message));
-            await delay(2000, 3500);
-          }
-        } catch (e) {
-          console.warn('[BotRunner:Unstop] Resume upload skipped:', e.message);
-        }
-      }
-
-      // 2. Fill Location if field is present and blank
-      await page.evaluate(() => {
-        const loc = document.querySelector('#cities_input, input[name="player_location"], input[placeholder*="location" i], input[id*="location"]');
-        if (loc && !loc.value) {
-          loc.value = 'Kopar Khairane, Maharashtra, India';
-          loc.dispatchEvent(new Event('input', { bubbles: true }));
-          loc.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }).catch(() => {});
-
-      // 3. Fill Skills input if empty
-      const skillsInp = page.locator('input[placeholder*="skills" i], input[placeholder*="Search and add" i]').first();
-      if (await skillsInp.isVisible().catch(() => false)) {
-        const skillsVal = await skillsInp.inputValue().catch(() => '');
-        if (!skillsVal) {
-          await skillsInp.fill('Full Stack Development').catch(() => {});
-          await page.keyboard.press('Enter').catch(() => {});
-          await delay(400, 800);
-          await skillsInp.fill('Node.js').catch(() => {});
-          await page.keyboard.press('Enter').catch(() => {});
-          await delay(400, 800);
-        }
-      }
-
-      // 4. Select Differently Abled ("No")
-      const noRadio = page.locator('un-radio-group[name="user_differently_abled"] label:has-text("No"), label:has-text("No")').first();
-      if (await noRadio.isVisible().catch(() => false)) {
-        await noRadio.click({ force: true }).catch(() => {});
-        await delay(300, 600);
-      }
-
-      // 5. Accept Terms & Conditions checkboxes
-      const checkboxes = page.locator('input[type="checkbox"], un-checkbox input');
-      const cbCount = await checkboxes.count().catch(() => 0);
-      for (let i = 0; i < cbCount; i++) {
-        const cb = checkboxes.nth(i);
-        if (await cb.isVisible().catch(() => false)) {
-          const isChecked = await cb.isChecked().catch(() => false);
-          if (!isChecked) {
-            await cb.click({ force: true }).catch(() => {});
-            await delay(300, 500);
-          }
-        }
-      }
-
-      // Fallback click on Terms & Conditions labels
-      const checkLabels = page.locator('un-checkbox label, label:has-text("agree"), label:has-text("terms"), label:has-text("Stay in the loop")');
-      const labelCount = await checkLabels.count().catch(() => 0);
-      for (let i = 0; i < labelCount; i++) {
-        const lbl = checkLabels.nth(i);
-        if (await lbl.isVisible().catch(() => false)) {
-          await lbl.click().catch(() => {});
-          await delay(300, 500);
-        }
-      }
-    }
-
-    // Step 3 & 4: Locate Next / Submit / Save Form action button
-    const actionBtn = await findVisible(page, [
-      '[data-test="save-form-btn"]',
-      'button[data-test*="save"]',
-      'button[data-test*="submit"]',
-      'button:has-text("Submit")',
-      'button:has-text("Submit Application")',
-      'button:has-text("Confirm Registration")',
-      'button:has-text("Confirm")',
-      'button:has-text("Register")',
-      'button:has-text("Next")',
-      '.un-button:has-text("Submit")',
-      '.un-button:has-text("Next")',
-      '.un-button',
-      '.modal button[type="submit"]',
-      'button[type="submit"]',
-    ], 4000);
-
-    let submitted = false;
-    if (actionBtn) {
-      this.emit(userId, appId, 'submitting', 'Submitting Unstop application form…', 90);
-      await humanClick(actionBtn);
-      await delay(4000, 6000);
-      submitted = true;
-
-      // Check if a second step Next/Submit appeared
-      const secondSubmitBtn = await findVisible(page, [
-        '[data-test="save-form-btn"]',
-        'button:has-text("Submit")',
-        'button:has-text("Confirm")',
-        'button[type="submit"]',
-      ], 2000);
-
-      if (secondSubmitBtn) {
-        await humanClick(secondSubmitBtn);
-        await delay(4000, 6000);
-      }
-    }
-
-    // Live API Verification with Unstop Server
-    const extractedOppId = url.match(/\/competitions\/(\d+)/)?.[1] || url.match(/\/internships\/[^-]+-(\d+)/)?.[1] || extractOpportunityId(url);
-    if (extractedOppId) {
-      this.emit(userId, appId, 'verifying', 'Verifying registration status with Unstop API…', 95);
-      const apiStatus = await page.evaluate(async (id) => {
-        try {
-          const res = await fetch(`/api/v1/opportunity/${id}/status`, {
-            headers: { 'Accept': 'application/json' }
-          }).catch(() => null);
-          return res ? res.json().catch(() => null) : null;
-        } catch { return null; }
-      }, extractedOppId).catch(() => null);
-
-      if (apiStatus?.isRegistered || apiStatus?.registered || apiStatus?.data?.isRegistered || apiStatus?.data?.registered) {
-        this.emit(userId, appId, 'complete', 'Application verified on Unstop API! 🎉', 100);
-        return true;
-      }
-    }
-
-    // Step 5: Double-verify by reloading the listing page to confirm button text
-    if (submitted) {
-      this.emit(userId, appId, 'verifying', 'Reloading Unstop page to double-verify registration status…', 96);
-      await delay(3000, 4000);
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
-      await delay(2000, 3000);
-    }
-
-    const finalUrl = page.url();
-    const btnText = applyBtn ? (await applyBtn.textContent().catch(() => '')).toLowerCase() : '';
-    const pageText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
-
-    const isConfirmed = (
-      finalUrl.includes('/success') ||
-      finalUrl.includes('rstatus=1') ||
-      btnText.includes('registered') ||
-      btnText.includes('applied') ||
-      pageText.includes('successfully registered') ||
-      pageText.includes('application submitted') ||
-      pageText.includes('thank you for applying') ||
-      pageText.includes('you have registered') ||
-      pageText.includes('already registered') ||
-      pageText.includes('registered successfully') ||
-      pageText.includes('congratulations') ||
-      pageText.includes('registration confirmed')
-    );
-
-    if (isConfirmed) {
+    if (verified) {
+      this.emit(userId, appId, 'complete', '✅ Application verified on Unstop! 🎉', 100);
       return true;
+    } else {
+      this.emit(userId, appId, 'failed', '❌ Application could not be verified on Unstop', 0);
+      return false;
     }
-
-    // Check if any button on the page now strictly says Registered or Applied
-    const hasRegisteredBtn = await page.locator('button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered"), .registered_btn').count().catch(() => 0);
-    if (hasRegisteredBtn > 0) {
-      return true;
-    }
-
-    console.warn('[BotRunner:Unstop] Registration steps executed, but confirmation could not be verified on DOM/URL.');
-    return false;
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
