@@ -26,8 +26,8 @@ const getLLMClient = () => {
           'X-Title': 'CVConnect AI Form Filler'
         }
       }),
-      model: process.env.FORM_LLM_MODEL || 'google/gemini-2.0-flash-exp:free',
-      provider: 'OpenRouter (Gemini / Llama)'
+      model: process.env.FORM_LLM_MODEL || 'deepseek/deepseek-chat',
+      provider: 'OpenRouter (DeepSeek Chat)'
     };
   }
   if (process.env.DEEPSEEK_API_KEY) {
