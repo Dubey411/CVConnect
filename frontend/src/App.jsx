@@ -164,8 +164,15 @@ function Shell() {
   const doAnalyze = async data => {
     if (data.jobUrl) setLastTargetUrl(data.jobUrl);
     const action = await dispatch(analyzeJob(data));
-    if (analyzeJob.fulfilled.match(action) && resume) {
-      dispatch(matchResume({ resumeId: resume.id, jobId: action.payload.job.id }));
+    if (analyzeJob.fulfilled.match(action)) {
+      let currentResume = resume;
+      if (!currentResume) {
+        const latest = await dispatch(fetchLatestResume());
+        currentResume = latest.payload;
+      }
+      if (currentResume?.id) {
+        await dispatch(matchResume({ resumeId: currentResume.id, jobId: action.payload.job.id }));
+      }
     }
   };
 

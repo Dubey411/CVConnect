@@ -22,9 +22,16 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
         data: { url: jobUrl }
       });
       if (res.job) {
+        const newTitle = res.job.title || title;
+        const newCompany = res.job.company || company;
+        const newDesc = res.job.description || description;
         if (res.job.title) setTitle(res.job.title);
         if (res.job.company) setCompany(res.job.company);
         if (res.job.description) setDescription(res.job.description);
+
+        if (newDesc && newDesc.length >= 20) {
+          onAnalyze({ title: newTitle, company: newCompany, description: newDesc, jobUrl });
+        }
       }
     } catch (err) {
       const errObj = err.response?.data?.error;
