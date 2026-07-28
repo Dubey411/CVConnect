@@ -413,7 +413,33 @@ export class BotRunner {
       }
     }
 
-      // Step 2: Use AI Form Filler engine to complete application fields and submission
+    // Step 1: Click Quick Apply / Register button if on job listing page
+    if (!page.url().toLowerCase().includes('/register')) {
+      console.log('  🔍 [BotRunner:Unstop] Locating Quick Apply / Register button on listing page...');
+      applyBtn = await findVisible(page, [
+        '#un-register-btn',
+        'button:has-text("Quick Apply")',
+        'a:has-text("Quick Apply")',
+        '.register_btn',
+        'button:has-text("Register Now")',
+        'button:has-text("Apply Now")',
+        'button:has-text("Apply")',
+        'button:has-text("Register")',
+        '.apply-btn',
+        '[data-testid="apply-button"]',
+        'a[href*="/register"]',
+      ], 8000);
+
+      if (applyBtn) {
+        console.log('  🖱️ [BotRunner:Unstop] Quick Apply button found! Executing click...');
+        await humanClick(applyBtn);
+        await delay(3000, 5000);
+      } else {
+        console.warn('  ⚠️ [BotRunner:Unstop] Quick Apply button not found on listing page.');
+      }
+    }
+
+    // Step 2: Use AI Form Filler engine to complete application fields and submission
     const formData = {
       resumePath: pdfPath,
       location: 'Kopar Khairane, Maharashtra, India',
