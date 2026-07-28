@@ -443,6 +443,83 @@ function PlatformCard({ platform, browserSession, tokenConnection, onRefresh }) 
   );
 }
 
+function CandidateProfileCard() {
+  const [profile, setProfile] = useState({
+    name: '', phone: '', gender: 'Male', location: '', college: '', degree: ''
+  });
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    request({ method: 'get', url: '/profile' }).then(res => {
+      if (res.profile) setProfile(prev => ({ ...prev, ...res.profile }));
+    }).catch(() => {});
+  }, []);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setSaved(false);
+    setError('');
+    try {
+      const res = await request({ method: 'patch', url: '/profile', data: profile });
+      if (res.profile) setProfile(prev => ({ ...prev, ...res.profile }));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to update profile.');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mb-6 rounded-xl border border-aqua/30 bg-surface/90 p-5 space-y-4 shadow-lg">
+      <div className="flex items-center justify-between border-b border-line pb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Smartphone size={16} className="text-aqua" /> Candidate Application Details
+          </h3>
+          <p className="text-xs text-slate-400">Provide your real details so the AI Form Filler applies with 100% accuracy on Unstop, LinkedIn, etc.</p>
+        </div>
+        {saved && <span className="text-xs text-emerald-400 font-medium flex items-center gap-1"><CheckCircle size={13}/> Profile Saved!</span>}
+      </div>
+
+      <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+        <label className="text-xs text-slate-400">
+          Full Name *
+          <input required type="text" className="input mt-1.5 text-xs py-2" value={profile.name || ''} onChange={e => setProfile({...profile, name: e.target.value})} placeholder="Shubham Dubey" />
+        </label>
+        <label className="text-xs text-slate-400">
+          Mobile Phone Number *
+          <input required type="tel" className="input mt-1.5 text-xs py-2" value={profile.phone || ''} onChange={e => setProfile({...profile, phone: e.target.value})} placeholder="10-digit mobile number" />
+        </label>
+        <label className="text-xs text-slate-400">
+          Gender *
+          <select className="input mt-1.5 text-xs py-2" value={profile.gender || 'Male'} onChange={e => setProfile({...profile, gender: e.target.value})}>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label className="text-xs text-slate-400">
+          Target Location / City *
+          <input required type="text" className="input mt-1.5 text-xs py-2" value={profile.location || ''} onChange={e => setProfile({...profile, location: e.target.value})} placeholder="Mumbai, Maharashtra, India" />
+        </label>
+        <label className="text-xs text-slate-400 sm:col-span-2">
+          College / Institution
+          <input type="text" className="input mt-1.5 text-xs py-2" value={profile.college || ''} onChange={e => setProfile({...profile, college: e.target.value})} placeholder="e.g. Mumbai University / IIT Bombay" />
+        </label>
+        {error && <p className="text-xs text-coral sm:col-span-2">{error}</p>}
+        <div className="sm:col-span-2 flex justify-end">
+          <button type="submit" disabled={busy} className="button-primary text-xs py-2 px-5">
+            {busy ? 'Saving Profile...' : 'Save Candidate Application Profile'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ─── Main PlatformAccounts page ───────────────────────────────────────────────
 
 export default function PlatformAccounts() {
@@ -494,6 +571,9 @@ export default function PlatformAccounts() {
           <p className="text-[11px] text-slate-500 mt-0.5">of {SESSION_PLATFORMS.length} connected</p>
         </div>
       </div>
+
+      {/* Candidate Profile Form */}
+      <CandidateProfileCard />
 
       {/* Security banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-aqua/10 to-purple-500/10 border border-aqua/20 p-4 flex items-start gap-3">
