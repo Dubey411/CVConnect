@@ -12,6 +12,11 @@ model User {
   email               String               @unique
   password            String?
   name                String
+  phone               String?
+  gender              String?              @default("Male")
+  location            String?              @default("Mumbai, Maharashtra, India")
+  college             String?
+  degree              String?
   refreshToken        String?
   resumes             Resume[]
   jobs                Job[]

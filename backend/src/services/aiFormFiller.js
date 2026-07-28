@@ -432,18 +432,25 @@ export async function verifyUnstopRegistration(page, oppId) {
   console.log('\n🔍 [BOT-DEBUG:Verify] VERIFYING REGISTRATION STATUS');
   try {
     if (oppId) {
-      console.log(`  -> Querying Unstop API for opportunity #${oppId}...`);
+      console.log(`  -> Querying Unstop opportunity API for opportunity #${oppId}...`);
       const apiStatus = await page.evaluate(async (id) => {
         try {
-          const res = await fetch(`/api/v1/opportunity/${id}/status`, {
-            headers: { 'Accept': 'application/json' }
-          }).catch(() => null);
-          return res ? res.json().catch(() => null) : null;
+          const endpoints = [
+            `/api/public/opportunity/${id}`,
+            `/api/v1/opportunity/${id}`,
+            `/api/v1/user/opportunity/${id}/status`
+          ];
+          for (const ep of endpoints) {
+            const res = await fetch(ep, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+            if (res?.data?.opportunity?.is_registered || res?.data?.is_registered || res?.data?.isRegistered || res?.isRegistered || res?.registered) {
+              return { isRegistered: true, data: res };
+            }
+          }
+          return null;
         } catch { return null; }
       }, oppId).catch(() => null);
 
-      console.log('  -> API Response:', JSON.stringify(apiStatus));
-      if (apiStatus?.isRegistered || apiStatus?.registered || apiStatus?.data?.isRegistered || apiStatus?.data?.registered) {
+      if (apiStatus?.isRegistered) {
         console.log('  ✅ [Verify] API confirmed registration: isRegistered = true');
         return true;
       }

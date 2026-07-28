@@ -442,11 +442,15 @@ export class BotRunner {
     // Step 2: Use AI Form Filler engine to complete application fields and submission
     const formData = {
       resumePath: pdfPath,
-      location: 'Kopar Khairane, Maharashtra, India',
+      location: user?.location || 'Mumbai, Maharashtra, India',
       skills: ['Full Stack Development', 'React.js', 'Node.js', 'JavaScript'],
       userDetails: {
         name: user?.name || 'Candidate',
         email: user?.email || '',
+        phone: user?.phone || '',
+        gender: user?.gender || 'Male',
+        college: user?.college || '',
+        degree: user?.degree || ''
       }
     };
 
