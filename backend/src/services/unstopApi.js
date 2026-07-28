@@ -11,6 +11,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { getProfilePath } from './sessionManager.js';
+import { getUnstopToken } from '../lib/vault.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,8 +64,11 @@ export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, u
       throw new Error('Unstop session is not logged in inside CVConnect. Please visit Platforms tab -> Unstop -> Reconnect.');
     }
 
+    const vaultToken = await getUnstopToken(userId).catch(() => null);
+    const jwtToken = vaultToken?.token || null;
+
     // 3. Execute API POST directly inside browser evaluate context (uses live cookies & CSRF tokens)
-    const apiResult = await page.evaluate(async ({ oppId, candidate, hasPdf }) => {
+    const apiResult = await page.evaluate(async ({ oppId, candidate, hasPdf, token }) => {
       try {
         const targetOppId = oppId || window.location.pathname.split('/').pop().replace(/\D/g, '');
 
@@ -93,16 +97,21 @@ export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, u
           `https://unstop.com/api/v1/user/register-opportunity`
         ];
 
+        const reqHeaders = {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        };
+        if (token) {
+          reqHeaders['Authorization'] = `Bearer ${token}`;
+        }
+
         let response = null;
         for (const ep of endpoints) {
           try {
             const r = await fetch(ep, {
               method: 'POST',
               body: formData,
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-              }
+              headers: reqHeaders
             });
             if (r.ok || r.status === 200 || r.status === 201) {
               const data = await r.json().catch(() => ({}));
@@ -114,7 +123,6 @@ export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, u
 
         if (response) return { success: true, details: response };
 
-        // Fallback: Check if page itself indicates registered
         return { success: false, reason: 'API endpoint required form submission' };
       } catch (err) {
         return { success: false, error: err.message };
@@ -126,6 +134,7 @@ export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, u
         email: user?.email || 'shubh6949@gmail.com',
       },
       hasPdf: !!pdfPath,
+      token: jwtToken
     });
 
     if (apiResult?.success) {
