@@ -38,6 +38,8 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
     const socket = ioClient(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000');
     socket.emit('subscribe', user.id);
 
+    const [missingInputData, setMissingInputData] = useState(null);
+
     socket.on('application:progress', (data) => {
       if (data.message) setProgressMsg(data.message);
       if (data.percent !== undefined) setProgressPercent(data.percent);
@@ -54,6 +56,11 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
         setErrorMsg(data.message || 'Auto-apply verification failed.');
         setApplyState('failed');
       }
+    });
+
+    socket.on('application:user_input_required', (data) => {
+      setMissingInputData(data);
+      setApplyState('user_input_required');
     });
 
     return () => socket.close();
@@ -234,6 +241,19 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
               <div className="h-full bg-blue-400 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
             <p className="text-[11px] text-slate-300 truncate">{progressMsg}</p>
+          </div>
+        ) : applyState === 'user_input_required' && missingInputData ? (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded space-y-2 text-left">
+            <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
+              <AlertTriangle size={14} /> Application Paused — Missing Input
+            </div>
+            <p className="text-[11px] text-slate-300">{missingInputData.reason}</p>
+            <div className="text-[10px] font-mono text-slate-400">
+              Required: {missingInputData.missingFields?.map(f => f.label).join(', ')}
+            </div>
+            <a href="/accounts" className="inline-block mt-1 text-xs text-emerald-400 underline font-medium">
+              Update Candidate Profile Settings &rarr;
+            </a>
           </div>
         ) : applyState === 'verifying' ? (
           <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded text-center text-xs text-blue-400 font-medium flex items-center justify-center gap-1.5">
