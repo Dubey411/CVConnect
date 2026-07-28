@@ -237,50 +237,56 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       }
     }
 
-    // Step 0: Fill Candidate Basic Details (First Name, Last Name, Email, Mobile, Gender)
+    // Step 0: Fill Candidate Basic Details (First Name, Last Name, Email, Mobile, Gender, Organization, Differently Abled)
     console.log('\n[BOT-DEBUG:Step 0/5] 👤 CANDIDATE BASIC DETAILS');
-    const nameParts = (formData?.userDetails?.name || 'Shubham Dubey').split(' ');
+    const nameParts = (formData?.userDetails?.name || 'Shubham Dubey').trim().split(' ');
     const firstName = nameParts[0] || 'Shubham';
     const lastName = nameParts.slice(1).join(' ') || 'Dubey';
     const email = formData?.userDetails?.email || 'dubeytech19@gmail.com';
-    const mobile = formData?.userDetails?.phone || '9876543210';
+    const mobile = formData?.userDetails?.phone || '8591694920';
+    const college = formData?.userDetails?.college || 'Mumbai University';
 
-    const firstNameInp = page.locator('input[placeholder*="First Name" i], input[name*="first_name" i], input[id*="first_name" i]').first();
-    if (await firstNameInp.isVisible().catch(() => false)) {
-      if (!await firstNameInp.inputValue().catch(() => '')) {
-        console.log(`  -> Filling First Name: "${firstName}"`);
-        await firstNameInp.fill(firstName).catch(() => {});
-      }
-    }
+    // Inject values via smart DOM evaluation for Angular inputs
+    await page.evaluate(({ fn, ln, em, mob, col }) => {
+      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])'));
+      
+      const setVal = (input, val) => {
+        if (!input || !val) return;
+        input.focus();
+        input.value = val;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+      };
 
-    const lastNameInp = page.locator('input[placeholder*="Last Name" i], input[name*="last_name" i], input[id*="last_name" i]').first();
-    if (await lastNameInp.isVisible().catch(() => false)) {
-      if (!await lastNameInp.inputValue().catch(() => '')) {
-        console.log(`  -> Filling Last Name: "${lastName}"`);
-        await lastNameInp.fill(lastName).catch(() => {});
-      }
-    }
+      // Unstop Basic Details form input order:
+      // [0]: First Name, [1]: Last Name, [2]: Email, [3]: Mobile, [4]: Location, [5]: Organization
+      if (inputs[0]) setVal(inputs[0], fn);
+      if (inputs[1] && !inputs[1].value) setVal(inputs[1], ln);
+      if (inputs[2] && !inputs[2].value) setVal(inputs[2], em);
+      if (inputs[3] && !inputs[3].value) setVal(inputs[3], mob);
+      if (inputs[5] && !inputs[5].value) setVal(inputs[5], col);
+    }, { fn: firstName, ln: lastName, em: email, mob: mobile, col: college }).catch(() => {});
 
-    const emailInp = page.locator('input[placeholder*="Email" i], input[name*="email" i], input[id*="email" i], input[type="email"]').first();
-    if (await emailInp.isVisible().catch(() => false)) {
-      if (!await emailInp.inputValue().catch(() => '')) {
-        console.log(`  -> Filling Email: "${email}"`);
-        await emailInp.fill(email).catch(() => {});
-      }
-    }
-
-    const mobileInp = page.locator('input[placeholder*="Mobile" i], input[placeholder*="phone" i], input[name*="mobile" i], input[type="tel"]').first();
-    if (await mobileInp.isVisible().catch(() => false)) {
-      if (!await mobileInp.inputValue().catch(() => '')) {
-        console.log(`  -> Filling Mobile: "${mobile}"`);
-        await mobileInp.fill(mobile).catch(() => {});
-      }
-    }
-
-    const genderBtn = page.locator('button:has-text("Male"), label:has-text("Male"), input[value="Male"]').first();
+    // Gender selection (Male)
+    const genderBtn = page.locator('button:has-text("Male"), label:has-text("Male"), span:has-text("Male")').first();
     if (await genderBtn.isVisible().catch(() => false)) {
       console.log('  -> Selecting Gender: "Male"');
       await genderBtn.click({ force: true }).catch(() => {});
+    }
+
+    // Differently Abled (No)
+    const diffAbledNo = page.locator('button:has-text("No"), label:has-text("No"), span:has-text("No")').first();
+    if (await diffAbledNo.isVisible().catch(() => false)) {
+      console.log('  -> Selecting Differently Abled: "No"');
+      await diffAbledNo.click({ force: true }).catch(() => {});
+    }
+
+    // User Type (College Students / Fresher)
+    const userTypeBtn = page.locator('button:has-text("College Students"), label:has-text("College Students"), span:has-text("College Students"), button:has-text("Fresher")').first();
+    if (await userTypeBtn.isVisible().catch(() => false)) {
+      console.log('  -> Selecting User Type: "College Students"');
+      await userTypeBtn.click({ force: true }).catch(() => {});
     }
 
     // Step 1: Upload Resume
