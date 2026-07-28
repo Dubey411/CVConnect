@@ -14,7 +14,7 @@ import OpenAI from 'openai';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRATCH_DIR = path.join(__dirname, '..', '..', '..', 'scratch');
 
-// Initialize OpenRouter / OpenAI client
+// Initialize OpenRouter / DeepSeek / OpenAI client
 const getLLMClient = () => {
   if (process.env.OPENROUTER_API_KEY) {
     return {
@@ -26,16 +26,28 @@ const getLLMClient = () => {
           'X-Title': 'CVConnect AI Form Filler'
         }
       }),
-      model: process.env.FORM_LLM_MODEL || 'google/gemini-2.0-flash-exp:free'
+      model: process.env.FORM_LLM_MODEL || 'google/gemini-2.0-flash-exp:free',
+      provider: 'OpenRouter (Gemini / Llama)'
+    };
+  }
+  if (process.env.DEEPSEEK_API_KEY) {
+    return {
+      client: new OpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com'
+      }),
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+      provider: 'DeepSeek (deepseek-chat)'
     };
   }
   if (process.env.OPENAI_API_KEY) {
     return {
       client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      provider: 'OpenAI (gpt-4o-mini)'
     };
   }
-  return { client: null, model: null };
+  return { client: null, model: 'local-heuristic-engine', provider: 'Local Heuristic DOM Engine' };
 };
 
 /**
