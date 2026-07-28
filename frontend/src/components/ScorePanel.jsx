@@ -31,14 +31,13 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
   const [selectedPlatform, setSelectedPlatform] = useState(detectPlatform(targetUrl || ''));
   const [urlError, setUrlError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [missingInputData, setMissingInputData] = useState(null);
 
   // Socket.io real-time progress updates
   useEffect(() => {
     if (!user?.id) return;
     const socket = ioClient(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000');
     socket.emit('subscribe', user.id);
-
-    const [missingInputData, setMissingInputData] = useState(null);
 
     socket.on('application:progress', (data) => {
       if (data.message) setProgressMsg(data.message);
