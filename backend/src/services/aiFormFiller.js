@@ -237,6 +237,52 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       }
     }
 
+    // Step 0: Fill Candidate Basic Details (First Name, Last Name, Email, Mobile, Gender)
+    console.log('\n[BOT-DEBUG:Step 0/5] 👤 CANDIDATE BASIC DETAILS');
+    const nameParts = (formData?.userDetails?.name || 'Shubham Dubey').split(' ');
+    const firstName = nameParts[0] || 'Shubham';
+    const lastName = nameParts.slice(1).join(' ') || 'Dubey';
+    const email = formData?.userDetails?.email || 'dubeytech19@gmail.com';
+    const mobile = formData?.userDetails?.phone || '9876543210';
+
+    const firstNameInp = page.locator('input[placeholder*="First Name" i], input[name*="first_name" i], input[id*="first_name" i]').first();
+    if (await firstNameInp.isVisible().catch(() => false)) {
+      if (!await firstNameInp.inputValue().catch(() => '')) {
+        console.log(`  -> Filling First Name: "${firstName}"`);
+        await firstNameInp.fill(firstName).catch(() => {});
+      }
+    }
+
+    const lastNameInp = page.locator('input[placeholder*="Last Name" i], input[name*="last_name" i], input[id*="last_name" i]').first();
+    if (await lastNameInp.isVisible().catch(() => false)) {
+      if (!await lastNameInp.inputValue().catch(() => '')) {
+        console.log(`  -> Filling Last Name: "${lastName}"`);
+        await lastNameInp.fill(lastName).catch(() => {});
+      }
+    }
+
+    const emailInp = page.locator('input[placeholder*="Email" i], input[name*="email" i], input[id*="email" i], input[type="email"]').first();
+    if (await emailInp.isVisible().catch(() => false)) {
+      if (!await emailInp.inputValue().catch(() => '')) {
+        console.log(`  -> Filling Email: "${email}"`);
+        await emailInp.fill(email).catch(() => {});
+      }
+    }
+
+    const mobileInp = page.locator('input[placeholder*="Mobile" i], input[placeholder*="phone" i], input[name*="mobile" i], input[type="tel"]').first();
+    if (await mobileInp.isVisible().catch(() => false)) {
+      if (!await mobileInp.inputValue().catch(() => '')) {
+        console.log(`  -> Filling Mobile: "${mobile}"`);
+        await mobileInp.fill(mobile).catch(() => {});
+      }
+    }
+
+    const genderBtn = page.locator('button:has-text("Male"), label:has-text("Male"), input[value="Male"]').first();
+    if (await genderBtn.isVisible().catch(() => false)) {
+      console.log('  -> Selecting Gender: "Male"');
+      await genderBtn.click({ force: true }).catch(() => {});
+    }
+
     // Step 1: Upload Resume
     console.log('\n[BOT-DEBUG:Step 1/5] 📄 RESUME UPLOAD');
     if (formData?.resumePath) {
