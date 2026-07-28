@@ -273,23 +273,21 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
     console.log('  ✅ [Step 4] Terms & conditions verified.');
     await takeStepScreenshot(page, 'step4_terms');
 
-    // Step 5: Submit Form
-    console.log('\n[BOT-DEBUG:Step 5/5] 🚀 SUBMIT FORM');
-    const submitBtn = await findButton(page, ['submit', 'register', 'next', 'save']);
-    if (submitBtn) {
+    // Step 5: Submit Form (Multi-step form navigation)
+    console.log('\n[BOT-DEBUG:Step 5/5] 🚀 SUBMIT FORM (Multi-Step Execution)');
+    let stepClickedCount = 0;
+    for (let step = 1; step <= 4; step++) {
+      const submitBtn = await findButton(page, ['submit', 'register', 'next', 'save', 'confirm']);
+      if (!submitBtn) break;
       const btnText = (await submitBtn.innerText().catch(() => '')).trim();
-      console.log(`  -> Submit button located: "${btnText}". Executing click...`);
+      if (!btnText) break;
+      console.log(`  -> [Submit Step ${step}] Action button located: "${btnText}". Executing click...`);
       await submitBtn.click({ force: true }).catch(() => {});
-      await page.waitForTimeout(4000);
-
-      const secondSubmit = await findButton(page, ['submit', 'confirm']);
-      if (secondSubmit) {
-        const secText = (await secondSubmit.innerText().catch(() => '')).trim();
-        console.log(`  -> Step 2 submit button located: "${secText}". Clicking...`);
-        await secondSubmit.click({ force: true }).catch(() => {});
-        await page.waitForTimeout(4000);
-      }
-      console.log('  ✅ [Step 5] Form submission click executed.');
+      stepClickedCount++;
+      await page.waitForTimeout(3500);
+    }
+    if (stepClickedCount > 0) {
+      console.log(`  ✅ [Step 5] Form submission click sequence executed (${stepClickedCount} clicks).`);
     } else {
       console.log('  ⚠️ [Step 5] Submit button not located on page.');
     }
