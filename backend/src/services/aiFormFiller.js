@@ -152,6 +152,68 @@ export async function findButton(page, targetKeywords = ['submit', 'register', '
 }
 
 /**
+ * Inspect page DOM for mandatory required fields and compare with candidate data
+ */
+export async function inspectFormRequirements(page, formData) {
+  try {
+    const fieldsInfo = await page.evaluate(() => {
+      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'));
+      return inputs.map(el => {
+        const labelEl = el.id ? document.querySelector(`label[for="${el.id}"]`) : el.closest('label, .form-group, mat-form-field, un-form-field');
+        const labelText = labelEl ? labelEl.innerText.trim() : (el.placeholder || el.name || el.id || '');
+        const isRequired = el.hasAttribute('required') || el.getAttribute('aria-required') === 'true' || labelText.includes('*');
+        const value = el.value || '';
+        return {
+          id: el.id,
+          name: el.name,
+          type: el.type,
+          placeholder: el.placeholder,
+          label: labelText.replace(/\n+/g, ' '),
+          isRequired,
+          hasValue: value.trim().length > 0
+        };
+      });
+    }).catch(() => []);
+
+    const missingFields = [];
+    for (const field of fieldsInfo) {
+      if (field.isRequired && !field.hasValue) {
+        const lowerLabel = field.label.toLowerCase();
+        const hasCandidateData = (
+          (lowerLabel.includes('location') || lowerLabel.includes('city')) && formData?.location ||
+          (lowerLabel.includes('skill')) && Array.isArray(formData?.skills) && formData.skills.length > 0 ||
+          (lowerLabel.includes('resume') || lowerLabel.includes('cv') || field.type === 'file') && formData?.resumePath ||
+          (lowerLabel.includes('email')) && formData?.userDetails?.email ||
+          (lowerLabel.includes('name')) && formData?.userDetails?.name
+        );
+
+        if (!hasCandidateData) {
+          missingFields.push({
+            name: field.name || field.id || field.label,
+            label: field.label || 'Required Field',
+            type: field.type || 'text',
+            required: true
+          });
+        }
+      }
+    }
+
+    if (missingFields.length > 0) {
+      const fieldNames = missingFields.map(f => `"${f.label}"`).join(', ');
+      return {
+        isComplete: false,
+        missingFields,
+        reason: `Application paused: Required candidate field(s) ${fieldNames} missing. Please update your profile settings.`
+      };
+    }
+
+    return { isComplete: true, missingFields: [], reason: null };
+  } catch (err) {
+    return { isComplete: true, missingFields: [], reason: null };
+  }
+}
+
+/**
  * Execute AI-Powered Form Filling task pipeline with rich console logging
  */
 export async function fillUnstopForm(page, formData, userId, appId, io) {
@@ -161,6 +223,19 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
 
   try {
     emitProgress(io, userId, appId, 'ai_analyzing', 'AI is analyzing form structure…', 60);
+
+    // Inspect DOM form requirements before submitting
+    const inspection = await inspectFormRequirements(page, formData);
+    if (!inspection.isComplete) {
+      console.warn(`  ⚠️ [AIFormFiller] ${inspection.reason}`);
+      if (io && userId) {
+        io.to(userId).emit('application:user_input_required', {
+          applicationId: appId,
+          missingFields: inspection.missingFields,
+          reason: inspection.reason
+        });
+      }
+    }
 
     // Step 1: Upload Resume
     console.log('\n[BOT-DEBUG:Step 1/5] 📄 RESUME UPLOAD');
