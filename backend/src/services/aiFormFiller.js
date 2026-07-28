@@ -468,6 +468,8 @@ export async function verifyUnstopRegistration(page, oppId) {
     const isRegisteredText = (
       url.includes('/success') ||
       url.includes('rstatus=1') ||
+      bodyText.includes('registration successful') ||
+      bodyText.includes('details saved successfully') ||
       bodyText.includes('successfully registered') ||
       bodyText.includes('application submitted') ||
       bodyText.includes('thank you for applying') ||
