@@ -4,9 +4,15 @@
  * AI-Powered Form Filling Engine for CVConnect.
  * Uses LLM-guided DOM resolution and Playwright automation to fill application forms
  * adaptively without relying on fragile hardcoded CSS selectors.
+ * Includes rich step-by-step terminal console logging & step screenshot captures.
  */
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import OpenAI from 'openai';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRATCH_DIR = path.join(__dirname, '..', '..', '..', 'scratch');
 
 // Initialize OpenRouter / OpenAI client
 const getLLMClient = () => {
@@ -48,6 +54,17 @@ const emitProgress = (io, userId, appId, stage, message, percent) => {
 };
 
 /**
+ * Helper to take step debug screenshots
+ */
+async function takeStepScreenshot(page, stepName) {
+  try {
+    const filePath = path.join(SCRATCH_DIR, `debug_${stepName}.png`);
+    await page.screenshot({ path: filePath, fullPage: false }).catch(() => {});
+    console.log(`  📸 [BOT-DEBUG:Screenshot] Saved step view to scratch/debug_${stepName}.png`);
+  } catch (_) {}
+}
+
+/**
  * AI-guided locator for form fields
  */
 export async function findField(page, fieldType) {
@@ -86,7 +103,7 @@ export async function findField(page, fieldType) {
       }
     }
   } catch (err) {
-    console.warn(`[AIFormFiller] findField (${fieldType}) notice:`, err.message);
+    console.warn(`  ⚠️ [AIFormFiller] findField (${fieldType}) notice:`, err.message);
   }
   return null;
 }
@@ -117,142 +134,162 @@ export async function findButton(page, targetKeywords = ['submit', 'register', '
       }
     }
   } catch (err) {
-    console.warn('[AIFormFiller] findButton notice:', err.message);
+    console.warn('  ⚠️ [AIFormFiller] findButton notice:', err.message);
   }
   return null;
 }
 
 /**
- * Execute AI-Powered Form Filling task pipeline
+ * Execute AI-Powered Form Filling task pipeline with rich console logging
  */
 export async function fillUnstopForm(page, formData, userId, appId, io) {
+  console.log('\n================================================================');
+  console.log('🤖 [BOT-DEBUG] STARTING AI FORM FILLING PIPELINE');
+  console.log('================================================================');
+
   try {
     emitProgress(io, userId, appId, 'ai_analyzing', 'AI is analyzing form structure…', 60);
 
-    const tasks = [
-      {
-        description: 'Uploading tailored resume PDF…',
-        progress: 68,
-        action: async (p) => {
-          if (formData?.resumePath) {
-            const fileInput = p.locator('input[type="file"]').first();
-            if (await fileInput.isVisible().catch(() => true)) {
-              await fileInput.setInputFiles(formData.resumePath).catch(() => {});
-              await p.waitForTimeout(1500);
-            }
+    // Step 1: Upload Resume
+    console.log('\n[BOT-DEBUG:Step 1/5] 📄 RESUME UPLOAD');
+    if (formData?.resumePath) {
+      const fileInput = page.locator('input[type="file"]').first();
+      if (await fileInput.isVisible().catch(() => true)) {
+        console.log(`  -> File input located. Uploading: ${path.basename(formData.resumePath)}`);
+        await fileInput.setInputFiles(formData.resumePath).catch(err => {
+          console.warn('  ⚠️ File upload warning:', err.message);
+        });
+        await page.waitForTimeout(1500);
+        console.log('  ✅ [Step 1] Resume uploaded successfully.');
+      } else {
+        console.log('  ℹ️ [Step 1] No file input visible on current page.');
+      }
+    } else {
+      console.log('  ⚠️ [Step 1] No resume path provided in formData.');
+    }
+    await takeStepScreenshot(page, 'step1_resume');
+
+    // Step 2: Fill Location
+    console.log('\n[BOT-DEBUG:Step 2/5] 📍 LOCATION AUTOCOMPLETE');
+    if (formData?.location) {
+      const locField = await findField(page, 'location');
+      if (locField) {
+        const currentVal = await locField.inputValue().catch(() => '');
+        if (!currentVal) {
+          console.log(`  -> Entering location: "Mumbai" (Target: ${formData.location})`);
+          await locField.click({ force: true }).catch(() => {});
+          await locField.fill('Mumbai').catch(() => {});
+          await page.waitForTimeout(1000);
+
+          const option = page.locator('mat-option, un-option, .cdk-overlay-container mat-option, .pac-item, li.location-item, div.option').first();
+          if (await option.isVisible().catch(() => false)) {
+            const optText = await option.innerText().catch(() => '');
+            console.log(`  -> Found autocomplete option: "${optText.trim()}". Clicking...`);
+            await option.click({ force: true }).catch(() => {});
+          } else {
+            console.log('  -> Autocomplete dropdown not visible. Pressing ArrowDown + Enter...');
+            await page.keyboard.press('ArrowDown').catch(() => {});
+            await page.waitForTimeout(300);
+            await page.keyboard.press('Enter').catch(() => {});
           }
+
+          await locField.evaluate(el => {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('blur', { bubbles: true }));
+          }).catch(() => {});
+          await page.waitForTimeout(500);
+          console.log('  ✅ [Step 2] Location filled & Angular events dispatched.');
+        } else {
+          console.log(`  ℹ️ [Step 2] Location already filled: "${currentVal}"`);
         }
-      },
-      {
-        description: 'Fulfilling location fields with autocomplete selection…',
-        progress: 75,
-        action: async (p) => {
-          if (formData?.location) {
-            const locField = await findField(p, 'location');
-            if (locField) {
-              const currentVal = await locField.inputValue().catch(() => '');
-              if (!currentVal) {
-                await locField.click({ force: true }).catch(() => {});
-                await locField.fill('Mumbai').catch(() => {});
-                await p.waitForTimeout(1000);
+      } else {
+        console.log('  ℹ️ [Step 2] Location input field not found on page.');
+      }
+    }
+    await takeStepScreenshot(page, 'step2_location');
 
-                // Select first Angular mat-option or Google places autocomplete suggestion
-                const option = p.locator('mat-option, un-option, .cdk-overlay-container mat-option, .pac-item, li.location-item, div.option').first();
-                if (await option.isVisible().catch(() => false)) {
-                  await option.click({ force: true }).catch(() => {});
-                } else {
-                  await p.keyboard.press('ArrowDown').catch(() => {});
-                  await p.waitForTimeout(300);
-                  await p.keyboard.press('Enter').catch(() => {});
-                }
+    // Step 3: Add Skills
+    console.log('\n[BOT-DEBUG:Step 3/5] 💡 SKILLS TAG AUTOCOMPLETE');
+    if (Array.isArray(formData?.skills) && formData.skills.length > 0) {
+      const skillsField = await findField(page, 'skills');
+      if (skillsField) {
+        console.log(`  -> Skills field located. Target skills: ${formData.skills.slice(0, 4).join(', ')}`);
+        for (const skill of formData.skills.slice(0, 4)) {
+          console.log(`  -> Adding skill: "${skill}"`);
+          await skillsField.click({ force: true }).catch(() => {});
+          await skillsField.fill(skill).catch(() => {});
+          await page.waitForTimeout(800);
 
-                await locField.evaluate(el => {
-                  el.dispatchEvent(new Event('input', { bubbles: true }));
-                  el.dispatchEvent(new Event('change', { bubbles: true }));
-                  el.dispatchEvent(new Event('blur', { bubbles: true }));
-                }).catch(() => {});
-                await p.waitForTimeout(500);
-              }
-            }
+          const skillOpt = page.locator('mat-option, un-option, .cdk-overlay-container mat-option, .skills-list li, div.skill-option, [role="option"]').first();
+          if (await skillOpt.isVisible().catch(() => false)) {
+            console.log(`     - Dropdown option visible. Clicking...`);
+            await skillOpt.click({ force: true }).catch(() => {});
+          } else {
+            console.log(`     - Dropdown option hidden. Pressing ArrowDown + Enter...`);
+            await page.keyboard.press('ArrowDown').catch(() => {});
+            await page.waitForTimeout(300);
+            await page.keyboard.press('Enter').catch(() => {});
           }
+          await page.waitForTimeout(400);
         }
-      },
-      {
-        description: 'Adding candidate skills with dropdown tag selection…',
-        progress: 82,
-        action: async (p) => {
-          if (Array.isArray(formData?.skills) && formData.skills.length > 0) {
-            const skillsField = await findField(p, 'skills');
-            if (skillsField) {
-              for (const skill of formData.skills.slice(0, 4)) {
-                await skillsField.click({ force: true }).catch(() => {});
-                await skillsField.fill(skill).catch(() => {});
-                await p.waitForTimeout(800);
+        console.log('  ✅ [Step 3] Skills tag selection completed.');
+      } else {
+        console.log('  ℹ️ [Step 3] Skills input field not found on page.');
+      }
+    }
+    await takeStepScreenshot(page, 'step3_skills');
 
-                // Select Angular mat-option / skill tag suggestion dropdown
-                const skillOpt = p.locator('mat-option, un-option, .cdk-overlay-container mat-option, .skills-list li, div.skill-option, [role="option"]').first();
-                if (await skillOpt.isVisible().catch(() => false)) {
-                  await skillOpt.click({ force: true }).catch(() => {});
-                } else {
-                  await p.keyboard.press('ArrowDown').catch(() => {});
-                  await p.waitForTimeout(300);
-                  await p.keyboard.press('Enter').catch(() => {});
-                }
-
-                await p.waitForTimeout(500);
-              }
-            }
-          }
-        }
-      },
-      {
-        description: 'Checking required Terms & Conditions…',
-        progress: 88,
-        action: async (p) => {
-          const checkboxes = p.locator('input[type="checkbox"], label:has-text("Terms"), label:has-text("Agree")');
-          const count = await checkboxes.count().catch(() => 0);
-          for (let i = 0; i < count; i++) {
-            const cb = checkboxes.nth(i);
-            if (await cb.isVisible().catch(() => false)) {
-              const checked = await cb.isChecked().catch(() => false);
-              if (!checked) {
-                await cb.click({ force: true }).catch(() => {});
-                await p.waitForTimeout(300);
-              }
-            }
-          }
-        }
-      },
-      {
-        description: 'Submitting application form…',
-        progress: 92,
-        action: async (p) => {
-          const submitBtn = await findButton(p, ['submit', 'register', 'next', 'save']);
-          if (submitBtn) {
-            await submitBtn.click({ force: true }).catch(() => {});
-            await p.waitForTimeout(4000);
-
-            // Check if multi-step next button was clicked
-            const secondSubmit = await findButton(p, ['submit', 'confirm']);
-            if (secondSubmit) {
-              await secondSubmit.click({ force: true }).catch(() => {});
-              await p.waitForTimeout(4000);
-            }
-          }
+    // Step 4: Terms & Conditions
+    console.log('\n[BOT-DEBUG:Step 4/5] 📜 TERMS & CONDITIONS CHECKBOXES');
+    const checkboxes = page.locator('input[type="checkbox"], label:has-text("Terms"), label:has-text("Agree")');
+    const count = await checkboxes.count().catch(() => 0);
+    console.log(`  -> Found ${count} checkbox/term elements on page.`);
+    for (let i = 0; i < count; i++) {
+      const cb = checkboxes.nth(i);
+      if (await cb.isVisible().catch(() => false)) {
+        const checked = await cb.isChecked().catch(() => false);
+        if (!checked) {
+          console.log(`  -> Checking checkbox #${i + 1}...`);
+          await cb.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(300);
+        } else {
+          console.log(`  ℹ️ Checkbox #${i + 1} already checked.`);
         }
       }
-    ];
-
-    for (const task of tasks) {
-      emitProgress(io, userId, appId, 'ai_filling', task.description, task.progress);
-      await task.action(page).catch(err => {
-        console.warn(`[AIFormFiller] Task warning (${task.description}):`, err.message);
-      });
     }
+    console.log('  ✅ [Step 4] Terms & conditions verified.');
+    await takeStepScreenshot(page, 'step4_terms');
+
+    // Step 5: Submit Form
+    console.log('\n[BOT-DEBUG:Step 5/5] 🚀 SUBMIT FORM');
+    const submitBtn = await findButton(page, ['submit', 'register', 'next', 'save']);
+    if (submitBtn) {
+      const btnText = (await submitBtn.innerText().catch(() => '')).trim();
+      console.log(`  -> Submit button located: "${btnText}". Executing click...`);
+      await submitBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(4000);
+
+      const secondSubmit = await findButton(page, ['submit', 'confirm']);
+      if (secondSubmit) {
+        const secText = (await secondSubmit.innerText().catch(() => '')).trim();
+        console.log(`  -> Step 2 submit button located: "${secText}". Clicking...`);
+        await secondSubmit.click({ force: true }).catch(() => {});
+        await page.waitForTimeout(4000);
+      }
+      console.log('  ✅ [Step 5] Form submission click executed.');
+    } else {
+      console.log('  ⚠️ [Step 5] Submit button not located on page.');
+    }
+    await takeStepScreenshot(page, 'step5_submit');
+
+    console.log('\n================================================================');
+    console.log('🤖 [BOT-DEBUG] AI FORM FILLING PIPELINE COMPLETED');
+    console.log('================================================================\n');
 
     return true;
   } catch (err) {
-    console.error('[AIFormFiller] Error filling Unstop form:', err.message);
+    console.error('❌ [BOT-DEBUG] Error during AI Form Filling:', err.message);
     return false;
   }
 }
@@ -261,8 +298,10 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
  * Verify registration completion via DOM & status API analysis
  */
 export async function verifyUnstopRegistration(page, oppId) {
+  console.log('\n🔍 [BOT-DEBUG:Verify] VERIFYING REGISTRATION STATUS');
   try {
     if (oppId) {
+      console.log(`  -> Querying Unstop API for opportunity #${oppId}...`);
       const apiStatus = await page.evaluate(async (id) => {
         try {
           const res = await fetch(`/api/v1/opportunity/${id}/status`, {
@@ -272,7 +311,9 @@ export async function verifyUnstopRegistration(page, oppId) {
         } catch { return null; }
       }, oppId).catch(() => null);
 
+      console.log('  -> API Response:', JSON.stringify(apiStatus));
       if (apiStatus?.isRegistered || apiStatus?.registered || apiStatus?.data?.isRegistered || apiStatus?.data?.registered) {
+        console.log('  ✅ [Verify] API confirmed registration: isRegistered = true');
         return true;
       }
     }
@@ -280,7 +321,7 @@ export async function verifyUnstopRegistration(page, oppId) {
     const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
     const url = page.url();
 
-    const isRegistered = (
+    const isRegisteredText = (
       url.includes('/success') ||
       url.includes('rstatus=1') ||
       bodyText.includes('successfully registered') ||
@@ -292,8 +333,19 @@ export async function verifyUnstopRegistration(page, oppId) {
 
     const hasRegisteredBtn = await page.locator('button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered")').count().catch(() => 0) > 0;
 
-    return isRegistered || hasRegisteredBtn;
-  } catch {
+    console.log(`  -> URL: ${url}`);
+    console.log(`  -> Text Matched: ${isRegisteredText}`);
+    console.log(`  -> Button Text "Registered" Visible: ${hasRegisteredBtn}`);
+
+    const verified = isRegisteredText || hasRegisteredBtn;
+    if (verified) {
+      console.log('  ✅ [Verify] DOM confirmed registration.');
+    } else {
+      console.log('  ❌ [Verify] Registration NOT confirmed on DOM or API.');
+    }
+    return verified;
+  } catch (err) {
+    console.error('  ⚠️ [Verify] Verification check error:', err.message);
     return false;
   }
 }

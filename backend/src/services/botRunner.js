@@ -367,6 +367,12 @@ export class BotRunner {
   // ── Unstop ────────────────────────────────────────────────────────────────
 
   async applyUnstop(page, url, user, resume, pdfPath, userId, appId) {
+    console.log('\n================================================================');
+    console.log(`🚀 [BOT-RUNNER] UNSTOP AUTO-APPLY TRACE`);
+    console.log(`   User Email: ${user?.email || 'N/A'}`);
+    console.log(`   Target URL: ${url}`);
+    console.log('================================================================\n');
+
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
     await delay(1500, 3000);
     await dismissOverlays(page);
