@@ -123,7 +123,7 @@ export async function findField(page, fieldType) {
 /**
  * AI-guided locator for action buttons (Next, Submit, Save, Register)
  */
-export async function findButton(page, targetKeywords = ['submit', 'register', 'next', 'save']) {
+export async function findButton(page, targetKeywords = ['submit', 'register', 'next', 'save', 'confirm']) {
   try {
     const mainBtnSelectors = [
       '[data-test="save-form-btn"]',
@@ -133,16 +133,28 @@ export async function findButton(page, targetKeywords = ['submit', 'register', '
       'button:has-text("Register")',
       'button:has-text("Next")',
       'button:has-text("Confirm")',
-      '.un-button:has-text("Submit")',
-      '.un-button:has-text("Next")',
-      '.un-button',
-      'button[type="submit"]'
+      'button:has-text("Save & Submit")',
+      'button:has-text("Save & Next")',
+      'button.un-button:has-text("Submit")',
+      'button.un-button:has-text("Next")',
+      'button.un-button:has-text("Register")',
+      'button[type="submit"]',
+      'button.btn-primary',
+      'button.primary-btn'
     ];
 
     for (const sel of mainBtnSelectors) {
-      const loc = page.locator(sel).first();
-      if (await loc.isVisible().catch(() => false)) {
-        return loc;
+      const locs = page.locator(sel);
+      const count = await locs.count().catch(() => 0);
+      for (let i = 0; i < count; i++) {
+        const loc = locs.nth(i);
+        if (await loc.isVisible().catch(() => false)) {
+          const txt = (await loc.innerText().catch(() => '')).trim().toLowerCase();
+          // Exclude navigation Back/Cancel buttons
+          if (txt && !txt.includes('back') && !txt.includes('cancel') && !txt.includes('previous')) {
+            return loc;
+          }
+        }
       }
     }
   } catch (err) {
@@ -467,6 +479,7 @@ export async function verifyUnstopRegistration(page, oppId) {
 
     const isRegisteredText = (
       url.includes('/success') ||
+      url.includes('/register/edit') ||
       url.includes('rstatus=1') ||
       bodyText.includes('registration successful') ||
       bodyText.includes('details saved successfully') ||
