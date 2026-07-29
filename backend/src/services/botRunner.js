@@ -159,6 +159,36 @@ async function findVisible(page, selectors, timeout = 2500) {
   return null;
 }
 
+// ─── Gap 1+7: Check if persistent profile dir exists ────────────────────────
+async function persistentProfileExists(userId, platform) {
+  try {
+    const profilePath = getProfilePath(userId, platform);
+    const stat = await fs.stat(profilePath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+// ─── Gap 2: Extract real skills from resume/user data ────────────────────────
+function extractSkills(user, resume) {
+  const resumeData = resume?.optimized || resume?.original || {};
+  const resumeSkills = Array.isArray(resumeData.skills)
+    ? resumeData.skills
+    : typeof resumeData.skills === 'string'
+      ? resumeData.skills.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+  const userSkills = Array.isArray(user?.skills)
+    ? user.skills
+    : typeof user?.skills === 'string'
+      ? user.skills.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+  const combined = [...new Set([...resumeSkills, ...userSkills])].filter(Boolean);
+  return combined.length > 0
+    ? combined
+    : ['Full Stack Development', 'React.js', 'Node.js', 'JavaScript'];
+}
+
 // ─── BotRunner class ──────────────────────────────────────────────────────────
 
 export class BotRunner {
@@ -204,8 +234,17 @@ export class BotRunner {
 
       this.emit(userId, applicationId, 'init', `Initializing stealth bot for ${platform}…`, 10);
 
-      // 2. Generate resume PDF
+      // ── Gap 8: Resume missing warning ───────────────────────────────────────
       const resumeData = resume?.optimized || resume?.original;
+      if (!resumeData) {
+        this.emit(userId, applicationId, 'warning',
+          '⚠️ No resume found in your profile. The bot will apply without uploading a resume. Add a resume in your Profile tab for best results.',
+          15
+        );
+        console.warn(`[BotRunner:${platform}] No resume data found for user ${userId}.`);
+      }
+
+      // 2. Generate resume PDF
       if (resumeData) {
         this.emit(userId, applicationId, 'generating_pdf', 'Generating optimized resume PDF…', 20);
         pdfPath = await generateResumePdf(resumeData).catch(err => {
@@ -217,9 +256,24 @@ export class BotRunner {
       // 3. Update status → applying
       await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'applying' } });
 
+      // ── Gap 1: Auto-use persistent profile if it exists ──────────────────────
+      // No need for caller to pass useBrowserSession=true — we auto-detect.
+      const hasProfile = await persistentProfileExists(userId, platform);
+      const shouldUsePersistent = useBrowserSession || hasProfile;
+
       // 4. Launch browser — persistent profile (preferred) or fresh + cookie injection
       let context;
-      if (useBrowserSession) {
+      if (shouldUsePersistent) {
+        // ── Gap 7: Pre-check session status ────────────────────────────────────
+        const session = await prisma.browserSession.findUnique({
+          where: { userId_platform: { userId, platform } }
+        }).catch(() => null);
+        if (session?.status === 'expired') {
+          throw new Error(
+            `Your ${platform} session has expired. Please go to Platforms → ${platform} → Reconnect and log in again.`
+          );
+        }
+
         // ── Persistent browser session (user logged in manually once) ──────────
         const profilePath = getProfilePath(userId, platform);
         this.emit(userId, applicationId, 'authenticating', `Loading saved ${platform} session…`, 30);
@@ -250,14 +304,15 @@ export class BotRunner {
         });
 
         if (!connection || connection.status !== 'connected') {
-          throw new Error(`${platform} is not connected. Please reconnect in Accounts or Connect Platforms.`);
+          throw new Error(`${platform} is not connected. Please go to Platforms tab → Connect.`);
         }
 
+        // ── Gap 7: Token expiry pre-check ────────────────────────────────────
         if (connection.tokenExpiresAt && new Date(connection.tokenExpiresAt) < new Date()) {
           await prisma.platformConnection.update({ where: { id: connection.id }, data: { status: 'expired' } });
           throw new Error(
             `Your ${platform} session expired on ${new Date(connection.tokenExpiresAt).toLocaleDateString('en-IN')}. ` +
-            'Please re-connect with a fresh token.'
+            'Please go to Platforms tab and reconnect.'
           );
         }
 
@@ -331,7 +386,7 @@ export class BotRunner {
             data: { status: 'submitted', submittedAt: new Date() },
           }),
         ];
-        if (!useBrowserSession) {
+        if (!shouldUsePersistent) {
           const conn = await prisma.platformConnection.findUnique({
             where: { userId_platform: { userId, platform } }
           }).catch(() => null);
@@ -439,39 +494,57 @@ export class BotRunner {
       }
     }
 
-    // Step 2: Use AI Form Filler engine to complete application fields and submission
+    // ── Gap 2: Real skills from resume/user profile ──────────────────────────
+    const skills = extractSkills(user, resume);
+
     const formData = {
       resumePath: pdfPath,
       location: user?.location || 'Mumbai, Maharashtra, India',
-      skills: ['Full Stack Development', 'React.js', 'Node.js', 'JavaScript'],
+      skills,
       userDetails: {
-        name: user?.name || 'Candidate',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        gender: user?.gender || 'Male',
+        name:    user?.name    || 'Candidate',
+        email:   user?.email   || '',
+        phone:   user?.phone   || '',
+        gender:  user?.gender  || 'Male',
         college: user?.college || '',
-        degree: user?.degree || ''
+        degree:  user?.degree  || ''
       }
     };
 
     const filled = await fillUnstopForm(page, formData, userId, appId, this.io);
     if (!filled) {
-      this.emit(userId, appId, 'failed', 'AI form filling failed. Check platform manually.', 0);
+      this.emit(userId, appId, 'failed', 'AI form filling failed.', 0);
       return false;
     }
 
-    // Step 3: Verify registration status with AI & Unstop API
-    this.emit(userId, appId, 'verifying', 'Verifying application status with Unstop…', 95);
-    const oppIdMatch = url.match(/\/competitions\/(\d+)/)?.[1] || url.match(/\/internships\/[^-]+-(\d+)/)?.[1] || extractOpportunityId(url);
+    this.emit(userId, appId, 'verifying', 'Verifying application status…', 95);
+    const oppIdMatch = extractOpportunityId(url);
     const verified = await verifyUnstopRegistration(page, oppIdMatch);
 
     if (verified) {
       this.emit(userId, appId, 'complete', '✅ Application verified on Unstop! 🎉', 100);
       return true;
-    } else {
-      this.emit(userId, appId, 'failed', '❌ Application could not be verified on Unstop', 0);
-      return false;
     }
+
+    // ── Gap 6: Secondary verification — check URL and page text ─────────────
+    const finalUrl = page.url();
+    const finalBody = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+    const secondaryConfirm = (
+      finalUrl.includes('/register/edit') ||
+      finalUrl.includes('/success') ||
+      finalUrl.includes('rstatus=1') ||
+      finalBody.includes('registration successful') ||
+      finalBody.includes('application submitted') ||
+      finalBody.includes('cancel application')     // Means they are registered
+    );
+
+    if (secondaryConfirm) {
+      console.log(`  ✅ Secondary confirmation: URL=${finalUrl}`);
+      return true;
+    }
+
+    this.emit(userId, appId, 'failed', '❌ Application could not be verified on Unstop.', 0);
+    return false;
   }
 
   // ── Internshala ───────────────────────────────────────────────────────────
@@ -526,23 +599,77 @@ export class BotRunner {
       }
     }
 
-    this.emit(userId, appId, 'submitting', 'Submitting Internshala application…', 90);
+    this.emit(userId, appId, 'submitting', 'Submitting Internshala application…', 85);
 
-    const submitBtn = await findVisible(page, [
-      '#submit_application',
-      'button[type="submit"]:has-text("Submit")',
-      'button:has-text("Submit Application")',
-      'input[type="submit"]',
-      'button[type="submit"]',
-    ], 4000);
-    if (submitBtn) { await humanClick(submitBtn); await delay(3000, 5000); }
+    // ── Gap 3: Multi-step form navigation ────────────────────────────────────
+    const MAX_INTERN_STEPS = 5;
+    let internStep = 0;
+    let submitted = false;
 
-    const html = await page.content();
+    while (internStep < MAX_INTERN_STEPS && !submitted) {
+      await delay(1000, 2000);
+
+      // Scroll to bottom to reveal any hidden required fields / checkboxes
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+      await delay(400);
+
+      // Check all unchecked checkboxes (terms, consent)
+      await page.evaluate(() => {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          if (!cb.checked) { cb.scrollIntoView({ behavior: 'instant', block: 'center' }); cb.click(); }
+        });
+      }).catch(() => {});
+
+      await page.evaluate(() => window.scrollTo(0, 0)).catch(() => {});
+      await delay(300);
+
+      // Submit button
+      const submitBtn = await findVisible(page, [
+        '#submit_application',
+        'button[type="submit"]:has-text("Submit")',
+        'button:has-text("Submit Application")',
+        'input[type="submit"]',
+        'button[type="submit"]',
+        'button:has-text("Submit")',
+      ], 3000);
+
+      if (submitBtn) {
+        await humanClick(submitBtn);
+        await delay(3000, 5000);
+        submitted = true;
+        break;
+      }
+
+      // Next / Continue step
+      const nextBtn = await findVisible(page, [
+        'button:has-text("Next")',
+        'button:has-text("Continue")',
+        'button:has-text("Save & Next")',
+        'a:has-text("Next")',
+      ], 2000);
+
+      if (nextBtn) {
+        await humanClick(nextBtn);
+        internStep++;
+      } else {
+        break;
+      }
+    }
+
+    const html = await page.content().catch(() => '');
+    const bodyLower = html.toLowerCase();
+
+    // ── Gap 6: Proper success verification ───────────────────────────────────
+    const finalUrl = page.url();
     return (
-      html.toLowerCase().includes('successfully applied') ||
-      html.toLowerCase().includes('application submitted') ||
-      html.toLowerCase().includes('thank you')              ||
-      html.toLowerCase().includes('applied successfully')
+      finalUrl.includes('/thankyou') ||
+      finalUrl.includes('/success')  ||
+      finalUrl.includes('/applied')  ||
+      bodyLower.includes('successfully applied')   ||
+      bodyLower.includes('application submitted')  ||
+      bodyLower.includes('thank you for applying') ||
+      bodyLower.includes('applied successfully')   ||
+      bodyLower.includes('your application has been')
     );
   }
 
@@ -553,18 +680,29 @@ export class BotRunner {
     await delay(2000, 4000);
 
     const pageHtml = await page.content();
+
+    // ── Gap 5: DataDome CAPTCHA notification (can't auto-solve) ─────────────
     if (hasCaptcha(pageHtml)) {
       this.emit(userId, appId, 'captcha_detected',
-        '⚠️ Wellfound DataDome CAPTCHA detected — bot paused for 60s. Please solve it in your browser, then the bot will resume.',
+        '⚠️ Wellfound uses DataDome bot protection which blocks automated browsers. ' +
+        'Please apply manually on Wellfound, or try again later.',
         45, 'CAPTCHA_REQUIRED'
       );
-      await delay(60000, 62000);
+      await delay(90000, 92000);
 
-      // Re-check after wait
       const refreshedHtml = await page.content();
       if (hasCaptcha(refreshedHtml)) {
-        throw new Error('Wellfound DataDome CAPTCHA not solved within the timeout. Please solve it manually and retry.');
+        throw new Error(
+          'Wellfound DataDome CAPTCHA could not be bypassed. ' +
+          'This is a known limitation — please apply on Wellfound manually.'
+        );
       }
+    }
+
+    // Session check
+    const isLoggedIn = await page.locator('[data-test="user-menu"], .userinfo__name, a[href*="/jobs"]').first().isVisible().catch(() => false);
+    if (!isLoggedIn) {
+      throw new Error('Wellfound session is not logged in. Please go to Platforms → Wellfound → Reconnect.');
     }
 
     this.emit(userId, appId, 'filling', 'Locating Wellfound Apply button…', 58);
@@ -578,7 +716,6 @@ export class BotRunner {
     ], 6000);
     if (applyBtn) { await humanClick(applyBtn); await delay(2000, 3000); }
 
-    // "Why do you want to work here?" short motivation note
     const motivation = this.buildCoverLetter(user, resume, { short: true });
     const whyField = await findVisible(page, [
       'textarea[placeholder*="why" i]',
@@ -589,13 +726,9 @@ export class BotRunner {
     ], 4000);
     if (whyField) { await humanType(whyField, motivation); await delay(500, 1000); }
 
-    // Resume upload if the modal has a file input
     if (pdfPath) {
       const fileInput = await findVisible(page, ['input[type="file"]'], 2000);
-      if (fileInput) {
-        await fileInput.setInputFiles(pdfPath);
-        await delay(1500, 2500);
-      }
+      if (fileInput) { await fileInput.setInputFiles(pdfPath); await delay(1500, 2500); }
     }
 
     this.emit(userId, appId, 'submitting', 'Submitting Wellfound application…', 88);
@@ -608,12 +741,17 @@ export class BotRunner {
     ], 4000);
     if (submitBtn) { await humanClick(submitBtn); await delay(3000, 5000); }
 
-    const html = await page.content();
+    const html = await page.content().catch(() => '');
+
+    // ── Gap 6: Proper success verification ───────────────────────────────────
+    const finalUrl = page.url();
     return (
       !hasCaptcha(html) &&
-      (html.toLowerCase().includes('applied')          ||
+      (finalUrl.includes('/applied')       ||
+       finalUrl.includes('/success')        ||
        html.toLowerCase().includes('application sent') ||
-       html.toLowerCase().includes('success'))
+       html.toLowerCase().includes('successfully applied') ||
+       html.toLowerCase().includes('application submitted'))
     );
   }
 
@@ -662,35 +800,69 @@ export class BotRunner {
 
       this.emit(userId, appId, 'filling', `Filling LinkedIn Easy Apply step ${step + 1}…`, 55 + step * 4);
 
+      // ── Gap 4: Per-step required field scan ─────────────────────────────────
+
       // Phone number
-      const phoneInput = await findVisible(page, ['input[id*="phoneNumber"], input[placeholder*="phone" i]'], 1000);
+      const phoneInput = await findVisible(page, ['input[id*="phoneNumber"]', 'input[placeholder*="phone" i]'], 1000);
       if (phoneInput) {
-        const phone = (resume?.optimized || resume?.original)?.phone || '';
+        const phone = user?.phone || (resume?.optimized || resume?.original)?.phone || '';
         if (phone) { await phoneInput.clear(); await humanType(phoneInput, phone); }
       }
 
-      // Text questions (short-answer)
-      const textInputs = page.locator('input[type="text"]:visible, input[type="number"]:visible');
-      const count = await textInputs.count();
-      for (let i = 0; i < Math.min(count, 5); i++) {
-        const inp = textInputs.nth(i);
-        const label = await inp.getAttribute('aria-label') || '';
-        const val   = await inp.inputValue();
-        if (!val && label.toLowerCase().includes('year')) {
-          await humanType(inp, '2');  // "years of experience" default
+      // City / Location
+      const cityInput = await findVisible(page, ['input[id*="city"]', 'input[placeholder*="city" i]', 'input[aria-label*="City" i]'], 1000);
+      if (cityInput) {
+        const city = user?.location?.split(',')[0]?.trim() || 'Mumbai';
+        const curVal = await cityInput.inputValue().catch(() => '');
+        if (!curVal) { await humanType(cityInput, city); await delay(800); await page.keyboard.press('ArrowDown'); await delay(300); await page.keyboard.press('Enter'); }
+      }
+
+      // Years of experience (all number fields default to "2")
+      const numInputs = page.locator('input[type="text"]:visible, input[type="number"]:visible');
+      const numCount = await numInputs.count().catch(() => 0);
+      for (let i = 0; i < Math.min(numCount, 5); i++) {
+        const inp = numInputs.nth(i);
+        const label = (await inp.getAttribute('aria-label') || '').toLowerCase();
+        const val = await inp.inputValue().catch(() => '');
+        if (!val && (label.includes('year') || label.includes('experience') || label.includes('months'))) {
+          await humanType(inp, '2');
         }
       }
+
+      // Radio buttons — select first option for any unselected required radio group
+      const radioGroups = page.locator('fieldset:has(input[type="radio"])');
+      const radioCount = await radioGroups.count().catch(() => 0);
+      for (let i = 0; i < radioCount; i++) {
+        const group = radioGroups.nth(i);
+        const hasChecked = await group.locator('input[type="radio"]:checked').count().catch(() => 0);
+        if (hasChecked === 0) {
+          // Prefer "Yes" for work authorization, first option otherwise
+          const yesRadio = group.locator('input[type="radio"]').filter({ hasText: /yes/i }).first();
+          const firstRadio = group.locator('input[type="radio"]').first();
+          const target = (await yesRadio.count().catch(() => 0)) > 0 ? yesRadio : firstRadio;
+          await target.click({ force: true }).catch(() => {});
+          await delay(300);
+        }
+      }
+
+      // Scroll to reveal all Terms / Consent checkboxes, then check them
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+      await delay(300);
+      await page.evaluate(() => {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          if (!cb.checked) { cb.scrollIntoView({ behavior: 'instant', block: 'center' }); cb.click(); }
+        });
+      }).catch(() => {});
+      await page.evaluate(() => window.scrollTo(0, 0)).catch(() => {});
+      await delay(300);
 
       // Resume PDF upload
       if (pdfPath) {
         const fileInput = await findVisible(page, ['input[type="file"]'], 1000);
-        if (fileInput) {
-          await fileInput.setInputFiles(pdfPath);
-          await delay(2000, 3000);
-        }
+        if (fileInput) { await fileInput.setInputFiles(pdfPath); await delay(2000, 3000); }
       }
 
-      // Check for Submit button first
+      // Submit button check first
       const submitBtn = await findVisible(page, [
         'button:has-text("Submit application")',
         'button[aria-label*="Submit"]',
@@ -716,14 +888,18 @@ export class BotRunner {
         await humanClick(nextBtn);
         step++;
       } else {
-        break; // No navigation button found — modal may have closed
+        break;
       }
     }
 
-    const html = await page.content();
+    const html = await page.content().catch(() => '');
+
+    // ── Gap 6: Proper success verification ───────────────────────────────────
     return (
-      html.toLowerCase().includes('submitted')        ||
-      html.toLowerCase().includes('application sent') ||
+      html.toLowerCase().includes('your application was sent') ||
+      html.toLowerCase().includes('application submitted')     ||
+      html.toLowerCase().includes('submitted')                 ||
+      html.toLowerCase().includes('application sent')          ||
       html.toLowerCase().includes('applied')
     );
   }
@@ -747,8 +923,37 @@ export class BotRunner {
       await delay(2000, 3000);
     }
 
-    await delay(2000, 3000);
-    return true; // optimistic — no confirmation available for unknown platforms
+    // Scroll and check all terms checkboxes
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+    await delay(400);
+    await page.evaluate(() => {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (!cb.checked) { cb.scrollIntoView({ behavior: 'instant', block: 'center' }); cb.click(); }
+      });
+    }).catch(() => {});
+
+    // Try to find and click submit
+    const submitBtn = await findVisible(page, [
+      'button[type="submit"]',
+      'button:has-text("Submit")',
+      'button:has-text("Apply")',
+      'input[type="submit"]',
+    ], 3000);
+    if (submitBtn) { await humanClick(submitBtn); await delay(3000, 5000); }
+
+    const html = await page.content().catch(() => '');
+    const finalUrl = page.url();
+
+    // ── Gap 6: Best-effort verification ─────────────────────────────────────
+    const bodyLower = html.toLowerCase();
+    return (
+      finalUrl.includes('/success') ||
+      finalUrl.includes('/submitted') ||
+      finalUrl.includes('/applied') ||
+      bodyLower.includes('application submitted') ||
+      bodyLower.includes('successfully applied') ||
+      bodyLower.includes('thank you for applying')
+    );
   }
 
   // ── Cover letter generator ─────────────────────────────────────────────────
