@@ -249,186 +249,322 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       }
     }
 
-    // Step 0: Fill Candidate Basic Details (First Name, Last Name, Email, Mobile, Gender, Organization, Differently Abled)
+    // ── Helper: Wait for Unstop loading overlays to clear ─────────────────────
+    const waitForOverlayClear = async (label = '') => {
+      try {
+        await page.waitForFunction(() => {
+          const overlays = document.querySelectorAll(
+            '.page-loader, .loading-overlay, .loader, [class*="spinner"], [class*="loading"]'
+          );
+          return Array.from(overlays).every(el => {
+            const s = window.getComputedStyle(el);
+            return s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0';
+          });
+        }, { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(600);
+        console.log(`  ✅ [Overlay] Page ready${label ? ` after ${label}` : ''}.`);
+      } catch (_) {}
+    };
+
+    // ── Helper: Fill a field by matching its label text (Angular-compatible) ───
+    // Uses Playwright .fill() which fires real InputEvent that Angular responds to
+    const fillByLabel = async (labelKeywords, value) => {
+      if (!value) return false;
+      try {
+        const fields = await page.evaluate((keywords) => {
+          const allInputs = Array.from(document.querySelectorAll(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea'
+          ));
+          return allInputs.map((el, idx) => {
+            const label =
+              (el.id ? document.querySelector(`label[for="${el.id}"]`)?.innerText : '') ||
+              el.closest('.form-group,.form-field,mat-form-field,un-form-field')
+                ?.querySelector('label,.label,.field-label,span')?.innerText ||
+              el.placeholder || el.name || el.getAttribute('aria-label') || '';
+            const lbl = label.toLowerCase().trim();
+            return { idx, label: lbl, matches: keywords.some(kw => lbl.includes(kw.toLowerCase())), hasValue: el.value.trim().length > 0 };
+          }).filter(f => f.matches && !f.hasValue);
+        }, labelKeywords).catch(() => []);
+
+        if (fields.length > 0) {
+          const allInputs = page.locator(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea'
+          );
+          const target = allInputs.nth(fields[0].idx);
+          if (await target.isVisible().catch(() => false)) {
+            await target.click({ force: true }).catch(() => {});
+            await target.fill(value);         // ← Playwright fires real InputEvent
+            await target.press('Tab').catch(() => {}); // ← Triggers Angular validation
+            await page.waitForTimeout(400);
+            console.log(`  ✅ fillByLabel: "${fields[0].label}" → "${value}"`);
+            return true;
+          }
+        }
+        return false;
+      } catch (_) { return false; }
+    };
+
+    // ── Helper: Fill by DOM index (position fallback) ──────────────────────────
+    const fillByPosition = async (nthIndex, value, label = '') => {
+      if (!value) return false;
+      try {
+        const allInputs = page.locator(
+          'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"])'
+        );
+        const target = allInputs.nth(nthIndex);
+        if (await target.isVisible().catch(() => false)) {
+          const cur = await target.inputValue().catch(() => '');
+          if (!cur) {
+            await target.click({ force: true }).catch(() => {});
+            await target.fill(value);         // ← Playwright fires real InputEvent
+            await target.press('Tab').catch(() => {});
+            await page.waitForTimeout(400);
+            console.log(`  ✅ fillByPosition[${nthIndex}] (${label}) → "${value}"`);
+            return true;
+          }
+          console.log(`  ℹ️ fillByPosition[${nthIndex}] (${label}) already set: "${cur}"`);
+          return true;
+        }
+        return false;
+      } catch (_) { return false; }
+    };
+
+    // ── Step 0: Candidate Basic Details (Angular-compatible via Playwright .fill()) ──
     console.log('\n[BOT-DEBUG:Step 0/5] 👤 CANDIDATE BASIC DETAILS');
     const nameParts = (formData?.userDetails?.name || 'Shubham Dubey').trim().split(' ');
     const firstName = nameParts[0] || 'Shubham';
-    const lastName = nameParts.slice(1).join(' ') || 'Dubey';
-    const email = formData?.userDetails?.email || 'dubeytech19@gmail.com';
-    const mobile = formData?.userDetails?.phone || '8591694920';
-    const college = formData?.userDetails?.college || 'Mumbai University';
+    const lastName  = nameParts.slice(1).join(' ') || 'Dubey';
+    const email     = formData?.userDetails?.email || 'dubeytech19@gmail.com';
+    const mobile    = formData?.userDetails?.phone || '8591694920';
+    const college   = formData?.userDetails?.college || 'Mumbai University';
 
-    // Inject values via smart DOM evaluation for Angular inputs
-    await page.evaluate(({ fn, ln, em, mob, col }) => {
-      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])'));
-      
-      const setVal = (input, val) => {
-        if (!input || !val) return;
-        input.focus();
-        input.value = val;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        input.dispatchEvent(new Event('blur', { bubbles: true }));
-      };
+    await waitForOverlayClear('page load');
 
-      // Unstop Basic Details form input order:
-      // [0]: First Name, [1]: Last Name, [2]: Email, [3]: Mobile, [4]: Location, [5]: Organization
-      if (inputs[0]) setVal(inputs[0], fn);
-      if (inputs[1] && !inputs[1].value) setVal(inputs[1], ln);
-      if (inputs[2] && !inputs[2].value) setVal(inputs[2], em);
-      if (inputs[3] && !inputs[3].value) setVal(inputs[3], mob);
-      if (inputs[5] && !inputs[5].value) setVal(inputs[5], col);
-    }, { fn: firstName, ln: lastName, em: email, mob: mobile, col: college }).catch(() => {});
+    // Label-first, position-fallback — both use Playwright .fill() (Angular-safe)
+    const fnFilled  = await fillByLabel(['first name', 'firstname', 'first'], firstName)
+                   || await fillByPosition(0, firstName, 'First Name');
+    const lnFilled  = await fillByLabel(['last name', 'lastname', 'surname', 'last'], lastName)
+                   || await fillByPosition(1, lastName, 'Last Name');
+    const emFilled  = await fillByLabel(['email', 'e-mail', 'mail'], email)
+                   || await fillByPosition(2, email, 'Email');
+    const mobFilled = await fillByLabel(['mobile', 'phone', 'contact number'], mobile)
+                   || await fillByPosition(3, mobile, 'Mobile');
+    const colFilled = await fillByLabel(['organization', 'college', 'institute', 'university', 'school'], college)
+                   || await fillByPosition(5, college, 'Organization');
 
-    // Gender selection (Male)
-    const genderBtn = page.locator('button:has-text("Male"), label:has-text("Male"), span:has-text("Male")').first();
-    if (await genderBtn.isVisible().catch(() => false)) {
-      console.log('  -> Selecting Gender: "Male"');
-      await genderBtn.click({ force: true }).catch(() => {});
+    console.log(`  Summary → Name:${fnFilled}/${lnFilled} Email:${emFilled} Mobile:${mobFilled} College:${colFilled}`);
+
+    // Gender: Male
+    for (const sel of [
+      'input[type="radio"][value*="male" i]',
+      'label:has-text("Male") input[type="radio"]',
+      'button:has-text("Male")',
+      'span.un-radio-label:has-text("Male")',
+      '[class*="gender"] label:has-text("Male")',
+    ]) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible().catch(() => false)) {
+        await el.click({ force: true }).catch(() => {});
+        console.log('  ✅ Gender: Male');
+        break;
+      }
     }
 
-    // Differently Abled (No)
-    const diffAbledNo = page.locator('button:has-text("No"), label:has-text("No"), span:has-text("No")').first();
-    if (await diffAbledNo.isVisible().catch(() => false)) {
-      console.log('  -> Selecting Differently Abled: "No"');
-      await diffAbledNo.click({ force: true }).catch(() => {});
+    // Differently Abled: No
+    for (const sel of [
+      'input[type="radio"][value*="no" i]',
+      'label:has-text("No") input[type="radio"]',
+      '[class*="differently"] label:has-text("No")',
+    ]) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible().catch(() => false)) {
+        await el.click({ force: true }).catch(() => {});
+        console.log('  ✅ Differently Abled: No');
+        break;
+      }
     }
 
-    // User Type (College Students / Fresher)
-    const userTypeBtn = page.locator('button:has-text("College Students"), label:has-text("College Students"), span:has-text("College Students"), button:has-text("Fresher")').first();
-    if (await userTypeBtn.isVisible().catch(() => false)) {
-      console.log('  -> Selecting User Type: "College Students"');
-      await userTypeBtn.click({ force: true }).catch(() => {});
+    // User Type: College Students
+    for (const sel of [
+      'input[type="radio"][value*="college" i]',
+      'label:has-text("College Students") input',
+      'button:has-text("College Students")',
+      'label:has-text("Fresher") input',
+      'button:has-text("Student")',
+    ]) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible().catch(() => false)) {
+        await el.click({ force: true }).catch(() => {});
+        console.log('  ✅ User Type: College Students');
+        break;
+      }
     }
 
-    // Step 1: Upload Resume
+    await page.waitForTimeout(500);
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Step 1: Resume Upload
+    // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 1/5] 📄 RESUME UPLOAD');
     if (formData?.resumePath) {
-      const fileInput = page.locator('input[type="file"]').first();
-      if (await fileInput.isVisible().catch(() => true)) {
-        console.log(`  -> File input located. Uploading: ${path.basename(formData.resumePath)}`);
-        await fileInput.setInputFiles(formData.resumePath).catch(err => {
-          console.warn('  ⚠️ File upload warning:', err.message);
-        });
-        await page.waitForTimeout(1500);
-        console.log('  ✅ [Step 1] Resume uploaded successfully.');
+      const fileInputCount = await page.locator('input[type="file"]').count().catch(() => 0);
+      if (fileInputCount > 0) {
+        console.log(`  -> Uploading: ${path.basename(formData.resumePath)}`);
+        await page.locator('input[type="file"]').first()
+          .setInputFiles(formData.resumePath)
+          .catch(err => console.warn('  ⚠️ File upload warning:', err.message));
+        await page.waitForTimeout(2000);
+        console.log('  ✅ [Step 1] Resume uploaded.');
       } else {
-        console.log('  ℹ️ [Step 1] No file input visible on current page.');
+        console.log('  ℹ️ [Step 1] No file input on page.');
       }
     } else {
-      console.log('  ⚠️ [Step 1] No resume path provided in formData.');
+      console.log('  ⚠️ [Step 1] No resume path in formData.');
     }
     await takeStepScreenshot(page, 'step1_resume');
 
-    // Step 2: Fill Location
+    // ────────────────────────────────────────────────────────────────────────────
+    // Step 2: Location Autocomplete
+    // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 2/5] 📍 LOCATION AUTOCOMPLETE');
     if (formData?.location) {
       const locField = await findField(page, 'location');
       if (locField) {
         const currentVal = await locField.inputValue().catch(() => '');
         if (!currentVal) {
-          console.log(`  -> Entering location: "Mumbai" (Target: ${formData.location})`);
+          console.log('  -> Typing "Mumbai"…');
           await locField.click({ force: true }).catch(() => {});
-          await locField.fill('Mumbai').catch(() => {});
-          await page.waitForTimeout(1000);
+          await locField.fill('').catch(() => {});
+          await locField.type('Mumbai', { delay: 80 });
+          await page.waitForTimeout(1200);
 
-          const option = page.locator('mat-option, un-option, .cdk-overlay-container mat-option, .pac-item, li.location-item, div.option').first();
-          if (await option.isVisible().catch(() => false)) {
+          const option = page.locator(
+            'mat-option, un-option, .cdk-overlay-container mat-option, .pac-item, li.location-item, [role="option"]'
+          ).first();
+          if (await option.isVisible({ timeout: 3000 }).catch(() => false)) {
             const optText = await option.innerText().catch(() => '');
-            console.log(`  -> Found autocomplete option: "${optText.trim()}". Clicking...`);
+            console.log(`  -> Selecting option: "${optText.trim()}"`);
             await option.click({ force: true }).catch(() => {});
           } else {
-            console.log('  -> Autocomplete dropdown not visible. Pressing ArrowDown + Enter...');
-            await page.keyboard.press('ArrowDown').catch(() => {});
+            await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(300);
-            await page.keyboard.press('Enter').catch(() => {});
+            await page.keyboard.press('Enter');
           }
-
-          await locField.evaluate(el => {
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-            el.dispatchEvent(new Event('blur', { bubbles: true }));
-          }).catch(() => {});
-          await page.waitForTimeout(500);
-          console.log('  ✅ [Step 2] Location filled & Angular events dispatched.');
+          await page.waitForTimeout(600);
+          console.log('  ✅ [Step 2] Location set.');
         } else {
-          console.log(`  ℹ️ [Step 2] Location already filled: "${currentVal}"`);
+          console.log(`  ℹ️ [Step 2] Location already set: "${currentVal}"`);
         }
       } else {
-        console.log('  ℹ️ [Step 2] Location input field not found on page.');
+        console.log('  ℹ️ [Step 2] Location field not found.');
       }
     }
     await takeStepScreenshot(page, 'step2_location');
 
-    // Step 3: Add Skills
+    // ────────────────────────────────────────────────────────────────────────────
+    // Step 3: Skills Autocomplete
+    // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 3/5] 💡 SKILLS TAG AUTOCOMPLETE');
     if (Array.isArray(formData?.skills) && formData.skills.length > 0) {
       const skillsField = await findField(page, 'skills');
       if (skillsField) {
-        console.log(`  -> Skills field located. Target skills: ${formData.skills.slice(0, 4).join(', ')}`);
+        console.log(`  -> Adding: ${formData.skills.slice(0, 4).join(', ')}`);
         for (const skill of formData.skills.slice(0, 4)) {
-          console.log(`  -> Adding skill: "${skill}"`);
           await skillsField.click({ force: true }).catch(() => {});
-          await skillsField.fill(skill).catch(() => {});
-          await page.waitForTimeout(800);
+          await skillsField.fill('').catch(() => {});
+          await skillsField.type(skill, { delay: 80 });
+          await page.waitForTimeout(900);
 
-          const skillOpt = page.locator('mat-option, un-option, .cdk-overlay-container mat-option, .skills-list li, div.skill-option, [role="option"]').first();
-          if (await skillOpt.isVisible().catch(() => false)) {
-            console.log(`     - Dropdown option visible. Clicking...`);
+          const skillOpt = page.locator(
+            'mat-option, un-option, .cdk-overlay-container mat-option, [role="option"], .skills-list li'
+          ).first();
+          if (await skillOpt.isVisible({ timeout: 2000 }).catch(() => false)) {
             await skillOpt.click({ force: true }).catch(() => {});
           } else {
-            console.log(`     - Dropdown option hidden. Pressing ArrowDown + Enter...`);
-            await page.keyboard.press('ArrowDown').catch(() => {});
+            await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(300);
-            await page.keyboard.press('Enter').catch(() => {});
+            await page.keyboard.press('Enter');
           }
-          await page.waitForTimeout(400);
+          await page.waitForTimeout(500);
         }
-        console.log('  ✅ [Step 3] Skills tag selection completed.');
+        console.log('  ✅ [Step 3] Skills added.');
       } else {
-        console.log('  ℹ️ [Step 3] Skills input field not found on page.');
+        console.log('  ℹ️ [Step 3] Skills field not found.');
       }
     }
     await takeStepScreenshot(page, 'step3_skills');
 
+    // ────────────────────────────────────────────────────────────────────────────
     // Step 4: Terms & Conditions
+    // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 4/5] 📜 TERMS & CONDITIONS CHECKBOXES');
-    const checkboxes = page.locator('input[type="checkbox"], label:has-text("Terms"), label:has-text("Agree")');
-    const count = await checkboxes.count().catch(() => 0);
-    console.log(`  -> Found ${count} checkbox/term elements on page.`);
-    for (let i = 0; i < count; i++) {
+    const checkboxes = page.locator('input[type="checkbox"]');
+    const cbCount = await checkboxes.count().catch(() => 0);
+    console.log(`  -> Found ${cbCount} checkbox(es).`);
+    for (let i = 0; i < cbCount; i++) {
       const cb = checkboxes.nth(i);
       if (await cb.isVisible().catch(() => false)) {
         const checked = await cb.isChecked().catch(() => false);
         if (!checked) {
-          console.log(`  -> Checking checkbox #${i + 1}...`);
           await cb.click({ force: true }).catch(() => {});
           await page.waitForTimeout(300);
-        } else {
-          console.log(`  ℹ️ Checkbox #${i + 1} already checked.`);
+          console.log(`  -> Checked checkbox #${i + 1}`);
         }
       }
     }
-    console.log('  ✅ [Step 4] Terms & conditions verified.');
+    console.log('  ✅ [Step 4] Terms verified.');
     await takeStepScreenshot(page, 'step4_terms');
 
-    // Step 5: Submit Form (Multi-step form navigation)
+    // ────────────────────────────────────────────────────────────────────────────
+    // Step 5: Multi-Step Form Navigation & Final Submit
+    // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 5/5] 🚀 SUBMIT FORM (Multi-Step Execution)');
     let stepClickedCount = 0;
-    for (let step = 1; step <= 4; step++) {
-      const submitBtn = await findButton(page, ['submit', 'register', 'next', 'save', 'confirm']);
-      if (!submitBtn) break;
+    const MAX_FORM_STEPS = 6;
+
+    for (let step = 1; step <= MAX_FORM_STEPS; step++) {
+      await waitForOverlayClear(`form step ${step}`);
+
+      const submitBtn = await findButton(page);
+      if (!submitBtn) {
+        console.log(`  ℹ️ [Form Step ${step}] No action button found.`);
+        break;
+      }
+
       const btnText = (await submitBtn.innerText().catch(() => '')).trim();
       if (!btnText) break;
-      console.log(`  -> [Submit Step ${step}] Action button located: "${btnText}". Executing click...`);
-      await submitBtn.click({ force: true }).catch(() => {});
+
+      console.log(`  -> [Form Step ${step}] Clicking "${btnText}"…`);
+      emitProgress(io, userId, appId, 'submitting', `Form step ${step}: "${btnText}"…`, 70 + step * 4);
+
+      await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
+      await submitBtn.click({ force: true }).catch(async () => {
+        await submitBtn.evaluate(el => el.click()).catch(() => {});
+      });
       stepClickedCount++;
-      await page.waitForTimeout(3500);
+
+      // Wait for Angular to process + any XHR between steps
+      await Promise.race([
+        page.waitForLoadState('networkidle', { timeout: 5000 }),
+        page.waitForTimeout(4000)
+      ]).catch(() => {});
+
+      // Early exit if registration confirmed by URL
+      const currentUrl = page.url();
+      if (
+        currentUrl.includes('/success') ||
+        currentUrl.includes('/register/edit') ||
+        currentUrl.includes('rstatus=1')
+      ) {
+        console.log(`  ✅ Registration confirmed via URL: ${currentUrl}`);
+        break;
+      }
     }
+
     if (stepClickedCount > 0) {
-      console.log(`  ✅ [Step 5] Form submission click sequence executed (${stepClickedCount} clicks).`);
+      console.log(`  ✅ [Step 5] ${stepClickedCount} click(s) executed.`);
     } else {
-      console.log('  ⚠️ [Step 5] Submit button not located on page.');
+      console.log('  ⚠️ [Step 5] No submit button located on page.');
     }
     await takeStepScreenshot(page, 'step5_submit');
 
