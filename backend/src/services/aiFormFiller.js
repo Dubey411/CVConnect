@@ -525,6 +525,69 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
     for (let step = 1; step <= MAX_FORM_STEPS; step++) {
       await waitForOverlayClear(`form step ${step}`);
 
+      // ── Per-step required field scan: fill any visible required radio/select ──
+      // This handles Unstop's multi-step form where "Differently Abled",
+      // "User Type", "Gender" may appear on different steps
+      try {
+        // Differently Abled → No
+        const diffAbledErr = await page.locator('text="Please select an option"').first().isVisible({ timeout: 500 }).catch(() => false);
+        const diffAbledSection = page.locator('[class*="differently"], label:has-text("Differently Abled")').first();
+        const diffAbledVisible = await diffAbledSection.isVisible({ timeout: 500 }).catch(() => false);
+        if (diffAbledVisible || diffAbledErr) {
+          for (const sel of [
+            'label:has-text("No"):near(label:has-text("Differently Abled"))',
+            'div:has-text("Differently Abled") ~ div button:has-text("No")',
+            'div:has-text("Differently Abled") button:first-child',
+            'un-radio-group button:first-of-type',
+          ]) {
+            const el = page.locator(sel).first();
+            if (await el.isVisible({ timeout: 500 }).catch(() => false)) {
+              await el.click({ force: true }).catch(() => {});
+              console.log(`  ✅ [Step ${step}] Differently Abled: No selected`);
+              await page.waitForTimeout(400);
+              break;
+            }
+          }
+          // Fallback: click all visible buttons containing "No"
+          const noButtons = page.locator('button').filter({ hasText: /^No$/ });
+          const noCount = await noButtons.count().catch(() => 0);
+          for (let i = 0; i < noCount; i++) {
+            const btn = noButtons.nth(i);
+            if (await btn.isVisible().catch(() => false)) {
+              await btn.click({ force: true }).catch(() => {});
+              console.log(`  ✅ [Step ${step}] Clicked "No" button #${i}`);
+              await page.waitForTimeout(300);
+            }
+          }
+        }
+
+        // Gender → Male (if not yet selected)
+        const genderSection = page.locator('label:has-text("Gender"), [class*="gender"]').first();
+        if (await genderSection.isVisible({ timeout: 500 }).catch(() => false)) {
+          const maleSelected = await page.locator('button:has-text("Male").selected, button.active:has-text("Male"), [class*="selected"]:has-text("Male")').first().isVisible({ timeout: 500 }).catch(() => false);
+          if (!maleSelected) {
+            const maleBtn = page.locator('button').filter({ hasText: /^Male$/ }).first();
+            if (await maleBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+              await maleBtn.click({ force: true }).catch(() => {});
+              console.log(`  ✅ [Step ${step}] Gender: Male selected`);
+              await page.waitForTimeout(300);
+            }
+          }
+        }
+
+        // Terms checkboxes on any step
+        const stepCheckboxes = page.locator('input[type="checkbox"]:not(:checked)');
+        const scCount = await stepCheckboxes.count().catch(() => 0);
+        for (let i = 0; i < scCount; i++) {
+          const cb = stepCheckboxes.nth(i);
+          if (await cb.isVisible().catch(() => false)) {
+            await cb.click({ force: true }).catch(() => {});
+            console.log(`  ✅ [Step ${step}] Checked unchecked checkbox #${i}`);
+            await page.waitForTimeout(200);
+          }
+        }
+      } catch (_) {}
+
       const submitBtn = await findButton(page);
       if (!submitBtn) {
         console.log(`  ℹ️ [Form Step ${step}] No action button found.`);
