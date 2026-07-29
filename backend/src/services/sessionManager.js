@@ -108,18 +108,33 @@ const PLATFORM_CONFIG = {
         const url = page.url();
         if (isAuthOrOAuthUrl(url)) return false;
 
-        // Check for actual auth cookie
-        const cookies = await context.cookies('https://unstop.com').catch(() => []);
-        const hasValidToken = cookies.some(c => 
-          (c.name === 'access_token' || c.name === 'token' || c.name === 'session' || c.name === 'at') && 
-          c.value && c.value.length > 20
-        );
+        // Check if "Session expired" banner or Login button is visible
+        const isExpiredOrLoggedOut = await page.evaluate(() => {
+          const body = document.body ? document.body.innerText : '';
+          const hasExpiredText = body.includes('Session expired') || body.includes('Please login again');
+          const loginBtn = document.querySelector('header a[href*="login"], header button:has-text("Login"), a.login-btn');
+          return hasExpiredText || Boolean(loginBtn);
+        }).catch(() => false);
 
-        if (hasValidToken) return true;
+        if (isExpiredOrLoggedOut) return false;
 
-        // Check for logged-in DOM elements
-        const loggedInEl = await page.locator('.profile-pic, .user_name, button:has-text("Logout"), a[href*="/user/profile"]').count().catch(() => 0);
-        return loggedInEl > 0;
+        // Check for logged-in DOM elements (profile picture, user name, logout button)
+        const loggedInEl = await page.locator('.profile-pic, .user_name, button:has-text("Logout"), a[href*="/user/profile"], header .user-profile').count().catch(() => 0);
+        if (loggedInEl > 0) return true;
+
+        // Check if Unstop API confirms token is active and valid
+        const apiValid = await page.evaluate(async () => {
+          try {
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('jwt');
+            if (!token) return false;
+            const res = await fetch('https://unstop.com/api/v1/user/profile', {
+              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+            }).then(r => r.json()).catch(() => null);
+            return Boolean(res?.data?.user || res?.user || res?.data?.id || res?.id);
+          } catch { return false; }
+        }).catch(() => false);
+
+        return apiValid;
       } catch { return false; }
     },
     accountExtract: async (page) => {
