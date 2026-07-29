@@ -525,15 +525,21 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
     for (let step = 1; step <= MAX_FORM_STEPS; step++) {
       await waitForOverlayClear(`form step ${step}`);
 
-      // ── Per-step required field scan: fill any visible required radio/select ──
-      // This handles Unstop's multi-step form where "Differently Abled",
-      // "User Type", "Gender" may appear on different steps
+      // ── Per-step required field scan: fill any visible/scrolled required fields ──
       try {
-        // Differently Abled → No
-        const diffAbledErr = await page.locator('text="Please select an option"').first().isVisible({ timeout: 500 }).catch(() => false);
-        const diffAbledSection = page.locator('[class*="differently"], label:has-text("Differently Abled")').first();
-        const diffAbledVisible = await diffAbledSection.isVisible({ timeout: 500 }).catch(() => false);
+        // Scroll to bottom of page first so ALL elements are accessible
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+        await page.waitForTimeout(500);
+
+        // Differently Abled → No (scroll into view then click)
+        const diffAbledSection = page.locator('label:has-text("Differently Abled"), [class*="differently"]').first();
+        const diffAbledVisible = await diffAbledSection.isVisible({ timeout: 800 }).catch(() => false);
+        const diffAbledErr = await page.locator('text="Please select an option"').first().isVisible({ timeout: 300 }).catch(() => false);
         if (diffAbledVisible || diffAbledErr) {
+          await diffAbledSection.scrollIntoViewIfNeeded().catch(() => {});
+          await page.waitForTimeout(300);
+
+          // Try all "No" button selectors near the Differently Abled section
           for (const sel of [
             'label:has-text("No"):near(label:has-text("Differently Abled"))',
             'div:has-text("Differently Abled") ~ div button:has-text("No")',
@@ -542,51 +548,52 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
           ]) {
             const el = page.locator(sel).first();
             if (await el.isVisible({ timeout: 500 }).catch(() => false)) {
+              await el.scrollIntoViewIfNeeded().catch(() => {});
               await el.click({ force: true }).catch(() => {});
               console.log(`  ✅ [Step ${step}] Differently Abled: No selected`);
               await page.waitForTimeout(400);
               break;
             }
           }
-          // Fallback: click all visible buttons containing "No"
-          const noButtons = page.locator('button').filter({ hasText: /^No$/ });
-          const noCount = await noButtons.count().catch(() => 0);
-          for (let i = 0; i < noCount; i++) {
-            const btn = noButtons.nth(i);
-            if (await btn.isVisible().catch(() => false)) {
-              await btn.click({ force: true }).catch(() => {});
-              console.log(`  ✅ [Step ${step}] Clicked "No" button #${i}`);
-              await page.waitForTimeout(300);
-            }
-          }
         }
 
-        // Gender → Male (if not yet selected)
+        // Gender → Male (if visible and not yet selected)
         const genderSection = page.locator('label:has-text("Gender"), [class*="gender"]').first();
         if (await genderSection.isVisible({ timeout: 500 }).catch(() => false)) {
-          const maleSelected = await page.locator('button:has-text("Male").selected, button.active:has-text("Male"), [class*="selected"]:has-text("Male")').first().isVisible({ timeout: 500 }).catch(() => false);
-          if (!maleSelected) {
-            const maleBtn = page.locator('button').filter({ hasText: /^Male$/ }).first();
-            if (await maleBtn.isVisible({ timeout: 500 }).catch(() => false)) {
-              await maleBtn.click({ force: true }).catch(() => {});
-              console.log(`  ✅ [Step ${step}] Gender: Male selected`);
-              await page.waitForTimeout(300);
-            }
+          const maleBtn = page.locator('button').filter({ hasText: /^Male$/ }).first();
+          if (await maleBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+            await maleBtn.scrollIntoViewIfNeeded().catch(() => {});
+            await maleBtn.click({ force: true }).catch(() => {});
+            console.log(`  ✅ [Step ${step}] Gender: Male selected`);
+            await page.waitForTimeout(300);
           }
         }
 
-        // Terms checkboxes on any step
-        const stepCheckboxes = page.locator('input[type="checkbox"]:not(:checked)');
-        const scCount = await stepCheckboxes.count().catch(() => 0);
-        for (let i = 0; i < scCount; i++) {
-          const cb = stepCheckboxes.nth(i);
-          if (await cb.isVisible().catch(() => false)) {
-            await cb.click({ force: true }).catch(() => {});
-            console.log(`  ✅ [Step ${step}] Checked unchecked checkbox #${i}`);
-            await page.waitForTimeout(200);
-          }
+        // ── Terms & Conditions: scroll through full page, check ALL unchecked boxes ──
+        // Use evaluate to find ALL checkboxes (including off-screen ones) and click them
+        const uncheckedCount = await page.evaluate(() => {
+          const boxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+          let clicked = 0;
+          boxes.forEach(cb => {
+            if (!cb.checked) {
+              cb.scrollIntoView({ behavior: 'instant', block: 'center' });
+              cb.click();
+              clicked++;
+            }
+          });
+          return clicked;
+        }).catch(() => 0);
+
+        if (uncheckedCount > 0) {
+          console.log(`  ✅ [Step ${step}] Checked ${uncheckedCount} Terms & Conditions checkbox(es) via JS`);
+          await page.waitForTimeout(500);
         }
+
+        // Scroll back to top to find the Next/Submit button
+        await page.evaluate(() => window.scrollTo(0, 0)).catch(() => {});
+        await page.waitForTimeout(300);
       } catch (_) {}
+
 
       const submitBtn = await findButton(page);
       if (!submitBtn) {
