@@ -41,31 +41,37 @@ export function extractOpportunityId(url) {
  *  2. If a registration POST is captured → confirm it succeeded
  *  3. If not captured → send the fallback registration payload ourselves
  */
-export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, user, resume, pdfPath }) {
-  const profilePath = getProfilePath(userId, 'unstop');
+export async function registerUnstopViaApi({ userId, opportunityId, targetUrl, user, resume, pdfPath, existingPage = null }) {
+  let context = null;
+  let page = existingPage;
 
-  try {
-    await fs.access(profilePath);
-  } catch {
-    throw new Error('Unstop profile session not found. Please visit Platforms → Unstop → Reconnect.');
+  if (!page) {
+    const profilePath = getProfilePath(userId, 'unstop');
+    try {
+      await fs.access(profilePath);
+    } catch {
+      throw new Error('Unstop profile session not found. Please visit Platforms → Unstop → Reconnect.');
+    }
+
+    try {
+      context = await chromium.launchPersistentContext(profilePath, {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-dev-shm-usage',
+          '--window-size=1366,768',
+        ],
+      });
+      page = context.pages()[0] || await context.newPage();
+    } catch (err) {
+      console.warn('  ⚠️ [API] Could not launch persistent context for API engine:', err.message);
+      return { success: false, reason: err.message };
+    }
   }
 
-  let context = null;
-
   try {
-    context = await chromium.launchPersistentContext(profilePath, {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-dev-shm-usage',
-        '--window-size=1366,768',
-      ],
-    });
-
-    const page = context.pages()[0] || await context.newPage();
-
     // ── Step 1: Intercept registration API calls ──────────────────────────────
     const capturedRequests = [];
 

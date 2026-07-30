@@ -24,6 +24,35 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const validate = (req, res, next) => { const e = validationResult(req); return e.isEmpty() ? next() : res.status(422).json({ error: { code: 'VALIDATION_ERROR', details: e.array() } }); };
 const ownedResume = async (id, userId) => { const resume = await prisma.resume.findFirst({ where: { id, userId }, include: { job: true } }); if (!resume) { const err = new Error('Resume not found.'); err.status = 404; throw err; } return resume; };
 router.use(authenticate);
+
+router.get('/profile', async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.sub },
+      select: { id: true, email: true, name: true, phone: true, gender: true, location: true, college: true, degree: true }
+    });
+    res.json({ profile: user });
+  } catch (e) { next(e); }
+});
+
+router.patch('/profile', async (req, res, next) => {
+  try {
+    const { name, phone, gender, location, college, degree } = req.body;
+    const user = await prisma.user.update({
+      where: { id: req.user.sub },
+      data: {
+        ...(name && { name }),
+        ...(phone !== undefined && { phone }),
+        ...(gender && { gender }),
+        ...(location && { location }),
+        ...(college !== undefined && { college }),
+        ...(degree !== undefined && { degree })
+      },
+      select: { id: true, email: true, name: true, phone: true, gender: true, location: true, college: true, degree: true }
+    });
+    res.json({ profile: user });
+  } catch (e) { next(e); }
+});
 router.get('/applications', async (req, res, next) => {
   try {
     const startOfToday = new Date();

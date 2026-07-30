@@ -135,12 +135,19 @@ export async function findButton(page, targetKeywords = ['submit', 'register', '
       'button:has-text("Confirm")',
       'button:has-text("Save & Submit")',
       'button:has-text("Save & Next")',
+      'button:has-text("Update Details")',
+      'button:has-text("Proceed")',
+      'button:has-text("Apply")',
       'button.un-button:has-text("Submit")',
       'button.un-button:has-text("Next")',
       'button.un-button:has-text("Register")',
       'button[type="submit"]',
       'button.btn-primary',
-      'button.primary-btn'
+      'button.primary-btn',
+      'a.btn:has-text("Next")',
+      'a.btn:has-text("Submit")',
+      'a:has-text("Next")',
+      'a:has-text("Submit")'
     ];
 
     for (const sel of mainBtnSelectors) {
@@ -655,31 +662,6 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
 export async function verifyUnstopRegistration(page, oppId) {
   console.log('\n🔍 [BOT-DEBUG:Verify] VERIFYING REGISTRATION STATUS');
   try {
-    if (oppId) {
-      console.log(`  -> Querying Unstop opportunity API for opportunity #${oppId}...`);
-      const apiStatus = await page.evaluate(async (id) => {
-        try {
-          const endpoints = [
-            `/api/public/opportunity/${id}`,
-            `/api/v1/opportunity/${id}`,
-            `/api/v1/user/opportunity/${id}/status`
-          ];
-          for (const ep of endpoints) {
-            const res = await fetch(ep, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-            if (res?.data?.opportunity?.is_registered || res?.data?.is_registered || res?.data?.isRegistered || res?.isRegistered || res?.registered) {
-              return { isRegistered: true, data: res };
-            }
-          }
-          return null;
-        } catch { return null; }
-      }, oppId).catch(() => null);
-
-      if (apiStatus?.isRegistered) {
-        console.log('  ✅ [Verify] API confirmed registration: isRegistered = true');
-        return true;
-      }
-    }
-
     const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
     const url = page.url();
 
@@ -693,16 +675,56 @@ export async function verifyUnstopRegistration(page, oppId) {
       bodyText.includes('application submitted') ||
       bodyText.includes('thank you for applying') ||
       bodyText.includes('you have registered') ||
-      bodyText.includes('already registered')
+      bodyText.includes('already registered') ||
+      bodyText.includes('cancel application') ||
+      bodyText.includes('update details') ||
+      bodyText.includes('my details')
     );
 
-    const hasRegisteredBtn = await page.locator('button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered")').count().catch(() => 0) > 0;
+    const hasRegisteredBtn = await page.locator(
+      'button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered"), button:has-text("Cancel Application"), button:has-text("Update Details")'
+    ).count().catch(() => 0) > 0;
 
     console.log(`  -> URL: ${url}`);
     console.log(`  -> Text Matched: ${isRegisteredText}`);
-    console.log(`  -> Button Text "Registered" Visible: ${hasRegisteredBtn}`);
+    console.log(`  -> Button Text "Registered/Cancel" Visible: ${hasRegisteredBtn}`);
 
     const verified = isRegisteredText || hasRegisteredBtn;
+
+    if (!verified && oppId) {
+      console.log(`  -> Querying Unstop opportunity API for opportunity #${oppId}...`);
+      const apiStatus = await page.evaluate(async (id) => {
+        try {
+          const endpoints = [
+            `/api/public/opportunity/${id}`,
+            `/api/v1/opportunity/${id}`,
+            `/api/v1/user/opportunity/${id}/status`,
+            `/api/public/competition/${id}`
+          ];
+          for (const ep of endpoints) {
+            const res = await fetch(ep, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+            if (
+              res?.data?.opportunity?.is_registered ||
+              res?.data?.is_registered ||
+              res?.data?.isRegistered ||
+              res?.isRegistered ||
+              res?.registered ||
+              res?.data?.user_registered ||
+              res?.data?.userStatus === 'registered'
+            ) {
+              return { isRegistered: true, data: res };
+            }
+          }
+          return null;
+        } catch { return null; }
+      }, oppId).catch(() => null);
+
+      if (apiStatus?.isRegistered) {
+        console.log('  ✅ [Verify] API confirmed registration: isRegistered = true');
+        return true;
+      }
+    }
+
     if (verified) {
       console.log('  ✅ [Verify] DOM confirmed registration.');
     } else {

@@ -414,6 +414,7 @@ export class BotRunner {
       this.emit(userId, applicationId, 'failed', `Auto-apply failed: ${err.message}`, 0, err.message);
       throw err;
     } finally {
+      if (context) await context.close().catch(() => {});
       if (browser) await browser.close().catch(() => {});
       if (pdfPath) await fs.unlink(pdfPath).catch(() => {});
     }
@@ -456,7 +457,7 @@ export class BotRunner {
     const oppId = extractOpportunityId(url);
     if (oppId) {
       this.emit(userId, appId, 'filling', `Executing Direct API Auto-Apply payload for opportunity #${oppId}…`, 65);
-      const apiRes = await registerUnstopViaApi({ userId, opportunityId: oppId, targetUrl: url, user, resume, pdfPath }).catch(err => {
+      const apiRes = await registerUnstopViaApi({ userId, opportunityId: oppId, targetUrl: url, user, resume, pdfPath, existingPage: page }).catch(err => {
         console.warn('[BotRunner:Unstop] Direct API engine fallback:', err.message);
         return null;
       });
