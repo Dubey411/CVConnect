@@ -269,10 +269,25 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
             </button>
           </div>
         ) : applyState === 'failed' || applyState === 'error' ? (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded space-y-1 text-center font-medium">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded space-y-2 text-center font-medium">
             <div className="text-xs text-coral flex items-center justify-center gap-1.5">
-              <AlertTriangle size={15} /> ❌ {errorMsg || 'Verification failed'}
+              <AlertTriangle size={15} /> <span>{errorMsg || 'Verification failed'}</span>
             </div>
+            {(errorMsg?.toLowerCase().includes('login') || errorMsg?.toLowerCase().includes('session') || errorMsg?.toLowerCase().includes('reconnect')) && (
+              <div className="pt-1 text-left bg-amber-500/10 border border-amber-500/30 p-2 rounded">
+                <span className="text-[11px] text-amber-300 font-semibold block mb-1">⚠️ Session Expired on {selectedPlatform.toUpperCase()}</span>
+                <p className="text-[10px] text-slate-300 mb-2">Please connect or reconnect your account in the Platforms tab.</p>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('cvconnect_active_tab', 'platforms');
+                    window.location.reload();
+                  }}
+                  className="text-xs font-semibold text-amber-300 bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 px-3 py-1 rounded-md transition-colors w-full text-center"
+                >
+                  Go to Platforms & Reconnect →
+                </button>
+              </div>
+            )}
             <button onClick={() => setApplyState('idle')} className="text-[10px] text-slate-400 hover:text-white mt-1 block w-full text-center">
               Try again
             </button>
