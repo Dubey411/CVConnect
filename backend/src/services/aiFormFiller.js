@@ -682,6 +682,24 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       emitProgress(io, userId, appId, 'submitting', `Form step ${step}: "${btnText}"…`, 70 + step * 4);
 
       const beforeUrl = page.url();
+
+      // Check if there are unfilled required screening questions on screen
+      const unfilledScreening = await page.evaluate(() => {
+        const labels = [];
+        const requiredInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea'));
+        requiredInputs.forEach(input => {
+          const val = input.value?.trim();
+          if (!val) {
+            const container = input.closest('div, section, fieldset, form') || input.parentElement;
+            const heading = container?.querySelector('label, h3, h4, p, .field-title')?.innerText?.trim() || '';
+            if (heading && (heading.includes('*') || heading.toLowerCase().includes('question') || heading.toLowerCase().includes('portfolio') || heading.toLowerCase().includes('timeline') || heading.toLowerCase().includes('sample') || heading.toLowerCase().includes('why') || heading.toLowerCase().includes('joining'))) {
+              labels.push(heading.replace(/\s+/g, ' ').replace('*', '').trim());
+            }
+          }
+        });
+        return labels;
+      }).catch(() => []);
+
       await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
       await submitBtn.click({ force: true }).catch(async () => {
         await submitBtn.evaluate(el => el.click()).catch(() => {});
@@ -694,8 +712,17 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
         page.waitForTimeout(3000)
       ]).catch(() => {});
 
-      // Early exit if registration confirmed by URL or DOM
       const currentUrl = page.url();
+
+      // If page url didn't change after clicking submit/next twice and unhandled screening questions exist:
+      if (beforeUrl === currentUrl && stepClickedCount >= 2 && unfilledScreening.length > 0) {
+        const qList = unfilledScreening.slice(0, 2).join(' / ');
+        const msg = `This job requires custom screening questions (${qList}). Please fill this form directly on Unstop.`;
+        console.warn(`  ⚠️ Custom screening questions detected: ${msg}`);
+        throw new Error(msg);
+      }
+
+      // Early exit if registration confirmed by URL or DOM
       const bodyLower = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
       if (
         currentUrl.includes('/success') ||
