@@ -649,6 +649,37 @@ export class BotRunner {
       return true;
     }
 
+    // ── Layer 4: Re-navigate to the listing page to check registered state ────
+    // If we're stuck on /register but submission may have gone through,
+    // go back to the listing URL and check if "Cancel Application" / "Registered" now shows
+    console.log('  🔄 [Verify] Re-navigating to listing page for definitive check…');
+    try {
+      const listingUrl = url.replace(/\/register.*$/, '');
+      await page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.waitForTimeout(2500);
+
+      const listingBody = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+      const listingUrl2 = page.url();
+      const registeredOnListing = (
+        listingBody.includes('cancel application') ||
+        listingBody.includes('update details') ||
+        listingBody.includes('already registered') ||
+        listingBody.includes('registered!') ||
+        listingUrl2.includes('rstatus=1') ||
+        await page.locator(
+          'button:has-text("Cancel Application"), button:has-text("Update Details"), button:has-text("Registered"), a:has-text("Cancel Application")'
+        ).count().catch(() => 0) > 0
+      );
+
+      if (registeredOnListing) {
+        console.log('  ✅ [Verify Layer 4] Listing page confirms registration!');
+        return true;
+      }
+      console.log('  ❌ [Verify Layer 4] Listing page did NOT confirm registration.');
+    } catch (navErr) {
+      console.warn('  ⚠️ [Verify Layer 4] Re-navigate check failed:', navErr.message);
+    }
+
     this.emit(userId, appId, 'failed', '❌ Application could not be verified on Unstop.', 0);
     return false;
   }
