@@ -189,7 +189,104 @@ function extractSkills(user, resume) {
     : ['Full Stack Development', 'React.js', 'Node.js', 'JavaScript'];
 }
 
+
+// ─── DOM-based login status check ─────────────────────────────────────────────
+/**
+ * After navigating to the target URL, inspect the live DOM to determine whether
+ * the user is genuinely logged in — not just whether the backend thinks so.
+ *
+ * Returns { isLoggedIn, loginButtonFound, indicator }
+ */
+async function checkDomLoginStatus(page, platform) {
+  const result = { isLoggedIn: false, loginButtonFound: false, indicator: '' };
+
+  // Selectors that confirm the user IS logged in (profile/avatar/user-menu visible)
+  const LOGGED_IN = {
+    unstop:      [
+      '[class*="user-profile"]', '[class*="user_name"]',
+      '.profile-pic', 'header img[class*="avatar"]',
+      'header a[href*="/user/"]', 'header a[href*="/profile"]',
+      'button:has-text("Logout")', '.user-details',
+    ],
+    internshala: ['.profile-pic-wrapper', '#nav-dropdown-user-menu', '.student-menu', 'a[href*="/student/"]'],
+    linkedin:    ['.global-nav__me', '.nav__avatar', '[data-control-name="identity_welcome_message"]'],
+    wellfound:   ['[data-test="user-menu"]', '.userinfo__name'],
+    glassdoor:   ['[data-test="user-avatar"]', '[data-test="user-account-menu"]'],
+    naukri:      ['.nI-gNb-drawer__icon', '.nI-gNb-user-name'],
+    indeed:      ['[data-testid="gnav-user-button"]', '[data-gnav-element-name="user-menu"]'],
+  };
+
+  // Selectors that confirm the user is NOT logged in (login/signup button visible)
+  const LOGGED_OUT = {
+    unstop:      [
+      'header a:has-text("Login")', 'header button:has-text("Login")',
+      '.top-header a:has-text("Login")', '.top-header button:has-text("Login")',
+      'button:has-text("Continue with Google")', 'a:has-text("Sign Up")',
+      'a[href*="/auth/login"]', 'button:has-text("Sign In")',
+    ],
+    internshala: ['a#log_in_link', '.login-btn', 'a:has-text("Login")'],
+    linkedin:    ['.nav__button-secondary', 'a[href*="/login"]'],
+    wellfound:   ['a[href="/login"]', 'a:has-text("Sign In")'],
+    glassdoor:   ['a[href*="login_input"]', 'button:has-text("Sign In")'],
+    naukri:      ['a[href*="/nlogin"]', '#login_Layer'],
+    indeed:      ['a[href*="/account/login"]', 'button:has-text("Sign in")'],
+  };
+
+  const inSelectors  = LOGGED_IN[platform]  || LOGGED_IN.unstop;
+  const outSelectors = LOGGED_OUT[platform] || LOGGED_OUT.unstop;
+
+  try {
+    // 1. Positive check — is a "logged in" element visible?
+    for (const sel of inSelectors) {
+      const visible = await page.locator(sel).first().isVisible({ timeout: 2000 }).catch(() => false);
+      if (visible) {
+        result.isLoggedIn = true;
+        result.indicator = `logged-in element: ${sel}`;
+        console.log(`  ✅ [DOM-Login] Logged in confirmed via: ${sel}`);
+        return result;
+      }
+    }
+
+    // 2. Negative check — is a "login" button visible?
+    for (const sel of outSelectors) {
+      const visible = await page.locator(sel).first().isVisible({ timeout: 1500 }).catch(() => false);
+      if (visible) {
+        result.loginButtonFound = true;
+        result.indicator = `login button: ${sel}`;
+        console.warn(`  ❌ [DOM-Login] Login button visible (NOT logged in) via: ${sel}`);
+        return result;
+      }
+    }
+
+    // 3. Body-text fallback (handles pages where DOM structure differs)
+    const bodyText = (await page.locator('body').innerText({ timeout: 3000 }).catch(() => '')).toLowerCase();
+    const loggedInKw  = ['logout', 'sign out', 'my account', 'my profile', 'dashboard'];
+    const loggedOutKw = ['sign in to', 'login to', 'create an account', 'continue with google'];
+
+    if (loggedInKw.some(kw => bodyText.includes(kw))) {
+      result.isLoggedIn = true;
+      result.indicator = 'body text: logged-in keyword';
+    } else if (loggedOutKw.some(kw => bodyText.includes(kw))) {
+      result.loginButtonFound = true;
+      result.indicator = 'body text: login keyword';
+    } else {
+      // Truly ambiguous — be optimistic and don't block the run
+      result.isLoggedIn = true;
+      result.indicator = 'ambiguous DOM — assumed logged in';
+      console.log('  ℹ️ [DOM-Login] Could not determine login state from DOM — assuming logged in.');
+    }
+  } catch (err) {
+    // If the check itself errors, don't crash the whole bot
+    result.isLoggedIn = true;
+    result.indicator = `check error: ${err.message}`;
+    console.warn(`  ⚠️ [DOM-Login] Check threw error (assuming logged in): ${err.message}`);
+  }
+
+  return result;
+}
+
 // ─── BotRunner class ──────────────────────────────────────────────────────────
+
 
 export class BotRunner {
   constructor(io) {
@@ -201,6 +298,7 @@ export class BotRunner {
   async runApplication({ userId, applicationId, jobId, platform, resumeId, targetUrl, useBrowserSession = false }) {
     let browser;
     let pdfPath;
+    let context;   // declared here so finally{} can always close it
 
     try {
       // 1. Load all required data
@@ -262,7 +360,6 @@ export class BotRunner {
       const shouldUsePersistent = useBrowserSession || hasProfile;
 
       // 4. Launch browser — persistent profile (preferred) or fresh + cookie injection
-      let context;
       if (shouldUsePersistent) {
         // ── Gap 7: Pre-check session status ────────────────────────────────────
         const session = await prisma.browserSession.findUnique({
@@ -433,6 +530,24 @@ export class BotRunner {
     await delay(1500, 3000);
     await dismissOverlays(page);
 
+    // ── DOM-based login check: inspect real page DOM, not just backend state ──
+    console.log('  🔍 [BotRunner:Unstop] Verifying login status from live page DOM…');
+    this.emit(userId, appId, 'authenticating', 'Checking login state from live page…', 45);
+    const loginStatus = await checkDomLoginStatus(page, 'unstop');
+
+    console.log(`  -> DOM Login Check: isLoggedIn=${loginStatus.isLoggedIn} | loginBtnFound=${loginStatus.loginButtonFound}`);
+
+    if (!loginStatus.isLoggedIn) {
+      const msg = 'Unstop is showing a Login button — your session has expired or was never connected. '
+                + 'Please go to Platforms → Unstop → Reconnect and log in again.';
+      console.error('[BotRunner:Unstop] ❌ NOT logged in (DOM check failed).');
+      this.emit(userId, appId, 'session_expired',
+        '⚠️ Not logged into Unstop — please Reconnect your Unstop account in Platforms tab.', 0, 'SESSION_EXPIRED'
+      );
+      throw new Error(msg);
+    }
+    console.log('  ✅ [BotRunner:Unstop] Login verified from page DOM.');
+
     let applyBtn = null;
 
     // CAPTCHA check
@@ -442,16 +557,6 @@ export class BotRunner {
     }
 
     this.emit(userId, appId, 'filling', 'Locating Unstop Apply button…', 58);
-
-    // Check if user is logged into Unstop profile in Playwright context
-    const bodyText = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
-    const hasLoginBtn = await page.locator('header a:has-text("Login"), header button:has-text("Login"), .top-header button:has-text("Login"), a:has-text("Login")').first().isVisible().catch(() => false);
-    const hasLoggedInText = bodyText.includes('logout') || bodyText.includes('my profile') || bodyText.includes('shubham');
-
-    if (hasLoginBtn && !hasLoggedInText) {
-      console.warn('[BotRunner:Unstop] Playwright profile is not logged into Unstop.');
-      throw new Error('Unstop session is not logged in inside CVConnect. Please visit Platforms tab -> Unstop -> Reconnect and log in.');
-    }
 
     // Attempt Direct API Engine first (instant background payload)
     const oppId = extractOpportunityId(url);
@@ -553,6 +658,14 @@ export class BotRunner {
   async applyInternshala(page, url, user, resume, pdfPath, userId, appId) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
     await delay(1500, 3000);
+
+    // ── DOM-based login check ──────────────────────────────────────────────────────
+    const internshalaDomStatus = await checkDomLoginStatus(page, 'internshala');
+    console.log(`  -> [Internshala DOM-Login] isLoggedIn=${internshalaDomStatus.isLoggedIn} | ${internshalaDomStatus.indicator}`);
+    if (!internshalaDomStatus.isLoggedIn) {
+      this.emit(userId, appId, 'session_expired', '⚠️ Not logged into Internshala — please Reconnect in Platforms tab.', 0, 'SESSION_EXPIRED');
+      throw new Error('Internshala login page detected. Session expired — go to Platforms → Internshala → Reconnect.');
+    }
 
     if (hasCaptcha(await page.content())) {
       this.emit(userId, appId, 'captcha_detected', '⚠️ CAPTCHA detected on Internshala. Please solve it in your browser.', 48, 'CAPTCHA_REQUIRED');
@@ -680,6 +793,14 @@ export class BotRunner {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
     await delay(2000, 4000);
 
+    // ── DOM-based login check ──────────────────────────────────────────────────────
+    const wellfoundDomStatus = await checkDomLoginStatus(page, 'wellfound');
+    console.log(`  -> [Wellfound DOM-Login] isLoggedIn=${wellfoundDomStatus.isLoggedIn} | ${wellfoundDomStatus.indicator}`);
+    if (!wellfoundDomStatus.isLoggedIn) {
+      this.emit(userId, appId, 'session_expired', '⚠️ Not logged into Wellfound — please Reconnect in Platforms tab.', 0, 'SESSION_EXPIRED');
+      throw new Error('Wellfound login page detected. Session expired — go to Platforms → Wellfound → Reconnect.');
+    }
+
     const pageHtml = await page.content();
 
     // ── Gap 5: DataDome CAPTCHA notification (can't auto-solve) ─────────────
@@ -761,6 +882,14 @@ export class BotRunner {
   async applyLinkedIn(page, url, user, resume, pdfPath, userId, appId) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 28000 });
     await delay(2000, 4000);
+
+    // ── DOM-based login check ──────────────────────────────────────────────────────
+    const linkedinDomStatus = await checkDomLoginStatus(page, 'linkedin');
+    console.log(`  -> [LinkedIn DOM-Login] isLoggedIn=${linkedinDomStatus.isLoggedIn} | ${linkedinDomStatus.indicator}`);
+    if (!linkedinDomStatus.isLoggedIn) {
+      this.emit(userId, appId, 'session_expired', '⚠️ Not logged into LinkedIn — please Reconnect in Platforms tab.', 0, 'SESSION_EXPIRED');
+      throw new Error('LinkedIn login page detected. Session expired — go to Platforms → LinkedIn → Reconnect.');
+    }
 
     if (hasCaptcha(await page.content())) {
       this.emit(userId, appId, 'captcha_detected',
