@@ -361,19 +361,46 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
 
     console.log(`  Summary → Name:${fnFilled}/${lnFilled} Email:${emFilled} Mobile:${mobFilled} College:${colFilled}`);
 
-    // Gender: Male
-    for (const sel of [
-      'input[type="radio"][value*="male" i]',
-      'label:has-text("Male") input[type="radio"]',
-      'button:has-text("Male")',
-      'span.un-radio-label:has-text("Male")',
-      '[class*="gender"] label:has-text("Male")',
-    ]) {
-      const el = page.locator(sel).first();
-      if (await el.isVisible().catch(() => false)) {
-        await el.click({ force: true }).catch(() => {});
-        console.log('  ✅ Gender: Male');
-        break;
+    // Gender: Male (handles pill buttons, radio inputs, and custom div options matching Unstop UI)
+    const genderSelected = await page.evaluate(() => {
+      const selectors = [
+        'input[type="radio"][value*="male" i]',
+        'label:has-text("Male")',
+        'button:has-text("Male")',
+        'div:has-text("Male")',
+        'span:has-text("Male")',
+        '[class*="gender"] div',
+        '[class*="gender"] button',
+      ];
+      for (const sel of selectors) {
+        const els = Array.from(document.querySelectorAll(sel));
+        for (const el of els) {
+          const txt = el.innerText?.trim();
+          if (txt === 'Male' || txt === '♂ Male' || txt.includes('Male')) {
+            el.click();
+            return true;
+          }
+        }
+      }
+      return false;
+    }).catch(() => false);
+
+    if (genderSelected) {
+      console.log('  ✅ Gender: Male (Pill option selected)');
+    } else {
+      // Playwright fallback
+      for (const sel of [
+        'input[type="radio"][value*="male" i]',
+        'label:has-text("Male") input',
+        'button:has-text("Male")',
+        'span.un-radio-label:has-text("Male")',
+      ]) {
+        const el = page.locator(sel).first();
+        if (await el.isVisible().catch(() => false)) {
+          await el.click({ force: true }).catch(() => {});
+          console.log('  ✅ Gender: Male');
+          break;
+        }
       }
     }
 
@@ -410,20 +437,33 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
     await page.waitForTimeout(500);
 
     // ────────────────────────────────────────────────────────────────────────────
-    // Step 1: Resume Upload
+    // Step 1: Resume Upload (Handles hidden input[type="file"] & custom dropzones)
     // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 1/5] 📄 RESUME UPLOAD');
     if (formData?.resumePath) {
-      const fileInputCount = await page.locator('input[type="file"]').count().catch(() => 0);
-      if (fileInputCount > 0) {
+      let fileInput = page.locator('input[type="file"]').first();
+      let hasFileInput = (await fileInput.count().catch(() => 0)) > 0;
+
+      // If file input not immediately available, wait up to 3s for Angular DOM hydration
+      if (!hasFileInput) {
+        hasFileInput = await page.waitForSelector('input[type="file"]', { timeout: 3000 }).then(() => true).catch(() => false);
+        if (hasFileInput) fileInput = page.locator('input[type="file"]').first();
+      }
+
+      if (hasFileInput) {
         console.log(`  -> Uploading: ${path.basename(formData.resumePath)}`);
-        await page.locator('input[type="file"]').first()
-          .setInputFiles(formData.resumePath)
-          .catch(err => console.warn('  ⚠️ File upload warning:', err.message));
+        await fileInput.setInputFiles(formData.resumePath).catch(async (err) => {
+          console.warn('  ⚠️ Direct setInputFiles failed, attempting force upload:', err.message);
+          await fileInput.evaluate((el, pathStr) => {
+            el.style.display = 'block';
+            el.style.visibility = 'visible';
+          }).catch(() => {});
+          await fileInput.setInputFiles(formData.resumePath).catch(() => {});
+        });
         await page.waitForTimeout(2000);
         console.log('  ✅ [Step 1] Resume uploaded.');
       } else {
-        console.log('  ℹ️ [Step 1] No file input on page.');
+        console.log('  ℹ️ [Step 1] No file input on page (Resume already uploaded or pre-saved).');
       }
     } else {
       console.log('  ⚠️ [Step 1] No resume path in formData.');
