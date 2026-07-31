@@ -15,7 +15,7 @@ const PLATFORM_META = {
   naukri:      { name: 'Naukri',     icon: '📋', color: 'text-rose-400', bg: 'bg-rose-400/10 border-rose-400/30' },
 };
 
-export default function History({ onLoadResume }) {
+export default function History({ onLoadResume, onNavigateToPlatforms }) {
   const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'resumes'
   const [applications, setApplications] = useState([]);
   const [appSummary, setAppSummary] = useState({ total: 0, submitted: 0, failed: 0 });
@@ -196,11 +196,27 @@ export default function History({ onLoadResume }) {
                         <p className="text-xs text-slate-400 mt-0.5">{company} · <span className="font-mono text-[11px] text-slate-500">{dateStr}</span></p>
 
                         {/* Error details if failed */}
-                        {app.status === 'failed' && app.errorDetails && (
-                          <p className="mt-1.5 text-[11px] text-rose-400 bg-rose-500/10 border-l-2 border-rose-500 px-2 py-1 rounded-r">
-                            ⚠️ {app.errorDetails}
-                          </p>
-                        )}
+                        {app.status === 'failed' && app.errorDetails && (() => {
+                          const errText = app.errorDetails.toLowerCase();
+                          const isSessionIssue = errText.includes('login') || errText.includes('session') || errText.includes('reconnect') || errText.includes('expired');
+                          return (
+                            <div className="mt-2 space-y-1.5">
+                              <p className="text-[11px] text-rose-400 bg-rose-500/10 border-l-2 border-rose-500 px-2.5 py-1.5 rounded-r flex items-start gap-1.5">
+                                <AlertCircle size={13} className="shrink-0 mt-0.5 text-rose-400" />
+                                <span>{app.errorDetails}</span>
+                              </p>
+                              {isSessionIssue && onNavigateToPlatforms && (
+                                <button
+                                  onClick={onNavigateToPlatforms}
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 px-3 py-1 rounded-lg transition-colors shadow-sm"
+                                >
+                                  <RefreshCw size={12} className="animate-spin-slow" />
+                                  <span>Reconnect {meta.name} Account →</span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
