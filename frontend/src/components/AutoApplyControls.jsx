@@ -350,6 +350,28 @@ export default function AutoApplyControls() {
         </button>
       </div>
 
+      {/* Platform Connection Helper Banner */}
+      <div className="rounded-xl border border-aqua/30 bg-aqua/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aqua/15 text-aqua font-bold shrink-0">
+            ⚡
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white">Before running auto-apply, verify your platform sessions</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Ensure Unstop, Wellfound, LinkedIn & Internshala show "Account Connected" in Platforms.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            localStorage.setItem('cvconnect_active_tab', 'platforms');
+            window.location.reload();
+          }}
+          className="text-xs font-semibold text-aqua bg-aqua/10 hover:bg-aqua/20 border border-aqua/30 px-3 py-1.5 rounded-lg transition-colors shrink-0 text-center"
+        >
+          Manage Platform Accounts →
+        </button>
+      </div>
+
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border border-line bg-surface p-4">
