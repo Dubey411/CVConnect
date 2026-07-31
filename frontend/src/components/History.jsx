@@ -199,6 +199,7 @@ export default function History({ onLoadResume, onNavigateToPlatforms }) {
                         {app.status === 'failed' && app.errorDetails && (() => {
                           const errText = app.errorDetails.toLowerCase();
                           const isSessionIssue = errText.includes('login') || errText.includes('session') || errText.includes('reconnect') || errText.includes('expired');
+                          const isCustomQuestionIssue = errText.includes('screening') || errText.includes('custom') || errText.includes('directly on') || errText.includes('beyond');
                           return (
                             <div className="mt-2 space-y-1.5">
                               <p className="text-[11px] text-rose-400 bg-rose-500/10 border-l-2 border-rose-500 px-2.5 py-1.5 rounded-r flex items-start gap-1.5">
@@ -213,6 +214,17 @@ export default function History({ onLoadResume, onNavigateToPlatforms }) {
                                   <RefreshCw size={12} className="animate-spin-slow" />
                                   <span>Reconnect {meta.name} Account →</span>
                                 </button>
+                              )}
+                              {isCustomQuestionIssue && app.targetUrl && (
+                                <a
+                                  href={app.targetUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-aqua bg-aqua/15 border border-aqua/30 hover:bg-aqua/25 px-3 py-1 rounded-lg transition-colors shadow-sm"
+                                >
+                                  <ExternalLink size={12} />
+                                  <span>Open & Fill Application Form Directly ↗</span>
+                                </a>
                               )}
                             </div>
                           );
