@@ -602,6 +602,33 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       } catch (_) {}
 
 
+      // Auto-select mandatory radios (e.g., Differently Abled: No, Gender: Male, Availability: Yes)
+      try {
+        await page.evaluate(() => {
+          const radioGroups = {};
+          document.querySelectorAll('input[type="radio"]').forEach(r => {
+            if (r.name) {
+              if (!radioGroups[r.name]) radioGroups[r.name] = [];
+              radioGroups[r.name].push(r);
+            }
+          });
+          Object.values(radioGroups).forEach(group => {
+            const hasChecked = group.some(r => r.checked);
+            if (!hasChecked && group.length > 0) {
+              // Prefer 'No' for disability/relocation, 'Male'/'Yes' for standard questions, or first option
+              const preferNo = group.find(r => r.value?.toLowerCase() === 'no' || r.labels?.[0]?.innerText?.toLowerCase().includes('no'));
+              const preferFirst = group[0];
+              const target = preferNo || preferFirst;
+              if (target) {
+                target.scrollIntoView({ behavior: 'instant', block: 'center' });
+                target.click();
+              }
+            }
+          });
+        });
+      } catch (_) {}
+
+      // Scroll to bottom first to look for primary Submit/Register button before Next
       const submitBtn = await findButton(page);
       if (!submitBtn) {
         console.log(`  ℹ️ [Form Step ${step}] No action button found.`);
@@ -614,26 +641,31 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
       console.log(`  -> [Form Step ${step}] Clicking "${btnText}"…`);
       emitProgress(io, userId, appId, 'submitting', `Form step ${step}: "${btnText}"…`, 70 + step * 4);
 
+      const beforeUrl = page.url();
       await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
       await submitBtn.click({ force: true }).catch(async () => {
         await submitBtn.evaluate(el => el.click()).catch(() => {});
       });
       stepClickedCount++;
 
-      // Wait for Angular to process + any XHR between steps
+      // Wait for page/XHR response
       await Promise.race([
         page.waitForLoadState('networkidle', { timeout: 5000 }),
-        page.waitForTimeout(4000)
+        page.waitForTimeout(3000)
       ]).catch(() => {});
 
-      // Early exit if registration confirmed by URL
+      // Early exit if registration confirmed by URL or DOM
       const currentUrl = page.url();
+      const bodyLower = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
       if (
         currentUrl.includes('/success') ||
         currentUrl.includes('/register/edit') ||
-        currentUrl.includes('rstatus=1')
+        currentUrl.includes('rstatus=1') ||
+        bodyLower.includes('cancel application') ||
+        bodyLower.includes('update details') ||
+        bodyLower.includes('application submitted')
       ) {
-        console.log(`  ✅ Registration confirmed via URL: ${currentUrl}`);
+        console.log(`  ✅ Registration confirmed via URL/DOM: ${currentUrl}`);
         break;
       }
     }
