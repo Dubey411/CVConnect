@@ -258,10 +258,13 @@ function Shell() {
             {activeTab === 'controls' && <AutoApplyControls />}
             {activeTab === 'insights' && <Insights />}
             {activeTab === 'history' && (
-              <History onLoadResume={(item) => {
-                dispatch(setResume(item));
-                setActiveTab('workspace');
-              }} />
+              <History
+                onLoadResume={(item) => {
+                  dispatch(setResume(item));
+                  setActiveTab('workspace');
+                }}
+                onNavigateToPlatforms={() => setActiveTab('platforms')}
+              />
             )}
             {activeTab === 'workspace' && (
               <>
