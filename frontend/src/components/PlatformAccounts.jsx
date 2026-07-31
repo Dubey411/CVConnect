@@ -547,11 +547,13 @@ export default function PlatformAccounts() {
   const getBrowserSession = (platform) => sessions.find(s => s.platform === platform);
   const getTokenConnection = (platform) => tokenConnections.find(c => c.platform === platform);
 
-  const connectedCount = SESSION_PLATFORMS.filter(p => {
+  const disconnectedOrExpired = SESSION_PLATFORMS.filter(p => {
     const bs = getBrowserSession(p);
     const tc = getTokenConnection(p);
-    return bs?.status === 'connected' || tc?.status === 'connected';
-  }).length;
+    const bsConnected = bs?.status === 'connected';
+    const tcConnected = tc?.status === 'connected';
+    return !bsConnected && !tcConnected;
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -571,6 +573,20 @@ export default function PlatformAccounts() {
           <p className="text-[11px] text-slate-500 mt-0.5">of {SESSION_PLATFORMS.length} connected</p>
         </div>
       </div>
+
+      {/* Disconnected / Expired Platform Urgent Alert Banner */}
+      {disconnectedOrExpired.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200 space-y-2 shadow-lg animate-pulse-slow">
+          <div className="flex items-center gap-2 font-semibold text-amber-300 text-sm">
+            <AlertCircle size={18} className="text-amber-400 shrink-0" />
+            <span>Platform Connection Action Required</span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            You are currently not logged into: <strong className="text-amber-200 font-semibold">{disconnectedOrExpired.map(p => PLATFORM_META[p]?.name || p).join(', ')}</strong>.
+            If auto-apply fails or says session expired, click <span className="text-aqua font-semibold">"Launch Interactive Login"</span> on the platform card below to connect or reconnect your account.
+          </p>
+        </div>
+      )}
 
       {/* Candidate Profile Form */}
       <CandidateProfileCard />
