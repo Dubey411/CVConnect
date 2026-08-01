@@ -51,6 +51,62 @@ const getLLMClient = () => {
 };
 
 /**
+ * Answer a custom screening question using LLM + resume data.
+ * @param {string} questionText - the question label text
+ * @param {object} resumeData   - parsed resume object
+ * @param {object} userDetails  - user profile (name, skills, etc.)
+ * @returns {Promise<string>} - short answer string
+ */
+async function answerCustomQuestion(questionText, resumeData, userDetails) {
+  try {
+    const { client, model } = getLLMClient();
+    if (!client) {
+      // Heuristic fallbacks without LLM
+      const q = questionText.toLowerCase();
+      if (q.includes('experience') || q.includes('year')) return '1-2 years';
+      if (q.includes('available') || q.includes('join')) return 'Immediately';
+      if (q.includes('salary') || q.includes('stipend')) return 'As per company norms';
+      if (q.includes('relocat')) return 'Yes, open to relocation';
+      if (q.includes('why') || q.includes('motivat')) return `I am passionate about ${resumeData?.summary?.split('.')[0] || 'technology'} and want to contribute to your team.`;
+      return 'Yes';
+    }
+
+    const skillsList = (() => {
+      if (Array.isArray(resumeData?.skills)) return resumeData.skills.join(', ');
+      if (typeof resumeData?.skills === 'string') return resumeData.skills;
+      return userDetails?.skills || 'JavaScript, React, Node.js';
+    })();
+
+    const prompt = [
+      `You are filling a job application form on behalf of a candidate. Answer the following question in 1-3 short sentences (under 100 words). Be honest, confident and professional.`,
+      ``,
+      `Candidate Name: ${userDetails?.name || 'Candidate'}`,
+      `Degree: ${userDetails?.degree || 'B.Tech Computer Science'}`,
+      `College: ${userDetails?.college || ''}`,
+      `Skills: ${skillsList}`,
+      `Resume Summary: ${resumeData?.summary || ''}`,
+      ``,
+      `Question: ${questionText}`,
+      ``,
+      `Answer (concise, 1-3 sentences only, no extra explanation):`,
+    ].join('\n');
+
+    const resp = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 120,
+      temperature: 0.4,
+    });
+
+    const answer = resp.choices?.[0]?.message?.content?.trim() || '';
+    return answer.replace(/^["']|["']$/g, '').trim();
+  } catch (err) {
+    console.warn(`  ⚠️ [LLM-QA] Failed to get LLM answer: ${err.message}`);
+    return 'Yes, I am interested and available.';
+  }
+}
+
+/**
  * Emit progress via Socket.io
  */
 const emitProgress = (io, userId, appId, stage, message, percent) => {
@@ -520,153 +576,163 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
      *  "Node.js, Express.js"         → first token "Node.js"
      */
     const cleanSkillName = (raw) => {
-      // strip category prefix like "Languages:", "Frontend:", "Backend and APIs:"
       let s = raw.replace(/^[^:]+:\s*/, '').trim();
-      // take first comma-separated token
       s = s.split(',')[0].trim();
-      // remove parenthetical version markers like "(ES6+)", "(v3)", "(2024)"
       s = s.replace(/\s*\([^)]*\)/g, '').trim();
-      // collapse extra whitespace
       return s.replace(/\s+/g, ' ').trim();
     };
 
-    // Flatten skills: each element might itself be a comma-separated string
-    const rawSkills = (formData?.skills || []).flatMap(s =>
-      typeof s === 'string' ? s.split(',').map(x => x.trim()).filter(Boolean) : []
-    );
-    // Clean and deduplicate, take up to 8 skills to try
-    const cleanedSkills = [...new Set(rawSkills.map(cleanSkillName).filter(s => s.length > 1))].slice(0, 8);
-    console.log(`  -> Cleaned skills to add: ${cleanedSkills.join(' | ')}`);
+    // ── Check existing chips FIRST — skip adding if already filled ──────────
+    const CHIP_SELECTORS = 'mat-chip, un-chip, [class*="chip"]:not([class*="chip-list"]):not([class*="chip-set"]), .tag-item, [class*="skill-tag"]';
+    const existingChipCount = await page.locator(CHIP_SELECTORS).count().catch(() => 0);
+    console.log(`  -> Existing skill chips on page: ${existingChipCount}`);
 
-    const SKILL_DROPDOWN_SELECTORS = [
-      'mat-option',
-      'un-option',
-      '.cdk-overlay-container mat-option',
-      '.cdk-overlay-container [role="option"]',
-      '[role="option"]',
-      '.autocomplete-option',
-      '.dropdown-item',
-      '.skills-list li',
-      '.skill-option',
-      'ul[role="listbox"] li',
-    ];
+    if (existingChipCount >= 3) {
+      console.log('  ✅ [Step 3] Skills already pre-filled (3+ chips found). Skipping autocomplete.');
+    } else {
+      // Flatten skills: each element might itself be a comma-separated string
+      const rawSkills = (formData?.skills || []).flatMap(s =>
+        typeof s === 'string' ? s.split(',').map(x => x.trim()).filter(Boolean) : []
+      );
+      // Clean and deduplicate, take up to 8 skills to try
+      const cleanedSkills = [...new Set(rawSkills.map(cleanSkillName).filter(s => s.length > 1))].slice(0, 8);
+      console.log(`  -> Cleaned skills to add: ${cleanedSkills.join(' | ')}`);
 
-    if (cleanedSkills.length > 0) {
-      // Find the skills input — try multiple specific Unstop selectors first
-      const SKILLS_INPUT_SELECTORS = [
-        'input[placeholder*="skill" i]',
-        'input[placeholder*="Search" i][formcontrolname*="skill" i]',
-        '[formcontrolname="skills"] input',
-        '[formcontrolname="skill"] input',
-        'un-chips-autocomplete input',
-        'mat-chip-list input',
-        '.skills-input input',
-        'input[id*="skill" i]',
+      const SKILL_DROPDOWN_SELECTORS = [
+        '.cdk-overlay-container mat-option',
+        '.cdk-overlay-container [role="option"]',
+        'mat-option',
+        'un-option',
+        '[role="option"]',
+        '.autocomplete-option',
+        '.dropdown-item',
+        '.skills-list li',
+        '.skill-option',
+        'ul[role="listbox"] li',
       ];
 
-      let skillInput = null;
-      for (const sel of SKILLS_INPUT_SELECTORS) {
-        const el = page.locator(sel).first();
-        if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
-          skillInput = el;
-          console.log(`  -> Skills input found via: ${sel}`);
-          break;
-        }
-      }
+      if (cleanedSkills.length > 0) {
+        const SKILLS_INPUT_SELECTORS = [
+          'input[placeholder*="skill" i]',
+          'input[placeholder*="Search" i][formcontrolname*="skill" i]',
+          '[formcontrolname="skills"] input',
+          '[formcontrolname="skill"] input',
+          'un-chips-autocomplete input',
+          'mat-chip-list input',
+          '.skills-input input',
+          'input[id*="skill" i]',
+        ];
 
-      // Fallback: use the generic findField
-      if (!skillInput) {
-        skillInput = await findField(page, 'skills');
-        if (skillInput) console.log('  -> Skills input found via findField fallback.');
-      }
-
-      if (skillInput) {
-        let addedCount = 0;
-        for (const skill of cleanedSkills) {
-          try {
-            // Focus input and clear it
-            await skillInput.scrollIntoViewIfNeeded().catch(() => {});
-            await skillInput.click({ force: true }).catch(() => {});
-            await page.waitForTimeout(200);
-
-            // Clear any previous text
-            await skillInput.fill('').catch(() => {});
-            await page.waitForTimeout(100);
-
-            // Type a short search term (first 4 chars or whole word if shorter)
-            const searchTerm = skill.length > 5 ? skill.substring(0, 5) : skill;
-            console.log(`  -> Searching for skill: "${skill}" (typing "${searchTerm}")`);
-            await skillInput.type(searchTerm, { delay: 100 });
-            await page.waitForTimeout(1200); // wait for autocomplete to populate
-
-            // Find dropdown options
-            let optionClicked = false;
-            for (const dropSel of SKILL_DROPDOWN_SELECTORS) {
-              const opts = page.locator(dropSel);
-              const count = await opts.count().catch(() => 0);
-              if (count > 0) {
-                // Find best matching option by text (case-insensitive partial match)
-                const skillLower = skill.toLowerCase();
-                let bestIdx = -1;
-                for (let i = 0; i < Math.min(count, 10); i++) {
-                  const optText = (await opts.nth(i).innerText().catch(() => '')).toLowerCase();
-                  if (optText.includes(skillLower) || skillLower.includes(optText.replace(/[^a-z0-9]/g, ''))) {
-                    bestIdx = i;
-                    break;
-                  }
-                }
-                if (bestIdx === -1 && count > 0) bestIdx = 0; // fallback to first option
-
-                if (bestIdx >= 0) {
-                  const chosenOpt = opts.nth(bestIdx);
-                  const chosenText = await chosenOpt.innerText().catch(() => '?');
-                  if (await chosenOpt.isVisible({ timeout: 800 }).catch(() => false)) {
-                    await chosenOpt.scrollIntoViewIfNeeded().catch(() => {});
-                    await chosenOpt.click({ force: true }).catch(() => {});
-                    console.log(`    ✅ Selected option: "${chosenText.trim()}" for skill "${skill}"`);
-                    addedCount++;
-                    optionClicked = true;
-                    await page.waitForTimeout(500);
-                    break;
-                  }
-                }
-              }
-            }
-
-            if (!optionClicked) {
-              // Last resort: ArrowDown + Enter
-              console.log(`    ⚠️ No dropdown found for "${skill}", trying ArrowDown+Enter`);
-              await page.keyboard.press('ArrowDown');
-              await page.waitForTimeout(400);
-              await page.keyboard.press('Enter');
-              await page.waitForTimeout(500);
-              // Check if something was added (chip count increased)
-              const chipCount = await page.locator('mat-chip, un-chip, .chip, [class*="chip"]').count().catch(() => 0);
-              if (chipCount > 0) {
-                addedCount++;
-                console.log(`    ✅ ArrowDown+Enter added skill (chip count: ${chipCount})`);
-              } else {
-                // Clear the failed input text
-                await skillInput.fill('').catch(() => {});
-              }
-            }
-
-            await page.waitForTimeout(300);
-          } catch (skillErr) {
-            console.warn(`    ⚠️ Error adding skill "${skill}": ${skillErr.message}`);
+        let skillInput = null;
+        for (const sel of SKILLS_INPUT_SELECTORS) {
+          const el = page.locator(sel).first();
+          if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
+            skillInput = el;
+            console.log(`  -> Skills input found via: ${sel}`);
+            break;
           }
         }
+        if (!skillInput) {
+          skillInput = await findField(page, 'skills');
+          if (skillInput) console.log('  -> Skills input found via findField fallback.');
+        }
 
-        if (addedCount > 0) {
-          console.log(`  ✅ [Step 3] Skills added: ${addedCount} of ${cleanedSkills.length} succeeded.`);
+        if (skillInput) {
+          let addedCount = 0;
+          const chipsBefore = existingChipCount;
+
+          for (const skill of cleanedSkills) {
+            try {
+              await skillInput.scrollIntoViewIfNeeded().catch(() => {});
+              await skillInput.click({ force: true }).catch(() => {});
+              await page.waitForTimeout(150);
+              await skillInput.fill('').catch(() => {});
+              await page.waitForTimeout(100);
+
+              // Type search term and fire Angular-compatible input events
+              const searchTerm = skill.length > 5 ? skill.substring(0, 5) : skill;
+              console.log(`  -> Searching for skill: "${skill}" (typing "${searchTerm}")`);
+
+              // Use keyboard to type so Angular CDK onChange fires
+              await skillInput.pressSequentially(searchTerm, { delay: 80 });
+
+              // Also fire native input/keyup events in case Angular needs them
+              await page.evaluate((inputEl) => {
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                inputEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+              }, await skillInput.elementHandle().catch(() => null)).catch(() => {});
+
+              await page.waitForTimeout(1500); // wait for autocomplete to populate
+
+              // Find dropdown options
+              let optionClicked = false;
+              for (const dropSel of SKILL_DROPDOWN_SELECTORS) {
+                const opts = page.locator(dropSel);
+                const count = await opts.count().catch(() => 0);
+                if (count > 0) {
+                  const skillLower = skill.toLowerCase();
+                  let bestIdx = -1;
+                  for (let i = 0; i < Math.min(count, 12); i++) {
+                    const optText = (await opts.nth(i).innerText().catch(() => '')).toLowerCase();
+                    if (optText.includes(skillLower) || skillLower.includes(optText.replace(/[^a-z0-9]/g, ''))) {
+                      bestIdx = i;
+                      break;
+                    }
+                  }
+                  if (bestIdx === -1 && count > 0) bestIdx = 0;
+
+                  if (bestIdx >= 0) {
+                    const chosenOpt = opts.nth(bestIdx);
+                    const chosenText = await chosenOpt.innerText().catch(() => '?');
+                    if (await chosenOpt.isVisible({ timeout: 1000 }).catch(() => false)) {
+                      await chosenOpt.scrollIntoViewIfNeeded().catch(() => {});
+                      await chosenOpt.click({ force: true }).catch(() => {});
+                      console.log(`    ✅ Selected: "${chosenText.trim()}" for "${skill}"`);
+                      addedCount++;
+                      optionClicked = true;
+                      await page.waitForTimeout(500);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (!optionClicked) {
+                // ArrowDown + Enter fallback
+                console.log(`    ⚠️ No dropdown for "${skill}", trying ArrowDown+Enter`);
+                await page.keyboard.press('ArrowDown');
+                await page.waitForTimeout(400);
+                const currentChips = await page.locator(CHIP_SELECTORS).count().catch(() => 0);
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(600);
+                const afterChips = await page.locator(CHIP_SELECTORS).count().catch(() => 0);
+                if (afterChips > currentChips) {
+                  addedCount++;
+                  console.log(`    ✅ ArrowDown+Enter added skill (chips: ${currentChips} → ${afterChips})`);
+                } else {
+                  await skillInput.fill('').catch(() => {});
+                }
+              }
+
+              await page.waitForTimeout(300);
+            } catch (skillErr) {
+              console.warn(`    ⚠️ Error adding skill "${skill}": ${skillErr.message}`);
+            }
+          }
+
+          const finalChips = await page.locator(CHIP_SELECTORS).count().catch(() => 0);
+          const netAdded = finalChips - chipsBefore;
+          if (netAdded > 0 || addedCount > 0) {
+            console.log(`  ✅ [Step 3] Skills: ${netAdded} added (total chips: ${finalChips}).`);
+          } else {
+            console.warn('  ⚠️ [Step 3] ZERO skills were added — form may block on Next!');
+          }
         } else {
-          console.warn('  ⚠️ [Step 3] ZERO skills were added — form may block on Next!');
+          console.log('  ℹ️ [Step 3] Skills input not found on page.');
         }
       } else {
-        console.log('  ℹ️ [Step 3] Skills input not found on page.');
+        console.log('  ℹ️ [Step 3] No skills in formData to add.');
       }
-    } else {
-      console.log('  ℹ️ [Step 3] No skills in formData to add.');
     }
     await takeStepScreenshot(page, 'step3_skills');
 
@@ -763,6 +829,74 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
         if (uncheckedCount > 0) {
           console.log(`  ✅ [Step ${step}] Checked ${uncheckedCount} Terms & Conditions checkbox(es) via JS`);
           await page.waitForTimeout(500);
+        }
+
+        // ── LLM-powered custom question filler ──────────────────────────────
+        // Detect any unfilled text inputs / textareas that look like screening questions
+        // and answer them using LLM + resume data
+        try {
+          const customQuestions = await page.evaluate(() => {
+            const results = [];
+            const inputs = Array.from(document.querySelectorAll(
+              'input[type="text"]:not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled])'
+            ));
+            for (const el of inputs) {
+              if ((el.value || '').trim()) continue; // already filled
+              // Find associated question label
+              const container = el.closest('[class*="question"], [class*="screening"], .form-group, .field-wrapper, mat-form-field, .form-field') || el.parentElement;
+              const label = (
+                container?.querySelector('label, .label, .field-label, mat-label, legend, h4, h3, p')?.innerText ||
+                el.getAttribute('placeholder') ||
+                el.getAttribute('aria-label') ||
+                ''
+              ).trim();
+              if (label.length > 5) {
+                // Only include if it looks like a real question, not a basic field
+                const lbl = label.toLowerCase();
+                const isBasic = [
+                  'first name', 'last name', 'email', 'phone', 'mobile', 'organization',
+                  'college', 'search', 'location', 'city', 'address'
+                ].some(k => lbl.includes(k));
+                if (!isBasic) {
+                  results.push({ label, inputId: el.id || '', inputName: el.name || '', tag: el.tagName });
+                }
+              }
+            }
+            return results;
+          }).catch(() => []);
+
+          if (customQuestions.length > 0) {
+            console.log(`  🤖 [LLM-QA] Found ${customQuestions.length} unanswered question(s) on step ${step}:`);
+            const resumeData = formData?.resumeData || {};
+            const userDetails = formData?.userDetails || {};
+
+            for (const q of customQuestions) {
+              console.log(`    -> Question: "${q.label}"`);
+              const answer = await answerCustomQuestion(q.label, resumeData, userDetails);
+              console.log(`    -> Answer:   "${answer}"`);
+
+              // Fill the input by id, name, or position
+              await page.evaluate(({ inputId, inputName, tag, answer }) => {
+                let el = inputId ? document.getElementById(inputId) : null;
+                if (!el && inputName) el = document.querySelector(`${tag}[name="${inputName}"]`);
+                if (!el) {
+                  // Find the first unfilled matching element
+                  const all = Array.from(document.querySelectorAll(`${tag}:not([readonly]):not([disabled])`));
+                  el = all.find(e => !(e.value || '').trim());
+                }
+                if (el) {
+                  el.focus();
+                  el.value = answer;
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              }, { inputId: q.inputId, inputName: q.inputName, tag: q.tag, answer }).catch(() => {});
+
+              await page.waitForTimeout(400);
+            }
+          }
+        } catch (qaErr) {
+          console.warn(`  ⚠️ [LLM-QA] Error during custom Q&A on step ${step}: ${qaErr.message}`);
         }
 
         // Scroll back to top to find the Next/Submit button

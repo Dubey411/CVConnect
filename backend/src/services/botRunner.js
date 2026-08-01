@@ -607,13 +607,15 @@ export class BotRunner {
       resumePath: pdfPath,
       location: user?.location || 'Mumbai, Maharashtra, India',
       skills,
+      resumeData: resume?.optimized || resume?.original || {},
       userDetails: {
         name:    user?.name    || 'Candidate',
         email:   user?.email   || '',
         phone:   user?.phone   || '',
         gender:  user?.gender  || 'Male',
         college: user?.college || '',
-        degree:  user?.degree  || ''
+        degree:  user?.degree  || '',
+        skills:  skills.join(', ')
       }
     };
 
