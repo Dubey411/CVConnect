@@ -705,50 +705,114 @@ export class BotRunner {
       await delay(60000, 62000);
     }
 
-    this.emit(userId, appId, 'filling', 'Locating Internshala Apply Now button…', 58);
+    this.emit(userId, appId, 'filling', 'Locating Internshala Apply now button…', 58);
 
+    // ── Step 1: Open the detail page & click "Apply now" ───────────────────────
     const applyBtn = await findVisible(page, [
-      '#easy_apply_button',
-      '.apply_now_button',
+      'button:has-text("Apply now")',
+      'a:has-text("Apply now")',
       'button:has-text("Apply Now")',
       'a:has-text("Apply Now")',
+      '#easy_apply_button',
+      '.apply_now_button',
       '.apply-button',
+      'button.btn-primary:has-text("Apply")',
+      'a.btn-primary:has-text("Apply")',
     ], 6000);
-    if (applyBtn) { await humanClick(applyBtn); await delay(1500, 2500); }
 
-    // Cover letter
-    const coverLetter = this.buildCoverLetter(user, resume);
-    const coverField = await findVisible(page, [
-      '#cover_letter_text',
-      'textarea[name*="cover"]',
-      'textarea[placeholder*="cover" i]',
-      'textarea[placeholder*="write" i]',
-      'textarea',
-    ], 4000);
-    if (coverField) {
-      await coverField.clear();
-      this.emit(userId, appId, 'filling', 'Writing tailored cover letter…', 68);
-      await humanType(coverField, coverLetter);
-      await delay(500, 1000);
+    if (applyBtn) {
+      console.log('  🖱️ [Internshala] Clicking "Apply now" button...');
+      await humanClick(applyBtn);
+      await delay(2000, 3500);
+    } else {
+      console.warn('  ⚠️ [Internshala] Apply now button not found — checking if already applied or modal is open.');
     }
 
-    // Availability
-    const availField = await findVisible(page, ['input[name*="available"]', 'input[placeholder*="available" i]', 'input[placeholder*="joining" i]']);
-    if (availField) { await availField.clear(); await humanType(availField, 'Immediately'); }
+    // Wait for application modal overlay card to open
+    await page.waitForSelector('.modal-content, #application_form, [class*="modal"], text="Confirm your availability", text="Apply now"', { timeout: 6000 }).catch(() => {});
 
-    // Resume upload
-    if (pdfPath) {
-      this.emit(userId, appId, 'uploading', 'Uploading resume to Internshala…', 78);
-      const fileInput = await findVisible(page, ['input[type="file"][accept*="pdf"]', 'input[type="file"]'], 3000);
-      if (fileInput) {
-        await fileInput.setInputFiles(pdfPath);
-        await delay(2000, 3000);
+    // ── Step 2: Confirm your availability ─────────────────────────────────────
+    this.emit(userId, appId, 'filling', 'Confirming availability & filling details…', 68);
+
+    // Availability Radio option selection (e.g. "Yes, I am available to join immediately")
+    const availRadioSelectors = [
+      'label:has-text("Yes, I am available to join immediately")',
+      'label:has-text("Yes, I am available")',
+      'input[type="radio"][value*="immediately" i]',
+      'input[type="radio"][id*="immediately" i]',
+      'input[type="radio"][value="yes" i]',
+      'label:has-text("Yes")',
+    ];
+
+    let availSelected = false;
+    for (const sel of availRadioSelectors) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
+        await el.scrollIntoViewIfNeeded().catch(() => {});
+        await el.click({ force: true }).catch(() => {});
+        console.log(`  ✅ [Internshala] Selected availability radio: "${sel}"`);
+        availSelected = true;
+        await delay(400, 800);
+        break;
       }
     }
 
+    if (!availSelected) {
+      // Fallback: Availability text field if present
+      const availField = await findVisible(page, [
+        'input[name*="available"]',
+        'input[placeholder*="available" i]',
+        'input[placeholder*="joining" i]'
+      ], 1500);
+      if (availField) {
+        await availField.clear().catch(() => {});
+        await humanType(availField, 'Immediately');
+        console.log('  ✅ [Internshala] Filled availability text field: "Immediately"');
+      }
+    }
+
+    // ── Step 3: Cover Letter & Assessment / Custom Questions ─────────────────
+    const coverLetter = this.buildCoverLetter(user, resume);
+    const textareas = page.locator('textarea:not([readonly]):not([disabled])');
+    const textareaCount = await textareas.count().catch(() => 0);
+
+    if (textareaCount > 0) {
+      console.log(`  📝 [Internshala] Found ${textareaCount} textarea(s) for cover letter / custom questions.`);
+      for (let i = 0; i < textareaCount; i++) {
+        const ta = textareas.nth(i);
+        if (await ta.isVisible({ timeout: 500 }).catch(() => false)) {
+          const currentVal = (await ta.inputValue().catch(() => '')).trim();
+          if (!currentVal) {
+            await ta.scrollIntoViewIfNeeded().catch(() => {});
+            await ta.fill(coverLetter).catch(() => {});
+            console.log(`  ✅ [Internshala] Filled textarea #${i + 1} with candidate response.`);
+            await delay(400, 800);
+          }
+        }
+      }
+    }
+
+    // ── Step 4: Custom Resume upload (if input is present) ────────────────────
+    if (pdfPath) {
+      const fileInput = await findVisible(page, [
+        'input[type="file"][accept*="pdf"]',
+        'input[type="file"]',
+        '#custom_resume',
+        '.custom-resume-input'
+      ], 2000);
+      if (fileInput) {
+        this.emit(userId, appId, 'uploading', 'Uploading custom resume to Internshala…', 78);
+        console.log('  📄 [Internshala] Uploading custom resume PDF...');
+        await fileInput.setInputFiles(pdfPath).catch(() => {});
+        await delay(2000, 3000);
+      } else {
+        console.log('  ℹ️ [Internshala] Using pre-saved profile resume.');
+      }
+    }
+
+    // ── Step 5: Check terms & submit ──────────────────────────────────────────
     this.emit(userId, appId, 'submitting', 'Submitting Internshala application…', 85);
 
-    // ── Gap 3: Multi-step form navigation ────────────────────────────────────
     const MAX_INTERN_STEPS = 5;
     let internStep = 0;
     let submitted = false;
@@ -756,38 +820,39 @@ export class BotRunner {
     while (internStep < MAX_INTERN_STEPS && !submitted) {
       await delay(1000, 2000);
 
-      // Scroll to bottom to reveal any hidden required fields / checkboxes
+      // Scroll modal / page to bottom to reveal any checkboxes or submit button
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
       await delay(400);
 
-      // Check all unchecked checkboxes (terms, consent)
+      // Check all unchecked checkboxes
       await page.evaluate(() => {
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
           if (!cb.checked) { cb.scrollIntoView({ behavior: 'instant', block: 'center' }); cb.click(); }
         });
       }).catch(() => {});
 
-      await page.evaluate(() => window.scrollTo(0, 0)).catch(() => {});
       await delay(300);
 
-      // Submit button
+      // Submit button inside modal / page
       const submitBtn = await findVisible(page, [
+        '#submit',
         '#submit_application',
-        'button[type="submit"]:has-text("Submit")',
-        'button:has-text("Submit Application")',
+        'button:has-text("Submit")',
         'input[type="submit"]',
         'button[type="submit"]',
-        'button:has-text("Submit")',
-      ], 3000);
+        'button.btn-primary:has-text("Submit")',
+        'input[value="Submit"]',
+      ], 4000);
 
       if (submitBtn) {
+        console.log('  🚀 [Internshala] Clicking Submit button...');
         await humanClick(submitBtn);
         await delay(3000, 5000);
         submitted = true;
         break;
       }
 
-      // Next / Continue step
+      // Next / Continue step (if multi-page application modal)
       const nextBtn = await findVisible(page, [
         'button:has-text("Next")',
         'button:has-text("Continue")',
@@ -796,6 +861,7 @@ export class BotRunner {
       ], 2000);
 
       if (nextBtn) {
+        console.log('  ➡️ [Internshala] Clicking Next step button...');
         await humanClick(nextBtn);
         internStep++;
       } else {
@@ -803,12 +869,12 @@ export class BotRunner {
       }
     }
 
+    // ── Verification ──────────────────────────────────────────────────────────
     const html = await page.content().catch(() => '');
     const bodyLower = html.toLowerCase();
-
-    // ── Gap 6: Proper success verification ───────────────────────────────────
     const finalUrl = page.url();
-    return (
+
+    const isVerified = (
       finalUrl.includes('/thankyou') ||
       finalUrl.includes('/success')  ||
       finalUrl.includes('/applied')  ||
@@ -818,6 +884,35 @@ export class BotRunner {
       bodyLower.includes('applied successfully')   ||
       bodyLower.includes('your application has been')
     );
+
+    if (isVerified) {
+      console.log(`  ✅ [Internshala] Application confirmed via DOM/URL: ${finalUrl}`);
+      return true;
+    }
+
+    // ── Layer 4: Re-navigate to listing page to check "Applied" status ────────
+    console.log('  🔄 [Internshala Verify] Re-navigating to job listing page to verify applied status…');
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await delay(2000, 3000);
+
+      const listingBody = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+      const listingVerified = (
+        listingBody.includes('applied') ||
+        listingBody.includes('application sent') ||
+        listingBody.includes('already applied') ||
+        await page.locator('button:has-text("Applied"), a:has-text("Applied"), .applied-badge').count().catch(() => 0) > 0
+      );
+
+      if (listingVerified) {
+        console.log('  ✅ [Internshala Layer 4] Listing page confirms application status!');
+        return true;
+      }
+    } catch (navErr) {
+      console.warn('  ⚠️ [Internshala Layer 4] Re-navigate check failed:', navErr.message);
+    }
+
+    return false;
   }
 
   // ── Wellfound ─────────────────────────────────────────────────────────────
