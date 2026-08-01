@@ -512,32 +512,161 @@ export async function fillUnstopForm(page, formData, userId, appId, io) {
     // Step 3: Skills Autocomplete
     // ────────────────────────────────────────────────────────────────────────────
     console.log('\n[BOT-DEBUG:Step 3/5] 💡 SKILLS TAG AUTOCOMPLETE');
-    if (Array.isArray(formData?.skills) && formData.skills.length > 0) {
-      const skillsField = await findField(page, 'skills');
-      if (skillsField) {
-        console.log(`  -> Adding: ${formData.skills.slice(0, 4).join(', ')}`);
-        for (const skill of formData.skills.slice(0, 4)) {
-          await skillsField.click({ force: true }).catch(() => {});
-          await skillsField.fill('').catch(() => {});
-          await skillsField.type(skill, { delay: 80 });
-          await page.waitForTimeout(900);
 
-          const skillOpt = page.locator(
-            'mat-option, un-option, .cdk-overlay-container mat-option, [role="option"], .skills-list li'
-          ).first();
-          if (await skillOpt.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await skillOpt.click({ force: true }).catch(() => {});
-          } else {
-            await page.keyboard.press('ArrowDown');
-            await page.waitForTimeout(300);
-            await page.keyboard.press('Enter');
-          }
-          await page.waitForTimeout(500);
+    /**
+     * Clean a raw skill string coming from resume data:
+     *  "Languages:JavaScript (ES6+)" → "JavaScript"
+     *  "React.js"                    → "React.js"
+     *  "Node.js, Express.js"         → first token "Node.js"
+     */
+    const cleanSkillName = (raw) => {
+      // strip category prefix like "Languages:", "Frontend:", "Backend and APIs:"
+      let s = raw.replace(/^[^:]+:\s*/, '').trim();
+      // take first comma-separated token
+      s = s.split(',')[0].trim();
+      // remove parenthetical version markers like "(ES6+)", "(v3)", "(2024)"
+      s = s.replace(/\s*\([^)]*\)/g, '').trim();
+      // collapse extra whitespace
+      return s.replace(/\s+/g, ' ').trim();
+    };
+
+    // Flatten skills: each element might itself be a comma-separated string
+    const rawSkills = (formData?.skills || []).flatMap(s =>
+      typeof s === 'string' ? s.split(',').map(x => x.trim()).filter(Boolean) : []
+    );
+    // Clean and deduplicate, take up to 8 skills to try
+    const cleanedSkills = [...new Set(rawSkills.map(cleanSkillName).filter(s => s.length > 1))].slice(0, 8);
+    console.log(`  -> Cleaned skills to add: ${cleanedSkills.join(' | ')}`);
+
+    const SKILL_DROPDOWN_SELECTORS = [
+      'mat-option',
+      'un-option',
+      '.cdk-overlay-container mat-option',
+      '.cdk-overlay-container [role="option"]',
+      '[role="option"]',
+      '.autocomplete-option',
+      '.dropdown-item',
+      '.skills-list li',
+      '.skill-option',
+      'ul[role="listbox"] li',
+    ];
+
+    if (cleanedSkills.length > 0) {
+      // Find the skills input — try multiple specific Unstop selectors first
+      const SKILLS_INPUT_SELECTORS = [
+        'input[placeholder*="skill" i]',
+        'input[placeholder*="Search" i][formcontrolname*="skill" i]',
+        '[formcontrolname="skills"] input',
+        '[formcontrolname="skill"] input',
+        'un-chips-autocomplete input',
+        'mat-chip-list input',
+        '.skills-input input',
+        'input[id*="skill" i]',
+      ];
+
+      let skillInput = null;
+      for (const sel of SKILLS_INPUT_SELECTORS) {
+        const el = page.locator(sel).first();
+        if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
+          skillInput = el;
+          console.log(`  -> Skills input found via: ${sel}`);
+          break;
         }
-        console.log('  ✅ [Step 3] Skills added.');
-      } else {
-        console.log('  ℹ️ [Step 3] Skills field not found.');
       }
+
+      // Fallback: use the generic findField
+      if (!skillInput) {
+        skillInput = await findField(page, 'skills');
+        if (skillInput) console.log('  -> Skills input found via findField fallback.');
+      }
+
+      if (skillInput) {
+        let addedCount = 0;
+        for (const skill of cleanedSkills) {
+          try {
+            // Focus input and clear it
+            await skillInput.scrollIntoViewIfNeeded().catch(() => {});
+            await skillInput.click({ force: true }).catch(() => {});
+            await page.waitForTimeout(200);
+
+            // Clear any previous text
+            await skillInput.fill('').catch(() => {});
+            await page.waitForTimeout(100);
+
+            // Type a short search term (first 4 chars or whole word if shorter)
+            const searchTerm = skill.length > 5 ? skill.substring(0, 5) : skill;
+            console.log(`  -> Searching for skill: "${skill}" (typing "${searchTerm}")`);
+            await skillInput.type(searchTerm, { delay: 100 });
+            await page.waitForTimeout(1200); // wait for autocomplete to populate
+
+            // Find dropdown options
+            let optionClicked = false;
+            for (const dropSel of SKILL_DROPDOWN_SELECTORS) {
+              const opts = page.locator(dropSel);
+              const count = await opts.count().catch(() => 0);
+              if (count > 0) {
+                // Find best matching option by text (case-insensitive partial match)
+                const skillLower = skill.toLowerCase();
+                let bestIdx = -1;
+                for (let i = 0; i < Math.min(count, 10); i++) {
+                  const optText = (await opts.nth(i).innerText().catch(() => '')).toLowerCase();
+                  if (optText.includes(skillLower) || skillLower.includes(optText.replace(/[^a-z0-9]/g, ''))) {
+                    bestIdx = i;
+                    break;
+                  }
+                }
+                if (bestIdx === -1 && count > 0) bestIdx = 0; // fallback to first option
+
+                if (bestIdx >= 0) {
+                  const chosenOpt = opts.nth(bestIdx);
+                  const chosenText = await chosenOpt.innerText().catch(() => '?');
+                  if (await chosenOpt.isVisible({ timeout: 800 }).catch(() => false)) {
+                    await chosenOpt.scrollIntoViewIfNeeded().catch(() => {});
+                    await chosenOpt.click({ force: true }).catch(() => {});
+                    console.log(`    ✅ Selected option: "${chosenText.trim()}" for skill "${skill}"`);
+                    addedCount++;
+                    optionClicked = true;
+                    await page.waitForTimeout(500);
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (!optionClicked) {
+              // Last resort: ArrowDown + Enter
+              console.log(`    ⚠️ No dropdown found for "${skill}", trying ArrowDown+Enter`);
+              await page.keyboard.press('ArrowDown');
+              await page.waitForTimeout(400);
+              await page.keyboard.press('Enter');
+              await page.waitForTimeout(500);
+              // Check if something was added (chip count increased)
+              const chipCount = await page.locator('mat-chip, un-chip, .chip, [class*="chip"]').count().catch(() => 0);
+              if (chipCount > 0) {
+                addedCount++;
+                console.log(`    ✅ ArrowDown+Enter added skill (chip count: ${chipCount})`);
+              } else {
+                // Clear the failed input text
+                await skillInput.fill('').catch(() => {});
+              }
+            }
+
+            await page.waitForTimeout(300);
+          } catch (skillErr) {
+            console.warn(`    ⚠️ Error adding skill "${skill}": ${skillErr.message}`);
+          }
+        }
+
+        if (addedCount > 0) {
+          console.log(`  ✅ [Step 3] Skills added: ${addedCount} of ${cleanedSkills.length} succeeded.`);
+        } else {
+          console.warn('  ⚠️ [Step 3] ZERO skills were added — form may block on Next!');
+        }
+      } else {
+        console.log('  ℹ️ [Step 3] Skills input not found on page.');
+      }
+    } else {
+      console.log('  ℹ️ [Step 3] No skills in formData to add.');
     }
     await takeStepScreenshot(page, 'step3_skills');
 
