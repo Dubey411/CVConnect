@@ -102,6 +102,22 @@ router.post('/applications/apply', [body('platform').trim().isString(), body('re
     const { platform, resumeId, jobId, targetUrl } = req.body;
     if (!targetUrl) return res.status(400).json({ error: { code: 'URL_REQUIRED', message: 'No target URL provided. Add a job URL before triggering auto-apply.' } });
 
+    // Auto-detect correct platform from targetUrl domain
+    const detectPlatformFromUrl = (urlStr) => {
+      if (!urlStr) return null;
+      const u = urlStr.toLowerCase();
+      if (u.includes('internshala.com')) return 'internshala';
+      if (u.includes('unstop.com')) return 'unstop';
+      if (u.includes('wellfound.com') || u.includes('angel.co')) return 'wellfound';
+      if (u.includes('linkedin.com')) return 'linkedin';
+      if (u.includes('indeed.')) return 'indeed';
+      if (u.includes('naukri.com')) return 'naukri';
+      if (u.includes('glassdoor.')) return 'glassdoor';
+      return null;
+    };
+
+    const finalPlatform = detectPlatformFromUrl(targetUrl) || platform || 'unstop';
+
     // Validate resume
     let validResumeId = resumeId;
     if (!validResumeId || validResumeId === 'undefined') {
@@ -124,22 +140,22 @@ router.post('/applications/apply', [body('platform').trim().isString(), body('re
 
     // Check browser session first, then fall back to token connection
     const [browserSession, tokenConnection] = await Promise.all([
-      prisma.browserSession.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }).catch(() => null),
-      prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform } } }).catch(() => null),
+      prisma.browserSession.findUnique({ where: { userId_platform: { userId: req.user.sub, platform: finalPlatform } } }).catch(() => null),
+      prisma.platformConnection.findUnique({ where: { userId_platform: { userId: req.user.sub, platform: finalPlatform } } }).catch(() => null),
     ]);
 
     const hasSession = browserSession?.status === 'connected';
     const hasToken   = tokenConnection?.status === 'connected';
 
     if (!hasSession && !hasToken) {
-      return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${platform} account in Accounts or Connect Platforms first.` } });
+      return res.status(400).json({ error: { code: 'PLATFORM_NOT_CONNECTED', message: `Please connect your ${finalPlatform} account in Accounts or Connect Platforms first.` } });
     }
 
     const application = await prisma.jobApplication.create({
       data: {
         userId: req.user.sub,
         jobId: validJobId,
-        platform,
+        platform: finalPlatform,
         targetUrl,
         status: 'pending'
       }
