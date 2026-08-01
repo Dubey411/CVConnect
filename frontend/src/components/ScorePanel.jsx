@@ -33,6 +33,14 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
   const [errorMsg, setErrorMsg] = useState('');
   const [missingInputData, setMissingInputData] = useState(null);
 
+  // Synchronize jobUrl and selectedPlatform when targetUrl prop updates
+  useEffect(() => {
+    if (targetUrl) {
+      setJobUrl(targetUrl);
+      setSelectedPlatform(detectPlatform(targetUrl));
+    }
+  }, [targetUrl]);
+
   // Socket.io real-time progress updates
   useEffect(() => {
     if (!user?.id) return;
