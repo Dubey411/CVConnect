@@ -51,17 +51,20 @@ export default function ScorePanel({ analysis, onRewrite, busy, resumeId, jobId,
       if (data.message) setProgressMsg(data.message);
       if (data.percent !== undefined) setProgressPercent(data.percent);
 
-      if (data.stage === 'ai_analyzing') {
-        setApplyState('ai_analyzing');
-      } else if (data.stage === 'ai_filling') {
-        setApplyState('ai_filling');
-      } else if (data.stage === 'verifying' || data.status === 'verifying') {
-        setApplyState('verifying');
-      } else if (data.status === 'complete' || data.stage === 'complete' || data.percent === 100) {
-        setApplyState('verified');
-      } else if (data.status === 'failed' || data.stage === 'failed') {
+      const st = (data.stage || data.status || '').toLowerCase();
+
+      if (st === 'failed' || st === 'error' || st.includes('fail') || st === 'session_expired') {
         setErrorMsg(data.message || 'Auto-apply verification failed.');
         setApplyState('failed');
+      } else if (st === 'complete' || st === 'verified' || data.percent === 100) {
+        setApplyState('verified');
+      } else if (st === 'verifying') {
+        setApplyState('verifying');
+      } else if (st === 'user_input_required' || st === 'captcha_detected') {
+        setMissingInputData(data.missingFields ? data : null);
+        setApplyState(st === 'captcha_detected' ? 'failed' : 'user_input_required');
+      } else {
+        setApplyState('applying');
       }
     });
 
