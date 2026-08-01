@@ -870,6 +870,7 @@ export class BotRunner {
     }
 
     // ── Verification ──────────────────────────────────────────────────────────
+    await delay(2500, 4000);
     const html = await page.content().catch(() => '');
     const bodyLower = html.toLowerCase();
     const finalUrl = page.url();
@@ -882,7 +883,9 @@ export class BotRunner {
       bodyLower.includes('application submitted')  ||
       bodyLower.includes('thank you for applying') ||
       bodyLower.includes('applied successfully')   ||
-      bodyLower.includes('your application has been')
+      bodyLower.includes('your application has been') ||
+      bodyLower.includes('already applied') ||
+      bodyLower.includes('application status')
     );
 
     if (isVerified) {
@@ -894,14 +897,18 @@ export class BotRunner {
     console.log('  🔄 [Internshala Verify] Re-navigating to job listing page to verify applied status…');
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await delay(2000, 3000);
+      await delay(2500, 4000);
 
       const listingBody = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
       const listingVerified = (
         listingBody.includes('applied') ||
         listingBody.includes('application sent') ||
         listingBody.includes('already applied') ||
-        await page.locator('button:has-text("Applied"), a:has-text("Applied"), .applied-badge').count().catch(() => 0) > 0
+        listingBody.includes('application status') ||
+        listingBody.includes('your application has been') ||
+        await page.locator(
+          'button:has-text("Applied"), a:has-text("Applied"), .applied-badge, .already_applied, [class*="applied"]'
+        ).count().catch(() => 0) > 0
       );
 
       if (listingVerified) {
@@ -1251,6 +1258,7 @@ ${name}`;
       this.io.to(userId).emit('application:progress', {
         applicationId,
         stage,
+        status: stage,
         message,
         percent,
         timestamp: new Date().toISOString(),
