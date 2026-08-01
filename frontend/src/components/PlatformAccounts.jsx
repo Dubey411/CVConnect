@@ -547,6 +547,12 @@ export default function PlatformAccounts() {
   const getBrowserSession = (platform) => sessions.find(s => s.platform === platform);
   const getTokenConnection = (platform) => tokenConnections.find(c => c.platform === platform);
 
+  const connectedCount = SESSION_PLATFORMS.filter(p => {
+    const bs = getBrowserSession(p);
+    const tc = getTokenConnection(p);
+    return bs?.status === 'connected' || tc?.status === 'connected';
+  }).length;
+
   const disconnectedOrExpired = SESSION_PLATFORMS.filter(p => {
     const bs = getBrowserSession(p);
     const tc = getTokenConnection(p);
