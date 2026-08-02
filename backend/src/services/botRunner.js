@@ -144,17 +144,36 @@ async function humanClick(locator) {
 
 /** Detect CAPTCHA / bot-challenge pages */
 function hasCaptcha(html) {
+  if (!html) return false;
   const h = html.toLowerCase();
+  // Avoid false positives on static <script src="...recaptcha..."> tags
   return (
     h.includes('geo.captcha-delivery.com') ||
     h.includes('datadome')                 ||
     h.includes('cf-challenge')             ||
-    h.includes('hcaptcha')                 ||
-    h.includes('recaptcha')                ||
+    h.includes('g-recaptcha-response')     ||
     h.includes('i am not a robot')         ||
     h.includes('verify you are human')     ||
     h.includes('press and hold')
   );
+}
+
+/** Check if an active visible CAPTCHA challenge box is blocking the page */
+async function isCaptchaChallengeActive(page) {
+  if (!page) return false;
+  try {
+    const html = (await page.content().catch(() => '')).toLowerCase();
+    if (hasCaptcha(html)) return true;
+
+    // Check for visible reCAPTCHA / hCaptcha iframe challenge box on screen
+    const activeIframe = await page.locator(
+      'iframe[src*="recaptcha/api2/bframe" i], iframe[src*="hcaptcha.com/captcha" i], iframe[title*="recaptcha challenge" i], .g-recaptcha-bubble-arrow'
+    ).first().isVisible({ timeout: 500 }).catch(() => false);
+
+    return activeIframe;
+  } catch {
+    return false;
+  }
 }
 
 /** Try multiple CSS selectors and return first visible match */
