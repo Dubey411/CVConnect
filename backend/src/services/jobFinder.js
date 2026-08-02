@@ -2,6 +2,17 @@ import axios from 'axios';
 import { prisma } from '../lib/prisma.js';
 import { analyzeText } from './mlClient.js';
 
+const NON_TECH_REGEX = /\b(sales|marketing|telecaller|tele-caller|receptionist|hr intern|recruiter|call center|customer care|bpo|business development associate|bda)\b/i;
+
+function isRelevantForCandidate(title, searchSkill) {
+  if (!title) return false;
+  const isCandidateTech = /react|node|python|javascript|developer|engineer|software|full stack|frontend|backend|java|c\+\+|coder|data/i.test(searchSkill);
+  if (isCandidateTech && NON_TECH_REGEX.test(title)) {
+    return false;
+  }
+  return true;
+}
+
 export class JobFinderService {
   /**
    * Search live job platforms (Unstop, Internshala, Remotive, Arbeitnow, etc.) for jobs matching candidate skills
@@ -33,7 +44,7 @@ export class JobFinderService {
           const items = res.data.data.data || res.data.data;
           if (Array.isArray(items)) {
             for (const item of items) {
-              if (!item.title) continue;
+              if (!item.title || !isRelevantForCandidate(item.title, primarySkill)) continue;
 
               const title = item.title.trim();
               const company = item.organisation?.name || item.company_name || 'Unstop Partner';
@@ -75,7 +86,7 @@ export class JobFinderService {
 
         if (res.data?.jobs && Array.isArray(res.data.jobs)) {
           for (const item of res.data.jobs) {
-            if (!item.title) continue;
+            if (!item.title || !isRelevantForCandidate(item.title, primarySkill)) continue;
             const title = item.title.trim();
             const company = item.company_name || 'Remote Partner';
             const targetUrl = item.url;
@@ -110,7 +121,7 @@ export class JobFinderService {
 
         if (res.data?.data && Array.isArray(res.data.data)) {
           for (const item of res.data.data) {
-            if (!item.title) continue;
+            if (!item.title || !isRelevantForCandidate(item.title, primarySkill)) continue;
             const title = item.title.trim();
             const company = item.company_name || 'Partner';
             const targetUrl = item.url;
