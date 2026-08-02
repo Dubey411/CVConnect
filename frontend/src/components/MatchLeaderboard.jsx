@@ -27,7 +27,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
   const fetchResumes = async () => {
     try {
-      const res = await request('/api/resumes?limit=20');
+      const res = await request({ method: 'get', url: '/resumes?limit=20' });
       if (res.items && res.items.length > 0) {
         setResumes(res.items);
         if (!selectedResumeId) setSelectedResumeId(res.items[0].id);
@@ -47,9 +47,11 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       formData.append('resume', file);
       formData.append('category', 'General');
 
-      const res = await request('/api/resumes/upload', {
-        method: 'POST',
-        body: formData
+      const res = await request({
+        method: 'post',
+        url: '/resumes/upload',
+        data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (res.resume) {
@@ -57,7 +59,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         setSelectedResumeId(res.resume.id);
       }
     } catch (err) {
-      setError(err.message || 'Failed to upload resume.');
+      setError(err.response?.data?.error?.message || err.message || 'Failed to upload resume.');
     } finally {
       setUploading(false);
     }
@@ -67,13 +69,14 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await request('/api/jobs/batch-match', {
-        method: 'POST',
-        body: JSON.stringify({ resumeId })
+      const data = await request({
+        method: 'post',
+        url: '/jobs/batch-match',
+        data: { resumeId }
       });
       setMatchData(data);
     } catch (err) {
-      setError(err.message || 'Failed to analyze job matches.');
+      setError(err.response?.data?.error?.message || err.message || 'Failed to analyze job matches.');
     } finally {
       setLoading(false);
     }
