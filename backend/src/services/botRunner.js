@@ -501,6 +501,14 @@ export class BotRunner {
         default:            success = await this.applyGeneric(page, destination, user, resume, userId, applicationId);
       }
 
+      // 7.5 Always capture a proof screenshot after application run for manual testing
+      const proofFileName = `proof_${platform}_${Date.now()}.png`;
+      const proofPath = path.join(SCRATCH_DIR, proofFileName);
+      try {
+        await page.screenshot({ path: proofPath, fullPage: false }).catch(() => {});
+        console.log(`  📸 [BotRunner:Proof] Saved manual testing proof screenshot: scratch/${proofFileName}`);
+      } catch (_) {}
+
       // 8. Persist result
       if (success) {
         const updates = [
@@ -521,13 +529,13 @@ export class BotRunner {
           }
         }
         await Promise.all(updates);
-        this.emit(userId, applicationId, 'complete', `Application submitted on ${platform}! 🎉`, 100);
+        this.emit(userId, applicationId, 'complete', `Application submitted on ${platform}! Proof: scratch/${proofFileName}`, 100);
       } else {
-        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: 'Bot completed but could not confirm submission.' } });
-        this.emit(userId, applicationId, 'failed', 'Bot completed but submission could not be confirmed. Check platform manually.', 0);
+        await prisma.jobApplication.update({ where: { id: applicationId }, data: { status: 'failed', errorDetails: `Submission failed. Proof: scratch/${proofFileName}` } });
+        this.emit(userId, applicationId, 'failed', `Bot completed but submission could not be confirmed. Proof: scratch/${proofFileName}`, 0);
       }
 
-      return { success };
+      return { success, proofPath };
     } catch (err) {
       console.error(`[BotRunner:${platform}]`, err.message);
       await prisma.jobApplication.update({
