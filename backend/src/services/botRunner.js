@@ -376,6 +376,15 @@ export class BotRunner {
       const destination = targetUrl || application?.job?.description?.match(/https?:\/\/[^\s]+/)?.[0];
       if (!destination) throw new Error('No target URL provided. Add a job URL before triggering auto-apply.');
 
+      // Auto-detect platform from destination domain to prevent loading wrong platform profile
+      if (destination.includes('internshala.com')) platform = 'internshala';
+      else if (destination.includes('unstop.com')) platform = 'unstop';
+      else if (destination.includes('linkedin.com')) platform = 'linkedin';
+      else if (destination.includes('wellfound.com') || destination.includes('angel.co')) platform = 'wellfound';
+      else if (destination.includes('naukri.com')) platform = 'naukri';
+      else if (destination.includes('indeed.com')) platform = 'indeed';
+      else if (destination.includes('glassdoor.com')) platform = 'glassdoor';
+
       this.emit(userId, applicationId, 'init', `Initializing stealth bot for ${platform}…`, 10);
 
       // ── Gap 8: Resume missing warning ───────────────────────────────────────
