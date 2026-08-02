@@ -224,7 +224,11 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
     }
 
     if (!resume) {
-      return res.status(404).json({ error: { code: 'RESUME_NOT_FOUND', message: 'No resume found. Please upload a resume first.' } });
+      return res.json({
+        resume: null,
+        rankedJobs: [],
+        summary: { totalJobs: 0, topMatchScore: 0, topMatchTitle: 'N/A', avgScore: 0, highFitCount: 0 }
+      });
     }
 
     const jobs = await prisma.job.findMany({
