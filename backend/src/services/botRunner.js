@@ -84,25 +84,32 @@ async function humanType(locator, text) {
   }
 }
 
-/** Dismiss cookie banners and floating overlays that block clicks */
+/** Dismiss cookie banners, promo popups, and floating overlays that block clicks */
 async function dismissOverlays(page) {
   if (!page) return;
   try {
     await page.evaluate(() => {
-      // 1. Click accept cookie buttons if present
+      // 1. Click accept cookie & close promo popup buttons if present
       const selectors = [
         '.GTM_ACCEPT_COOKIE',
         'button.GTM_ACCEPT_COOKIE',
         '#onetrust-accept-btn-handler',
         '.cookie-banner button',
+        '#close_popup',
+        '.ic-24-cross',
+        '.modal-backdrop',
+        '#app_download_modal .close',
+        '.close_popup',
+        'button.close',
+        '[aria-label="Close"]',
       ];
       for (const sel of selectors) {
         const btns = document.querySelectorAll(sel);
         btns.forEach(b => { if (b && b.offsetWidth > 0) b.click(); });
       }
 
-      // 2. Hide fixed cookie banners / notifications that obscure pointer events
-      const banners = document.querySelectorAll('app-notification, .cookie-banner, .cookie-consent, #onetrust-banner-sdk');
+      // 2. Hide fixed cookie banners / notifications / backdrop overlays that obscure pointer events
+      const banners = document.querySelectorAll('app-notification, .cookie-banner, .cookie-consent, #onetrust-banner-sdk, .modal-backdrop');
       banners.forEach(b => {
         b.style.display = 'none';
         b.style.pointerEvents = 'none';
@@ -551,8 +558,8 @@ export class BotRunner {
     let applyBtn = null;
 
     // CAPTCHA check
-    if (hasCaptcha(await page.content())) {
-      this.emit(userId, appId, 'captcha_detected', '⚠️ CAPTCHA detected on Unstop — please solve it in your browser within 60s.', 50, 'CAPTCHA_REQUIRED');
+    if (await isCaptchaChallengeActive(page)) {
+      this.emit(userId, appId, 'captcha_detected', '⚠️ Active CAPTCHA challenge detected on Unstop — please solve it in your browser within 60s.', 50, 'CAPTCHA_REQUIRED');
       await delay(60000, 62000);
     }
 
@@ -700,8 +707,8 @@ export class BotRunner {
       throw new Error('Internshala login page detected. Session expired — go to Platforms → Internshala → Reconnect.');
     }
 
-    if (hasCaptcha(await page.content())) {
-      this.emit(userId, appId, 'captcha_detected', '⚠️ CAPTCHA detected on Internshala. Please solve it in your browser.', 48, 'CAPTCHA_REQUIRED');
+    if (await isCaptchaChallengeActive(page)) {
+      this.emit(userId, appId, 'captcha_detected', '⚠️ Active CAPTCHA challenge detected on Internshala. Please solve it in your browser.', 48, 'CAPTCHA_REQUIRED');
       await delay(60000, 62000);
     }
 
