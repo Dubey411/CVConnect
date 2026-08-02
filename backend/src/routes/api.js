@@ -232,11 +232,20 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
       });
     }
 
-    const jobs = await prisma.job.findMany({
+    const rawJobs = await prisma.job.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: 60
     });
+
+    const uniqueMap = new Map();
+    for (const j of rawJobs) {
+      const key = `${(j.title || '').trim().toLowerCase()}::${(j.company || '').trim().toLowerCase()}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, j);
+      }
+    }
+    const jobs = Array.from(uniqueMap.values());
 
     if (!jobs.length) {
       return res.json({
@@ -333,11 +342,20 @@ router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()]
       console.warn('[Api] Job discovery warning:', err.message);
     });
 
-    const jobs = await prisma.job.findMany({
+    const rawJobs = await prisma.job.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 60
     });
+
+    const uniqueMap = new Map();
+    for (const j of rawJobs) {
+      const key = `${(j.title || '').trim().toLowerCase()}::${(j.company || '').trim().toLowerCase()}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, j);
+      }
+    }
+    const jobs = Array.from(uniqueMap.values());
 
     const matcher = new SkillMatcher();
     const rankedJobs = await Promise.all(
