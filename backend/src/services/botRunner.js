@@ -846,8 +846,12 @@ export class BotRunner {
     while (internStep < MAX_INTERN_STEPS && !submitted) {
       await delay(1000, 2000);
 
-      // Scroll modal / page to bottom to reveal any checkboxes or submit button
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+      // Scroll modal container & page to bottom to reveal submit button
+      await page.evaluate(() => {
+        const modal = document.querySelector('.modal-body, #application_form, [class*="modal"]');
+        if (modal) modal.scrollTo(0, modal.scrollHeight);
+        window.scrollTo(0, document.body.scrollHeight);
+      }).catch(() => {});
       await delay(400);
 
       // Check all unchecked checkboxes
@@ -859,18 +863,11 @@ export class BotRunner {
 
       await delay(300);
 
-      // Submit button inside modal / page
-      const submitBtn = await findVisible(page, [
-        '#submit',
-        '#submit_application',
-        'button:has-text("Submit")',
-        'input[type="submit"]',
-        'button[type="submit"]',
-        'button.btn-primary:has-text("Submit")',
-        'input[value="Submit"]',
-      ], 4000);
+      // Submit button inside modal / page (#submit input, input[value="Submit"], etc.)
+      const submitBtn = page.locator('#submit, input[value="Submit"], input[type="submit"], button:has-text("Submit")').first();
+      const isSubmitBtn = await submitBtn.isVisible({ timeout: 1500 }).catch(() => false);
 
-      if (submitBtn) {
+      if (isSubmitBtn || await page.locator('#submit').count().catch(() => 0) > 0) {
         // Save debug screenshot right BEFORE clicking Submit
         try {
           const beforeSubmitPath = path.join(__dirname, '..', '..', '..', 'scratch', 'internshala_before_submit.png');
@@ -880,10 +877,14 @@ export class BotRunner {
 
         console.log('  🚀 [Internshala] Clicking Submit button...');
         await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
-        await humanClick(submitBtn);
-        // Dispatch native click in case framework requires explicit event
-        await submitBtn.evaluate(el => el.click()).catch(() => {});
+        await page.evaluate(el => {
+          if (el) {
+            el.scrollIntoView({ behavior: 'instant', block: 'center' });
+            el.click();
+          }
+        }, await submitBtn.elementHandle().catch(() => null)).catch(() => {});
 
+        await humanClick(submitBtn).catch(() => {});
         await delay(3000, 5000);
 
         // Save debug screenshot right AFTER clicking Submit
@@ -924,6 +925,8 @@ export class BotRunner {
       finalUrl.includes('/thankyou') ||
       finalUrl.includes('/success')  ||
       finalUrl.includes('/applied')  ||
+      bodyLower.includes('application submitted successfully') ||
+      bodyLower.includes('recommended internships') ||
       bodyLower.includes('successfully applied')   ||
       bodyLower.includes('application submitted')  ||
       bodyLower.includes('thank you for applying') ||
