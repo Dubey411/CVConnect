@@ -137,7 +137,8 @@ const PLATFORMS = [
   }
 ];
 
-const INITIAL_PLATFORMS = PLATFORMS.map(p => ({ ...p, status: 'disconnected', lastSync: 'Never', applicationsCount: 0 }));
+// Filter platform list to display only Unstop on UI for now (all platform definitions remain intact)
+const INITIAL_PLATFORMS = PLATFORMS.filter(p => p.id === 'unstop').map(p => ({ ...p, status: 'disconnected', lastSync: 'Never', applicationsCount: 0 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
