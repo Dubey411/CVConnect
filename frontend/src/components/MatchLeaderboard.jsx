@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Target, Zap, Award, Sparkles, AlertCircle, ArrowUpRight,
-  CheckCircle2, XCircle, RefreshCw, Briefcase, FileText, ChevronRight
+  CheckCircle2, XCircle, RefreshCw, Briefcase, FileText, ChevronRight, Plus
 } from 'lucide-react';
 import { request } from '../api';
 
 export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
+  const fileInputRef = useRef(null);
   const [resumes, setResumes] = useState([]);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [matchData, setMatchData] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'top', 'good'
@@ -28,10 +30,36 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       const res = await request('/api/resumes?limit=20');
       if (res.items && res.items.length > 0) {
         setResumes(res.items);
-        setSelectedResumeId(res.items[0].id);
+        if (!selectedResumeId) setSelectedResumeId(res.items[0].id);
       }
     } catch (err) {
       console.error('Failed to fetch resumes:', err);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+      formData.append('category', 'General');
+
+      const res = await request('/api/resumes/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.resume) {
+        await fetchResumes();
+        setSelectedResumeId(res.resume.id);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to upload resume.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -62,6 +90,15 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900/40 via-purple-900/30 to-indigo-900/40 border border-violet-500/20 p-6 md:p-8 backdrop-blur-xl">
         <div className="absolute -right-12 -top-12 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -80,12 +117,23 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
             </p>
           </div>
 
-          {/* Resume Selector */}
-          <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl min-w-[260px] space-y-1.5">
-            <label className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-              <FileText size={13} className="text-violet-400" />
-              Active Resume Profile:
-            </label>
+          {/* Resume Selector & Inline Upload */}
+          <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl min-w-[300px] space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                <FileText size={13} className="text-violet-400" />
+                Active Resume Profile:
+              </label>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[11px] font-semibold transition-colors shadow-sm shadow-violet-600/30"
+              >
+                <Plus size={12} />
+                <span>{uploading ? 'Uploading…' : '+ Upload Resume'}</span>
+              </button>
+            </div>
+
             <select
               value={selectedResumeId}
               onChange={(e) => setSelectedResumeId(e.target.value)}
@@ -222,12 +270,23 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
       {/* Empty state */}
       {!loading && !error && filteredJobs.length === 0 && (
-        <div className="py-16 text-center space-y-3 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+        <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
           <Briefcase size={40} className="text-slate-600 mx-auto" />
-          <h3 className="text-white font-medium text-lg">No Matching Positions Found</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Analyze or scrape job postings using Option A/B in Tailoring Studio to see your ranked fit scores.
-          </p>
+          <div className="space-y-1">
+            <h3 className="text-white font-medium text-lg">No Resumes or Target Postings Found</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Upload a resume PDF or enter target job links in Tailoring Studio to calculate your instant fit leaderboard.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
+            >
+              <Plus size={15} />
+              <span>Upload Resume PDF / DOCX</span>
+            </button>
+          </div>
         </div>
       )}
 
