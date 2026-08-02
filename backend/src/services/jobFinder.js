@@ -4,15 +4,18 @@ import { analyzeText } from './mlClient.js';
 
 export class JobFinderService {
   /**
-   * Search live job platforms (Unstop, Internshala, public job APIs) for jobs matching candidate skills
+   * Search live job platforms (Unstop, Internshala, Remotive, Arbeitnow, etc.) for jobs matching candidate skills
    */
   async discoverJobsForCandidate(userId, resumeSkills = [], candidateTitle = 'Software Developer') {
     const primarySkill = resumeSkills.length > 0 ? resumeSkills[0] : candidateTitle;
-    console.log(`🔍 [JobFinder] Searching live opportunities on Unstop for: "${primarySkill}"...`);
+    const secondarySkill = resumeSkills.length > 1 ? resumeSkills[1] : 'Developer';
+
+    console.log(`🔍 [JobFinder] Aggregating multi-platform opportunities for skills: "${primarySkill}", "${secondarySkill}"...`);
 
     const discoveredMap = new Map();
 
-    const fetchCategory = async (opportunityType) => {
+    // 1. Unstop Live Opportunities (Jobs & Internships)
+    const fetchUnstopCategory = async (opportunityType) => {
       try {
         const res = await axios.get('https://unstop.com/api/public/opportunity/search-result', {
           params: {
@@ -50,7 +53,7 @@ export class JobFinderService {
                   company,
                   targetUrl,
                   description,
-                  platform: 'unstop',
+                  platform: 'Unstop',
                   skills
                 });
               }
@@ -58,18 +61,94 @@ export class JobFinderService {
           }
         }
       } catch (err) {
-        console.warn(`[JobFinder] Unstop ${opportunityType} search error:`, err.message);
+        console.warn(`[JobFinder] Unstop ${opportunityType} notice:`, err.message);
       }
     };
 
-    // Search both jobs and internships on Unstop
+    // 2. Remotive Live Remote Tech Jobs API
+    const fetchRemotiveJobs = async () => {
+      try {
+        const res = await axios.get('https://remotive.com/api/remote-jobs', {
+          params: { search: primarySkill, limit: 12 },
+          timeout: 7000
+        });
+
+        if (res.data?.jobs && Array.isArray(res.data.jobs)) {
+          for (const item of res.data.jobs) {
+            if (!item.title) continue;
+            const title = item.title.trim();
+            const company = item.company_name || 'Remote Partner';
+            const targetUrl = item.url;
+            const key = `${title.toLowerCase()}::${company.toLowerCase()}`;
+
+            if (!discoveredMap.has(key)) {
+              const tags = item.tags || [];
+              const cleanDesc = (item.description || '').replace(/<[^>]*>?/gm, ' ').slice(0, 500);
+
+              discoveredMap.set(key, {
+                title,
+                company,
+                targetUrl,
+                description: `${title} at ${company}. ${cleanDesc}`,
+                platform: 'Remotive',
+                skills: tags
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[JobFinder] Remotive notice:', err.message);
+      }
+    };
+
+    // 3. Arbeitnow Tech Jobs API
+    const fetchArbeitnowJobs = async () => {
+      try {
+        const res = await axios.get('https://www.arbeitnow.com/api/job-board-api', {
+          timeout: 7000
+        });
+
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          for (const item of res.data.data) {
+            if (!item.title) continue;
+            const title = item.title.trim();
+            const company = item.company_name || 'Partner';
+            const targetUrl = item.url;
+            const key = `${title.toLowerCase()}::${company.toLowerCase()}`;
+
+            // Filter relevant to candidate skills
+            const matchesSkill = new RegExp(primarySkill, 'i').test(title + ' ' + (item.tags || []).join(' '));
+
+            if (matchesSkill && !discoveredMap.has(key)) {
+              const tags = item.tags || [];
+              const cleanDesc = (item.description || '').replace(/<[^>]*>?/gm, ' ').slice(0, 500);
+
+              discoveredMap.set(key, {
+                title,
+                company,
+                targetUrl,
+                description: `${title} at ${company}. ${cleanDesc}`,
+                platform: 'Arbeitnow',
+                skills: tags
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[JobFinder] Arbeitnow notice:', err.message);
+      }
+    };
+
+    // Execute multi-platform search in parallel
     await Promise.all([
-      fetchCategory('jobs'),
-      fetchCategory('internships')
+      fetchUnstopCategory('jobs'),
+      fetchUnstopCategory('internships'),
+      fetchRemotiveJobs(),
+      fetchArbeitnowJobs()
     ]);
 
     const discovered = Array.from(discoveredMap.values());
-    console.log(`✅ [JobFinder] Found ${discovered.length} distinct live Unstop opportunities.`);
+    console.log(`✅ [JobFinder] Aggregated ${discovered.length} distinct live opportunities across Unstop, Remotive, & Arbeitnow.`);
 
     // Save discovered jobs to DB without creating duplicates
     const savedJobs = [];
@@ -86,7 +165,8 @@ export class JobFinderService {
           const requirements = {
             responsibilities: [jobData.description.slice(0, 250)],
             mustHave: nlp.skills || jobData.skills || [],
-            targetUrl: jobData.targetUrl
+            targetUrl: jobData.targetUrl,
+            platform: jobData.platform
           };
 
           const newJob = await prisma.job.create({
