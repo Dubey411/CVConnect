@@ -232,7 +232,7 @@ function extractSkills(user, resume) {
 async function checkDomLoginStatus(page, platform) {
   const result = { isLoggedIn: false, loginButtonFound: false, indicator: '' };
 
-  // Selectors that confirm the user IS logged in (profile/avatar/user-menu visible)
+  // Selectors that confirm the user IS logged in (profile/avatar/user-menu visible in header/nav)
   const LOGGED_IN = {
     unstop:      [
       '[class*="user-profile"]', '[class*="user_name"]',
@@ -240,7 +240,7 @@ async function checkDomLoginStatus(page, platform) {
       'header a[href*="/user/"]', 'header a[href*="/profile"]',
       'button:has-text("Logout")', '.user-details',
     ],
-    internshala: ['.profile-pic-wrapper', '#nav-dropdown-user-menu', '.student-menu', 'a[href*="/student/"]'],
+    internshala: ['header [class*="profile"]', 'header a[href*="/student/"]', '.profile-pic-wrapper', '#nav-dropdown-user-menu', '.student-menu'],
     linkedin:    ['.global-nav__me', '.nav__avatar', '[data-control-name="identity_welcome_message"]'],
     wellfound:   ['[data-test="user-menu"]', '.userinfo__name'],
     glassdoor:   ['[data-test="user-avatar"]', '[data-test="user-account-menu"]'],
@@ -248,7 +248,7 @@ async function checkDomLoginStatus(page, platform) {
     indeed:      ['[data-testid="gnav-user-button"]', '[data-gnav-element-name="user-menu"]'],
   };
 
-  // Selectors that confirm the user is NOT logged in (login/signup button visible)
+  // Selectors that confirm the user is NOT logged in (login/signup button visible in header/nav)
   const LOGGED_OUT = {
     unstop:      [
       'header a:has-text("Login")', 'header button:has-text("Login")',
@@ -256,7 +256,7 @@ async function checkDomLoginStatus(page, platform) {
       'button:has-text("Continue with Google")', 'a:has-text("Sign Up")',
       'a[href*="/auth/login"]', 'button:has-text("Sign In")',
     ],
-    internshala: ['a#log_in_link', '.login-btn', 'a:has-text("Login")'],
+    internshala: ['header a:has-text("Login")', 'a:has-text("Login / Register")', 'button:has-text("Login / Register")', 'a#log_in_link', '.login-btn'],
     linkedin:    ['.nav__button-secondary', 'a[href*="/login"]'],
     wellfound:   ['a[href="/login"]', 'a:has-text("Sign In")'],
     glassdoor:   ['a[href*="login_input"]', 'button:has-text("Sign In")'],
@@ -268,24 +268,25 @@ async function checkDomLoginStatus(page, platform) {
   const outSelectors = LOGGED_OUT[platform] || LOGGED_OUT.unstop;
 
   try {
-    // 1. Positive check — is a "logged in" element visible?
+    // 1. Negative check FIRST — is a "Login / Register" header button visible?
+    for (const sel of outSelectors) {
+      const visible = await page.locator(sel).first().isVisible({ timeout: 1500 }).catch(() => false);
+      if (visible) {
+        result.loginButtonFound = true;
+        result.isLoggedIn = false;
+        result.indicator = `login button found: ${sel}`;
+        console.warn(`  ❌ [DOM-Login] Login button visible in header (NOT logged in) via: ${sel}`);
+        return result;
+      }
+    }
+
+    // 2. Positive check — is a "logged in" profile element visible?
     for (const sel of inSelectors) {
       const visible = await page.locator(sel).first().isVisible({ timeout: 2000 }).catch(() => false);
       if (visible) {
         result.isLoggedIn = true;
         result.indicator = `logged-in element: ${sel}`;
         console.log(`  ✅ [DOM-Login] Logged in confirmed via: ${sel}`);
-        return result;
-      }
-    }
-
-    // 2. Negative check — is a "login" button visible?
-    for (const sel of outSelectors) {
-      const visible = await page.locator(sel).first().isVisible({ timeout: 1500 }).catch(() => false);
-      if (visible) {
-        result.loginButtonFound = true;
-        result.indicator = `login button: ${sel}`;
-        console.warn(`  ❌ [DOM-Login] Login button visible (NOT logged in) via: ${sel}`);
         return result;
       }
     }
