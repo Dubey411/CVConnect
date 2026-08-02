@@ -268,7 +268,31 @@ async function checkDomLoginStatus(page, platform) {
   const outSelectors = LOGGED_OUT[platform] || LOGGED_OUT.unstop;
 
   try {
-    // 1. Negative check FIRST — is a "Login / Register" header button visible?
+    // 1. Positive check FIRST — is a "logged in" profile element visible?
+    for (const sel of inSelectors) {
+      const visible = await page.locator(sel).first().isVisible({ timeout: 2000 }).catch(() => false);
+      if (visible) {
+        result.isLoggedIn = true;
+        result.indicator = `logged-in element: ${sel}`;
+        console.log(`  ✅ [DOM-Login] Logged in confirmed via: ${sel}`);
+        return result;
+      }
+    }
+
+    // 2. Internshala session cookie check (handles SSR HTML with client-side JS header swap)
+    if (platform === 'internshala') {
+      await delay(1500, 2000);
+      const cookies = await page.context().cookies().catch(() => []);
+      const hasAuthCookie = cookies.some(c => (c.name === 'is_logged_in' && c.value !== 'false') || c.name === 'u');
+      if (hasAuthCookie) {
+        result.isLoggedIn = true;
+        result.indicator = 'Internshala session cookie confirmed';
+        console.log('  ✅ [DOM-Login] Internshala session confirmed via active cookies.');
+        return result;
+      }
+    }
+
+    // 3. Negative check — is a "Login / Register" header button visible?
     for (const sel of outSelectors) {
       const visible = await page.locator(sel).first().isVisible({ timeout: 1500 }).catch(() => false);
       if (visible) {
@@ -276,17 +300,6 @@ async function checkDomLoginStatus(page, platform) {
         result.isLoggedIn = false;
         result.indicator = `login button found: ${sel}`;
         console.warn(`  ❌ [DOM-Login] Login button visible in header (NOT logged in) via: ${sel}`);
-        return result;
-      }
-    }
-
-    // 2. Positive check — is a "logged in" profile element visible?
-    for (const sel of inSelectors) {
-      const visible = await page.locator(sel).first().isVisible({ timeout: 2000 }).catch(() => false);
-      if (visible) {
-        result.isLoggedIn = true;
-        result.indicator = `logged-in element: ${sel}`;
-        console.log(`  ✅ [DOM-Login] Logged in confirmed via: ${sel}`);
         return result;
       }
     }
