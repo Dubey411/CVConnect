@@ -34,6 +34,9 @@ function Auth({ mode, setMode, onBack }) {
         data: { name, email, password }
       });
       localStorage.setItem('cvconnect_token', result.accessToken);
+      if (result.refreshToken) {
+        localStorage.setItem('cvconnect_refresh_token', result.refreshToken);
+      }
       dispatch(signIn(result.user));
     } catch (err) {
       setError(err.response?.data?.error?.message || 'Unable to continue. Check your connection and try again.');
