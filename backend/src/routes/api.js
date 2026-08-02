@@ -11,6 +11,7 @@ import { authenticate } from '../middleware/auth.js';
 import { storeResumeSource } from '../lib/storage.js';
 import { encryptToken, verifyPlatformToken } from '../lib/vault.js';
 import { JobScraper } from '../services/jobScraper.js';
+import { JobFinderService } from '../services/jobFinder.js';
 import { BotRunner } from '../services/botRunner.js';
 import {
   launchLoginSession,
@@ -289,6 +290,102 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
       summary: {
         totalJobs,
         topMatchScore: topMatch?.matchScore || 0,
+        topMatchTitle: topMatch?.title || 'N/A',
+        avgScore,
+        highFitCount
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()], validate, async (req, res, next) => {
+  try {
+    const userId = req.user.sub;
+    let resumeId = req.body.resumeId;
+
+    let resume = null;
+    if (resumeId) {
+      resume = await prisma.resume.findFirst({ where: { id: resumeId, userId } });
+    }
+    if (!resume) {
+      resume = await prisma.resume.findFirst({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+    }
+
+    if (!resume) {
+      return res.json({
+        resume: null,
+        rankedJobs: [],
+        summary: { totalJobs: 0, topMatchScore: 0, topMatchTitle: 'N/A', avgScore: 0, highFitCount: 0 }
+      });
+    }
+
+    const resumeData = resume.original || resume.optimized || {};
+    const skills = Array.isArray(resumeData.skills)
+      ? resumeData.skills
+      : typeof resumeData.skills === 'string'
+        ? resumeData.skills.split(',').map(s => s.trim())
+        : [];
+    const candidateTitle = resume.category || resume.title || 'Software Developer';
+
+    const finder = new JobFinderService();
+    await finder.discoverJobsForCandidate(userId, skills, candidateTitle).catch(err => {
+      console.warn('[Api] Job discovery warning:', err.message);
+    });
+
+    const jobs = await prisma.job.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 60
+    });
+
+    const matcher = new SkillMatcher();
+    const rankedJobs = await Promise.all(
+      jobs.map(async (job) => {
+        const analysis = await matcher.match(resumeData, job).catch(() => null);
+        const score = analysis?.score || 50;
+        const atsScore = analysis?.atsScore || 50;
+        const selectionChance = Math.min(98, Math.round(score * 0.95 + (atsScore > 75 ? 5 : 0)));
+
+        let category = 'fair';
+        if (score >= 85) category = 'excellent';
+        else if (score >= 70) category = 'good';
+        else if (score >= 50) category = 'fair';
+        else category = 'low';
+
+        return {
+          id: job.id,
+          title: job.title,
+          company: job.company || 'Direct Hiring',
+          description: job.description,
+          skills: job.skills,
+          requirements: job.requirements,
+          createdAt: job.createdAt,
+          targetUrl: job.requirements?.targetUrl || null,
+          matchScore: score,
+          atsScore,
+          selectionChance,
+          category,
+          matchedSkills: analysis?.matchedSkills || [],
+          missingSkills: analysis?.missingSkills || [],
+          recommendations: analysis?.recommendations || []
+        };
+      })
+    );
+
+    rankedJobs.sort((a, b) => b.selectionChance - a.selectionChance);
+
+    const totalJobs = rankedJobs.length;
+    const topMatch = rankedJobs[0] || null;
+    const avgScore = Math.round(rankedJobs.reduce((acc, j) => acc + j.selectionChance, 0) / (totalJobs || 1));
+    const highFitCount = rankedJobs.filter(j => j.selectionChance >= 80).length;
+
+    res.json({
+      resume: { id: resume.id, title: resume.title || 'Master Resume', category: resume.category },
+      rankedJobs,
+      summary: {
+        totalJobs,
+        topMatchScore: topMatch?.selectionChance || 0,
         topMatchTitle: topMatch?.title || 'N/A',
         avgScore,
         highFitCount
