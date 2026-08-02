@@ -166,13 +166,13 @@ router.post('/applications/apply', [body('platform').trim().isString(), body('re
       userId: req.user.sub,
       applicationId: application.id,
       jobId: validJobId,
-      platform,
+      platform: finalPlatform,
       resumeId: validResumeId,
       targetUrl,
       useBrowserSession: hasSession
     }).catch(err => console.error('[BotRunner Async Error]:', err.message));
 
-    res.status(202).json({ application, message: `Automated application to ${platform} initiated.` });
+    res.status(202).json({ application, message: `Automated application to ${finalPlatform} initiated.` });
   } catch (e) {
     next(e);
   }
