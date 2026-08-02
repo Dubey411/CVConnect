@@ -232,6 +232,9 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
       });
     }
 
+    const NON_TECH_FILTER = /\b(sales|marketing|telecaller|tele-caller|receptionist|hr intern|recruiter|call center|customer care|bpo|business development associate|bda|growth associate)\b/i;
+    const isTechResume = /react|node|python|javascript|developer|engineer|software|full stack|frontend|backend|java|c\+\+|coder|data/i.test((resume.category || '') + ' ' + (resume.title || ''));
+
     const rawJobs = await prisma.job.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -240,6 +243,9 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
 
     const uniqueMap = new Map();
     for (const j of rawJobs) {
+      if (isTechResume && NON_TECH_FILTER.test(j.title || '')) {
+        continue;
+      }
       const key = `${(j.title || '').trim().toLowerCase()}::${(j.company || '').trim().toLowerCase()}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, j);
@@ -342,6 +348,9 @@ router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()]
       console.warn('[Api] Job discovery warning:', err.message);
     });
 
+    const NON_TECH_FILTER = /\b(sales|marketing|telecaller|tele-caller|receptionist|hr intern|recruiter|call center|customer care|bpo|business development associate|bda|growth associate)\b/i;
+    const isTechResume = /react|node|python|javascript|developer|engineer|software|full stack|frontend|backend|java|c\+\+|coder|data/i.test(candidateTitle + ' ' + skills.join(' '));
+
     const rawJobs = await prisma.job.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -350,6 +359,9 @@ router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()]
 
     const uniqueMap = new Map();
     for (const j of rawJobs) {
+      if (isTechResume && NON_TECH_FILTER.test(j.title || '')) {
+        continue;
+      }
       const key = `${(j.title || '').trim().toLowerCase()}::${(j.company || '').trim().toLowerCase()}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, j);
