@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Target, Zap, Award, Sparkles, AlertCircle, ArrowUpRight,
-  CheckCircle2, XCircle, RefreshCw, Briefcase, FileText, ChevronRight, Plus
+  CheckCircle2, XCircle, RefreshCw, Briefcase, FileText, ChevronRight, Plus, Search
 } from 'lucide-react';
 import { request } from '../api';
 
@@ -11,6 +11,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [matchData, setMatchData] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'top', 'good'
@@ -57,6 +58,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       if (res.resume) {
         await fetchResumes();
         setSelectedResumeId(res.resume.id);
+        runDiscoverAndMatch(res.resume.id);
       }
     } catch (err) {
       setError(err.response?.data?.error?.message || err.message || 'Failed to upload resume.');
@@ -78,6 +80,25 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
     } catch (err) {
       setError(err.response?.data?.error?.message || err.message || 'Failed to analyze job matches.');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const runDiscoverAndMatch = async (resumeId) => {
+    setDiscovering(true);
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await request({
+        method: 'post',
+        url: '/jobs/discover-and-match',
+        data: { resumeId: resumeId || selectedResumeId }
+      });
+      setMatchData(data);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || err.message || 'Failed to discover matching jobs.');
+    } finally {
+      setDiscovering(false);
       setLoading(false);
     }
   };
@@ -242,14 +263,25 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
           </button>
         </div>
 
-        <button
-          onClick={() => runBatchMatch(selectedResumeId)}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-medium text-slate-300 transition-colors"
-        >
-          <RefreshCw size={13} className={loading ? 'animate-spin text-violet-400' : ''} />
-          Refresh Scores
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => runDiscoverAndMatch(selectedResumeId)}
+            disabled={loading}
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-violet-600/30 transition-all"
+          >
+            <Search size={13} className={discovering ? 'animate-spin' : ''} />
+            <span>{discovering ? 'Searching Live Jobs…' : '🔍 Auto-Find Matching Jobs'}</span>
+          </button>
+
+          <button
+            onClick={() => runBatchMatch(selectedResumeId)}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-medium text-slate-300 transition-colors"
+          >
+            <RefreshCw size={13} className={loading && !discovering ? 'animate-spin text-violet-400' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Loading state */}
@@ -257,8 +289,10 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
           <RefreshCw size={32} className="animate-spin text-violet-500 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-white font-semibold">Running AI Match Engine…</h3>
-            <p className="text-xs text-slate-400">Comparing vector skills & keyword density across all saved roles</p>
+            <h3 className="text-white font-semibold">
+              {discovering ? 'Searching Live Platforms (Unstop & Web) for Matching Roles…' : 'Running ML Selection Prediction Engine…'}
+            </h3>
+            <p className="text-xs text-slate-400">Comparing vector skills & ML selection probability across opportunities</p>
           </div>
         </div>
       )}
@@ -276,18 +310,25 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
           <Briefcase size={40} className="text-slate-600 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-white font-medium text-lg">No Resumes or Target Postings Found</h3>
+            <h3 className="text-white font-medium text-lg">No Live Opportunities Found Yet</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Upload a resume PDF or enter target job links in Tailoring Studio to calculate your instant fit leaderboard.
+              Upload a resume or click <strong>Auto-Find Matching Jobs</strong> to let Playwright discover live opportunities from Unstop and web platforms matching your profile.
             </p>
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => runDiscoverAndMatch(selectedResumeId)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
             >
+              <Search size={15} />
+              <span>Auto-Find Jobs for My Resume</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all"
+            >
               <Plus size={15} />
-              <span>Upload Resume PDF / DOCX</span>
+              <span>Upload Resume PDF</span>
             </button>
           </div>
         </div>
@@ -297,8 +338,9 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       {!loading && !error && filteredJobs.length > 0 && (
         <div className="space-y-4">
           {filteredJobs.map((job, idx) => {
-            const isTop = job.matchScore >= 80;
-            const isGood = job.matchScore >= 65 && job.matchScore < 80;
+            const chance = job.selectionChance || job.matchScore || 50;
+            const isTop = chance >= 80;
+            const isGood = chance >= 65 && chance < 80;
 
             return (
               <div
@@ -325,7 +367,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                       </span>
                       {isTop && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
-                          <CheckCircle2 size={12} /> High Match Fit
+                          <CheckCircle2 size={12} /> High Selection Probability
                         </span>
                       )}
                     </div>
@@ -367,16 +409,16 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                     </div>
                   </div>
 
-                  {/* Score Gauge & Apply Action */}
+                  {/* ML Selection Chance & Apply Action */}
                   <div className="flex items-center justify-between md:justify-end gap-6 pt-4 md:pt-0 border-t md:border-t-0 border-slate-800">
                     <div className="text-center">
                       <div className={`text-3xl font-extrabold tracking-tight ${
                         isTop ? 'text-emerald-400' : isGood ? 'text-sky-400' : 'text-slate-400'
                       }`}>
-                        {job.matchScore}%
+                        {chance}%
                       </div>
                       <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
-                        Match Score
+                        Selection Chance
                       </div>
                     </div>
 
