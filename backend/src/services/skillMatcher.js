@@ -20,7 +20,12 @@ export class SkillMatcher {
     ]);
     const resumeSkills = [...new Set([...(resume.skills || []), ...(resumeNlp.skills || [])].map(s => String(s).toLowerCase()))];
     const jobSkills = [...new Set([...(job.skills || []), ...(jobNlp.skills || [])].map(s => String(s).toLowerCase()))];
-    const matchedSkills = jobSkills.filter(s => resumeSkills.some(r => r.includes(s) || s.includes(r)));
+    const jobDescLower = (job.description || '').toLowerCase();
+    const matchedSkills = jobSkills.filter(s => 
+      (jobDescLower.includes(s) || (job.skills || []).map(x => String(x).toLowerCase()).includes(s)) && 
+      resumeSkills.some(r => r.includes(s) || s.includes(r)) &&
+      jobDescLower.includes(s)
+    );
     const missingSkills = jobSkills.filter(s => !matchedSkills.includes(s));
     const experienceText = flattenText(resume.experience);
     const educationText = flattenText(resume.education);
