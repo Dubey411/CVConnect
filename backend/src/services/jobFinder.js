@@ -7,91 +7,74 @@ export class JobFinderService {
    * Search live job platforms (Unstop, Internshala, public job APIs) for jobs matching candidate skills
    */
   async discoverJobsForCandidate(userId, resumeSkills = [], candidateTitle = 'Software Developer') {
-    const searchTerms = resumeSkills.length > 0 
-      ? resumeSkills.slice(0, 3).join(' ') 
-      : candidateTitle;
+    const primarySkill = resumeSkills.length > 0 ? resumeSkills[0] : candidateTitle;
+    console.log(`🔍 [JobFinder] Searching live opportunities on Unstop for: "${primarySkill}"...`);
 
-    console.log(`🔍 [JobFinder] Searching live opportunities for skills: "${searchTerms}"...`);
+    const discoveredMap = new Map();
 
-    const discovered = [];
-
-    // 1. Search Unstop Live Opportunities via Public API
-    try {
-      const unstopRes = await axios.get('https://unstop.com/api/public/opportunity/search-result', {
-        params: {
-          opportunity: 'internships',
-          searchTerm: searchTerms,
-          per_page: 15
-        },
-        timeout: 10000
-      }).catch(() => null);
-
-      if (unstopRes?.data?.data?.data) {
-        const items = unstopRes.data.data.data;
-        for (const item of items) {
-          if (!item.title) continue;
-
-          const title = item.title.trim();
-          const company = item.organisation?.name || item.company_name || 'Unstop Partner';
-          const targetUrl = item.seo_url || `https://unstop.com/o/${item.id}`;
-          const description = `${title} position at ${company}. Required skills and qualifications: ${(item.job_detail?.skills || item.skills || []).map(s => s.name || s).join(', ') || searchTerms}. ${item.details || item.about_opportunity || ''}`;
-
-          discovered.push({
-            title,
-            company,
-            targetUrl,
-            description,
-            platform: 'unstop',
-            skills: (item.job_detail?.skills || item.skills || []).map(s => s.name || s)
-          });
-        }
-      }
-    } catch (err) {
-      console.warn('[JobFinder] Unstop search failed (non-fatal):', err.message);
-    }
-
-    // 2. Fallback / Search Unstop Hackathons & Hiring Challenges
-    if (discovered.length < 5) {
+    const fetchCategory = async (opportunityType) => {
       try {
-        const unstopJobsRes = await axios.get('https://unstop.com/api/public/opportunity/search-result', {
+        const res = await axios.get('https://unstop.com/api/public/opportunity/search-result', {
           params: {
-            opportunity: 'jobs',
-            searchTerm: searchTerms,
-            per_page: 10
+            opportunity: opportunityType,
+            searchTerm: primarySkill,
+            per_page: 15
+          },
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           },
           timeout: 10000
-        }).catch(() => null);
+        });
 
-        if (unstopJobsRes?.data?.data?.data) {
-          const items = unstopJobsRes.data.data.data;
-          for (const item of items) {
-            if (!item.title) continue;
+        if (res.data?.data) {
+          const items = res.data.data.data || res.data.data;
+          if (Array.isArray(items)) {
+            for (const item of items) {
+              if (!item.title) continue;
 
-            const title = item.title.trim();
-            const company = item.organisation?.name || item.company_name || 'Unstop Partner';
-            const targetUrl = item.seo_url || `https://unstop.com/o/${item.id}`;
-            const description = `${title} at ${company}. ${item.details || ''}`;
+              const title = item.title.trim();
+              const company = item.organisation?.name || item.company_name || 'Unstop Partner';
+              const rawSeo = item.public_url || item.seo_url || item.site_url;
+              let targetUrl = `https://unstop.com/o/${item.id}`;
+              if (rawSeo) {
+                targetUrl = rawSeo.startsWith('http') ? rawSeo : `https://unstop.com/${rawSeo}`;
+              }
 
-            discovered.push({
-              title,
-              company,
-              targetUrl,
-              description,
-              platform: 'unstop',
-              skills: (item.skills || []).map(s => s.name || s)
-            });
+              const key = `${title.toLowerCase()}::${company.toLowerCase()}`;
+              if (!discoveredMap.has(key)) {
+                const skills = (item.job_detail?.skills || item.skills || []).map(s => s.name || s);
+                const description = `${title} position at ${company}. Required skills: ${skills.join(', ') || primarySkill}. ${item.details || item.about_opportunity || ''}`;
+
+                discoveredMap.set(key, {
+                  title,
+                  company,
+                  targetUrl,
+                  description,
+                  platform: 'unstop',
+                  skills
+                });
+              }
+            }
           }
         }
-      } catch (_) {}
-    }
+      } catch (err) {
+        console.warn(`[JobFinder] Unstop ${opportunityType} search error:`, err.message);
+      }
+    };
 
-    console.log(`✅ [JobFinder] Discovered ${discovered.length} live opportunities.`);
+    // Search both jobs and internships on Unstop
+    await Promise.all([
+      fetchCategory('jobs'),
+      fetchCategory('internships')
+    ]);
 
-    // 3. Save discovered jobs to Database for candidate
+    const discovered = Array.from(discoveredMap.values());
+    console.log(`✅ [JobFinder] Found ${discovered.length} distinct live Unstop opportunities.`);
+
+    // Save discovered jobs to DB without creating duplicates
     const savedJobs = [];
     for (const jobData of discovered) {
       try {
-        // Avoid duplicate jobs for same user & title
         const existing = await prisma.job.findFirst({
           where: { userId, title: jobData.title, company: jobData.company }
         });
@@ -101,7 +84,7 @@ export class JobFinderService {
         } else {
           const nlp = await analyzeText(jobData.description).catch(() => ({ skills: jobData.skills || [] }));
           const requirements = {
-            responsibilities: [jobData.description.slice(0, 200)],
+            responsibilities: [jobData.description.slice(0, 250)],
             mustHave: nlp.skills || jobData.skills || [],
             targetUrl: jobData.targetUrl
           };
@@ -119,7 +102,7 @@ export class JobFinderService {
           savedJobs.push(newJob);
         }
       } catch (err) {
-        console.warn('[JobFinder] Failed to save job:', err.message);
+        console.warn('[JobFinder] Save job notice:', err.message);
       }
     }
 
