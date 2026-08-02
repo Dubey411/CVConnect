@@ -15,6 +15,9 @@ import Insights from './components/Insights';
 import PlatformAccounts from './components/PlatformAccounts';
 import AutoApplyControls from './components/AutoApplyControls';
 
+import MatchLeaderboard from './components/MatchLeaderboard';
+import { Target } from 'lucide-react';
+
 function Auth({ mode, setMode, onBack }) {
   const dispatch = useDispatch();
   const [name, setName] = useState('');
@@ -183,6 +186,7 @@ function Shell() {
 
   const nav = [
     ['Workspace', Sparkles, 'workspace'],
+    ['Job Matcher', Target, 'matcher'],
     ['Platforms', Globe, 'platforms'],
     ['Auto Apply', Sliders, 'controls'],
     ['Insights', BarChart3, 'insights'],
@@ -257,6 +261,16 @@ function Shell() {
 
         <main className="flex-1 p-5 md:p-8 overflow-x-hidden">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+            {activeTab === 'matcher' && (
+              <MatchLeaderboard
+                onSelectJob={(selectedJob) => {
+                  dispatch(analyzeJob({ description: selectedJob.description, title: selectedJob.title, company: selectedJob.company }));
+                }}
+                onNavigateToApply={() => {
+                  setActiveTab('workspace');
+                }}
+              />
+            )}
             {activeTab === 'platforms' && <PlatformAccounts />}
             {activeTab === 'controls' && <AutoApplyControls />}
             {activeTab === 'insights' && <Insights />}
