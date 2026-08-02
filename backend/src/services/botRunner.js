@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import { prisma } from '../lib/prisma.js';
@@ -6,6 +8,10 @@ import { generateResumePdf } from '../lib/resumePdf.js';
 import { getProfilePath } from './sessionManager.js';
 import { extractOpportunityId, registerUnstopViaApi } from './unstopApi.js';
 import { fillUnstopForm, verifyUnstopRegistration } from './aiFormFiller.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SCRATCH_DIR = path.join(__dirname, '..', '..', '..', 'scratch');
 
 // ─── Stealth fingerprint override script ─────────────────────────────────────
 // Injected into every page before any JS runs to defeat automation detection.
