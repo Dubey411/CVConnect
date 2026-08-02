@@ -146,15 +146,15 @@ async function humanClick(locator) {
 function hasCaptcha(html) {
   if (!html) return false;
   const h = html.toLowerCase();
-  // Avoid false positives on static <script src="...recaptcha..."> tags
+  // Avoid false positives on static <script src="...recaptcha..."> tags and hidden form fields
   return (
     h.includes('geo.captcha-delivery.com') ||
     h.includes('datadome')                 ||
     h.includes('cf-challenge')             ||
-    h.includes('g-recaptcha-response')     ||
     h.includes('i am not a robot')         ||
     h.includes('verify you are human')     ||
-    h.includes('press and hold')
+    h.includes('press and hold')           ||
+    h.includes('unusual traffic from your computer network')
   );
 }
 
