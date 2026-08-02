@@ -13,6 +13,6 @@ const workspace = createSlice({ name: 'workspace', initialState: { resume: null,
   .addCase(rewriteResume.fulfilled, (s, a) => { s.status = 'ready'; s.resume = a.payload.resume; s.rewrite = a.payload; })
   .addMatcher(a => a.type.endsWith('/pending'), s => { s.status = 'loading'; s.error = null; })
   .addMatcher(a => a.type.endsWith('/rejected'), (s, a) => { s.status = 'failed'; s.error = a.error.message; }) });
-const auth = createSlice({ name: 'auth', initialState: { user: JSON.parse(localStorage.getItem('cvconnect_user') || 'null') }, reducers: { signIn(state, action) { state.user = action.payload; localStorage.setItem('cvconnect_user', JSON.stringify(action.payload)); }, signOut(state) { state.user = null; localStorage.removeItem('cvconnect_user'); localStorage.removeItem('cvconnect_token'); } } });
+const auth = createSlice({ name: 'auth', initialState: { user: JSON.parse(localStorage.getItem('cvconnect_user') || 'null') }, reducers: { signIn(state, action) { state.user = action.payload; localStorage.setItem('cvconnect_user', JSON.stringify(action.payload)); }, signOut(state) { state.user = null; localStorage.removeItem('cvconnect_user'); localStorage.removeItem('cvconnect_token'); localStorage.removeItem('cvconnect_refresh_token'); } } });
 export const { setResume, clearResume, resolveChange } = workspace.actions; export const { signIn, signOut } = auth.actions;
 export const store = configureStore({ reducer: { workspace: workspace.reducer, auth: auth.reducer } });
