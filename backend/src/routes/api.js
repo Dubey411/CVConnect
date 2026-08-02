@@ -210,6 +210,90 @@ router.get('/resumes/:id', [param('id').isString()], validate, async (req, res, 
 router.delete('/resumes/:id', [param('id').isString()], validate, async (req, res, next) => { try { const resume = await ownedResume(req.params.id, req.user.sub); await prisma.resume.delete({ where: { id: resume.id } }); res.json({ success: true, id: resume.id, message: 'Resume deleted successfully.' }); } catch (e) { next(e); } });
 router.post('/jobs/analyze', [body('title').trim().isLength({ min: 2, max: 140 }), body('description').trim().isLength({ min: 20, max: 50000 }), body('company').optional().trim().isLength({ max: 140 })], validate, async (req, res, next) => { try { const { title, description, company } = req.body; const nlp = await cached(`job:${Buffer.from(description).toString('base64').slice(0, 80)}`, 86400, () => analyzeText(description)); const requirements = { responsibilities: description.split(/[.!?]\s/).filter(s => /responsib|experience|build|lead|deliver/i.test(s)).slice(0, 8), mustHave: nlp.skills.slice(0, Math.ceil(nlp.skills.length * .65)), niceToHave: nlp.skills.slice(Math.ceil(nlp.skills.length * .65)) }; const job = await prisma.job.create({ data: { userId: req.user.sub, title, company, description, skills: nlp.skills, requirements } }); res.status(201).json({ job }); } catch (e) { next(e); } });
 router.post('/resumes/:id/match', [param('id').isString(), body('jobId').isString()], validate, async (req, res, next) => { try { const [resume, job] = await Promise.all([ownedResume(req.params.id, req.user.sub), prisma.job.findFirst({ where: { id: req.body.jobId, userId: req.user.sub } })]); if (!job) return res.status(404).json({ error: { code: 'JOB_NOT_FOUND', message: 'Job description not found.' } }); const analysis = await cached(`match:${resume.id}:${job.id}`, 3600, () => new SkillMatcher().match(resume.original, job)); const saved = await prisma.resume.update({ where: { id: resume.id }, data: { jobId: job.id, matchScore: analysis.score, atsScore: analysis.atsScore, analysis, skillGap: analysis.missingSkills } }); res.json({ resume: saved, analysis }); } catch (e) { next(e); } });
+router.post('/jobs/batch-match', [body('resumeId').optional().isString()], validate, async (req, res, next) => {
+  try {
+    const userId = req.user.sub;
+    let resumeId = req.body.resumeId;
+
+    let resume = null;
+    if (resumeId) {
+      resume = await prisma.resume.findFirst({ where: { id: resumeId, userId } });
+    }
+    if (!resume) {
+      resume = await prisma.resume.findFirst({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+    }
+
+    if (!resume) {
+      return res.status(404).json({ error: { code: 'RESUME_NOT_FOUND', message: 'No resume found. Please upload a resume first.' } });
+    }
+
+    const jobs = await prisma.job.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+
+    if (!jobs.length) {
+      return res.json({
+        resume: { id: resume.id, title: resume.title, category: resume.category },
+        rankedJobs: [],
+        summary: { totalJobs: 0, topMatchScore: 0, topMatchTitle: 'N/A', avgScore: 0, highFitCount: 0 }
+      });
+    }
+
+    const matcher = new SkillMatcher();
+    const rankedJobs = await Promise.all(
+      jobs.map(async (job) => {
+        const analysis = await matcher.match(resume.original || resume.optimized || {}, job).catch(() => null);
+        const score = analysis?.score || 50;
+        const atsScore = analysis?.atsScore || 50;
+
+        let category = 'fair';
+        if (score >= 85) category = 'excellent';
+        else if (score >= 70) category = 'good';
+        else if (score >= 50) category = 'fair';
+        else category = 'low';
+
+        return {
+          id: job.id,
+          title: job.title,
+          company: job.company || 'Direct Hiring',
+          description: job.description,
+          skills: job.skills,
+          requirements: job.requirements,
+          createdAt: job.createdAt,
+          matchScore: score,
+          atsScore,
+          category,
+          matchedSkills: analysis?.matchedSkills || [],
+          missingSkills: analysis?.missingSkills || [],
+          recommendations: analysis?.recommendations || []
+        };
+      })
+    );
+
+    rankedJobs.sort((a, b) => b.matchScore - a.matchScore);
+
+    const totalJobs = rankedJobs.length;
+    const topMatch = rankedJobs[0] || null;
+    const avgScore = Math.round(rankedJobs.reduce((acc, j) => acc + j.matchScore, 0) / (totalJobs || 1));
+    const highFitCount = rankedJobs.filter(j => j.matchScore >= 80).length;
+
+    res.json({
+      resume: { id: resume.id, title: resume.title || 'Master Resume', category: resume.category },
+      rankedJobs,
+      summary: {
+        totalJobs,
+        topMatchScore: topMatch?.matchScore || 0,
+        topMatchTitle: topMatch?.title || 'N/A',
+        avgScore,
+        highFitCount
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 router.post('/resumes/:id/rewrite', [param('id').isString(), body('jobId').isString()], validate, async (req, res, next) => { try { const resume = await ownedResume(req.params.id, req.user.sub); const job = await prisma.job.findFirst({ where: { id: req.body.jobId, userId: req.user.sub } }); if (!job) return res.status(404).json({ error: { code: 'JOB_NOT_FOUND', message: 'Job description not found.' } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'rewriting', percent: 45 }); const rewrite = await new ResumeRewriter().rewrite(resume.original, job); const saved = await prisma.resume.update({ where: { id: resume.id }, data: { optimized: { ...rewrite.optimized, changes: rewrite.changes, provider: rewrite.provider } } }); req.app.get('io')?.to(req.user.sub).emit('resume:progress', { resumeId: resume.id, stage: 'complete', percent: 100 }); res.json({ resume: saved, ...rewrite }); } catch (e) { next(e); } });
 router.get('/users/me', async (req, res, next) => { try { const user = await prisma.user.findUnique({ where: { id: req.user.sub }, select: { id: true, email: true, name: true, createdAt: true } }); res.json({ user }); } catch (e) { next(e); } });
 router.put('/users/me', [body('name').trim().isLength({ min: 2, max: 80 })], validate, async (req, res, next) => { try { const user = await prisma.user.update({ where: { id: req.user.sub }, data: { name: req.body.name }, select: { id: true, email: true, name: true } }); res.json({ user }); } catch (e) { next(e); } });
