@@ -118,19 +118,19 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
           </div>
 
           {/* Resume Selector & Inline Upload */}
-          <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl min-w-[300px] space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+          <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl w-full md:w-auto md:min-w-[320px] space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-medium text-slate-400 flex items-center gap-1.5 shrink-0">
                 <FileText size={13} className="text-violet-400" />
-                Active Resume Profile:
+                Active Resume:
               </label>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[11px] font-semibold transition-colors shadow-sm shadow-violet-600/30"
+                className="flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[11px] font-semibold transition-colors shadow-sm shadow-violet-600/30 shrink-0 whitespace-nowrap"
               >
                 <Plus size={12} />
-                <span>{uploading ? 'Uploading…' : '+ Upload Resume'}</span>
+                <span>{uploading ? 'Uploading…' : 'Upload Resume'}</span>
               </button>
             </div>
 
