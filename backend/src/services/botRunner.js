@@ -871,9 +871,28 @@ export class BotRunner {
       ], 4000);
 
       if (submitBtn) {
+        // Save debug screenshot right BEFORE clicking Submit
+        try {
+          const beforeSubmitPath = path.join(__dirname, '..', '..', '..', 'scratch', 'internshala_before_submit.png');
+          await page.screenshot({ path: beforeSubmitPath, fullPage: false }).catch(() => {});
+          console.log(`  📸 [Internshala Debug] Saved pre-submit screenshot to scratch/internshala_before_submit.png`);
+        } catch (_) {}
+
         console.log('  🚀 [Internshala] Clicking Submit button...');
+        await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
         await humanClick(submitBtn);
+        // Dispatch native click in case framework requires explicit event
+        await submitBtn.evaluate(el => el.click()).catch(() => {});
+
         await delay(3000, 5000);
+
+        // Save debug screenshot right AFTER clicking Submit
+        try {
+          const afterSubmitPath = path.join(__dirname, '..', '..', '..', 'scratch', 'internshala_after_submit.png');
+          await page.screenshot({ path: afterSubmitPath, fullPage: false }).catch(() => {});
+          console.log(`  📸 [Internshala Debug] Saved post-submit screenshot to scratch/internshala_after_submit.png`);
+        } catch (_) {}
+
         submitted = true;
         break;
       }
