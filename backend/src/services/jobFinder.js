@@ -86,8 +86,13 @@ export class JobFinderService {
           // 🛑 CRITICAL FILTER: Skip expired, closed, or filled Unstop opportunities
           if (item.regn_open === 0) continue;
           if (item.status && item.status.toUpperCase() !== 'LIVE') continue;
-          if (item.end_date && new Date(item.end_date) < now) continue;
           if (item.expired === true) continue;
+
+          const endDateStr = item.end_date || item.register_by || item.regn_end_date;
+          if (endDateStr) {
+            const endDateMs = new Date(endDateStr).getTime();
+            if (!isNaN(endDateMs) && endDateMs < Date.now()) continue;
+          }
 
           const title = item.title.trim();
           const company = item.organisation?.name || item.company_name || 'Unstop Partner';
