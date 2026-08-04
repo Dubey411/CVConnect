@@ -124,9 +124,10 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
   const availablePlatforms = [...new Set(rankedJobs.map(j => j.platform || j.requirements?.platform).filter(Boolean))];
 
   const filteredJobs = rankedJobs.filter(job => {
+    const chance = job.selectionChance || job.matchScore || 50;
     const platform = job.platform || job.requirements?.platform;
-    const passScore = filter === 'top' ? job.matchScore >= 80
-      : filter === 'good' ? job.matchScore >= 65 && job.matchScore < 80
+    const passScore = filter === 'top' ? chance >= 75
+      : filter === 'good' ? chance >= 60
       : true;
     const passPlatform = platformFilter === 'all' || platform === platformFilter;
     return passScore && passPlatform;
@@ -215,8 +216,8 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl flex-wrap">
           {[
             { id: 'all',  label: `All (${rankedJobs.length})` },
-            { id: 'top',  label: '🟢 Top Fits 80%+' },
-            { id: 'good', label: '🟡 Good Fits 65%+' }
+            { id: 'top',  label: '🟢 Top Fits (75%+)' },
+            { id: 'good', label: '🟡 Strong Fits (60%+)' }
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setFilter(id)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
