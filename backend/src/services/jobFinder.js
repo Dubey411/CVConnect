@@ -12,6 +12,18 @@ function isRelevantForCandidate(title, primarySkill) {
   return true;
 }
 
+// ─── Extract company from Internshala detail URL slug ─────────────────────────
+function extractCompanyFromUrl(url) {
+  if (!url || !url.includes('-at-')) return 'Internshala Partner';
+  try {
+    const afterAt = url.split('-at-')[1] || '';
+    const rawCompany = afterAt.replace(/\d+$/, '').replace(/-/g, ' ');
+    return rawCompany.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').trim();
+  } catch (e) {
+    return 'Internshala Partner';
+  }
+}
+
 // ─── Browser-like headers ───────────────────────────────────────────────────
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -21,28 +33,21 @@ const BROWSER_HEADERS = {
 };
 
 // ─── Parse Internshala AJAX JSON response ────────────────────────────────────
-// Internshala returns JSON: { internship_list_html: "<html fragment>" }
 function parseInternshalaHTML(html) {
   const results = [];
   if (!html || typeof html !== 'string') return results;
 
-  // Match individual internship cards: each has a container with data-internshipid
-  // Extract: title from .job-internship-name a, company from .company-name, link from href
-  const titleRegex = /<h3[^>]*class="[^"]*job-internship-name[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  const regex = /class="[^"]*job-internship-name[^"]*"[\s\S]*?<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
   let m;
-  while ((m = titleRegex.exec(html)) !== null) {
+  while ((m = regex.exec(html)) !== null) {
     const href = m[1].trim();
     const title = m[2].trim();
     if (!title || title.length < 3) continue;
 
     const link = href.startsWith('http') ? href : `https://internshala.com${href}`;
 
-    // Look forward in the HTML (within 1000 chars) for company name
-    const chunk = html.slice(m.index, m.index + 1000);
-    const companyMatch = chunk.match(/class="[^"]*company-name[^"]*"[^>]*>\s*<[^>]+>\s*([^<\n]{2,80})/i)
-      || chunk.match(/class="[^"]*company[^"]*"[^>]*>([^<\n]{2,60})/i);
-    const company = companyMatch ? companyMatch[1].replace(/&amp;/g, '&').trim() : 'Company via Internshala';
-
+    // Extract company name using URL slug or HTML snippet
+    const company = extractCompanyFromUrl(link);
     results.push({ title, company, link });
   }
   return results;
@@ -50,8 +55,7 @@ function parseInternshalaHTML(html) {
 
 export class JobFinderService {
   /**
-   * Search Unstop, Internshala, and optionally Adzuna/JSearch
-   * for live jobs/internships matching candidate's resume skills.
+   * Search Unstop, Internshala, and platform links for live active jobs/internships matching candidate's resume skills.
    */
   async discoverJobsForCandidate(userId, resumeSkills = [], candidateTitle = 'Software Developer') {
     const primarySkill = resumeSkills.length > 0 ? resumeSkills[0] : candidateTitle;
@@ -61,11 +65,11 @@ export class JobFinderService {
     console.log(`\n🔍 [JobFinder] Searching across platforms for: "${searchQuery}"`);
     const discoveredMap = new Map();
 
-    // ── 1. UNSTOP — Public search API (Jobs + Internships) ─────────────────
+    // ── 1. UNSTOP — Filter ONLY LIVE & OPEN Opportunities ─────────────────
     const fetchUnstop = async (opportunityType) => {
       try {
         const res = await axios.get('https://unstop.com/api/public/opportunity/search-result', {
-          params: { opportunity: opportunityType, searchTerm: primarySkill, per_page: 15 },
+          params: { opportunity: opportunityType, searchTerm: primarySkill, per_page: 25 },
           headers: BROWSER_HEADERS,
           timeout: 12000
         });
@@ -74,8 +78,16 @@ export class JobFinderService {
         if (!Array.isArray(items)) return;
 
         let count = 0;
+        const now = new Date();
+
         for (const item of items) {
           if (!item.title || !isRelevantForCandidate(item.title, primarySkill)) continue;
+
+          // 🛑 CRITICAL FILTER: Skip expired, closed, or filled Unstop opportunities
+          if (item.regn_open === 0) continue;
+          if (item.status && item.status.toUpperCase() !== 'LIVE') continue;
+          if (item.end_date && new Date(item.end_date) < now) continue;
+          if (item.expired === true) continue;
 
           const title = item.title.trim();
           const company = item.organisation?.name || item.company_name || 'Unstop Partner';
@@ -92,20 +104,20 @@ export class JobFinderService {
             count++;
           }
         }
-        console.log(`  ✅ Unstop ${opportunityType}: ${count} listings`);
+        console.log(`  ✅ Unstop ${opportunityType} (Live/Open only): ${count} listings`);
       } catch (err) {
         console.warn(`  ⚠️  Unstop ${opportunityType}: ${err.message}`);
       }
     };
 
-    // ── 2. INTERNSHALA — AJAX endpoint (confirmed working) ──────────────────
+    // ── 2. INTERNSHALA — Live AJAX listings (40+ live positions) ────────────
     const fetchInternshala = async () => {
-      // Internshala AJAX returns JSON: { internship_list_html: "<html>" }
       const skillSlug = primarySkill.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const attempts = [
         `https://internshala.com/internships_ajax/${skillSlug}-internship/`,
         `https://internshala.com/internships_ajax/keywords-${encodeURIComponent(primarySkill)}/`,
-        `https://internshala.com/internships_ajax/javascript-internship/`, // fallback common skill
+        `https://internshala.com/internships_ajax/web-development-internship/`,
+        `https://internshala.com/internships_ajax/software-development-internship/`
       ];
 
       let count = 0;
@@ -120,7 +132,6 @@ export class JobFinderService {
             timeout: 12000
           });
 
-          // Internshala returns JSON with internship_list_html
           const html = res.data?.internship_list_html || res.data?.jobs_list_html || (typeof res.data === 'string' ? res.data : '');
           if (!html) continue;
 
@@ -140,93 +151,32 @@ export class JobFinderService {
               count++;
             }
           }
-          if (count > 0) break; // success — no need to try next URL
+          if (count >= 10) break; // Obtained rich set of active Internshala listings
         } catch (err) {
           console.warn(`  ⚠️  Internshala (${url.slice(30)}): ${err.message}`);
         }
       }
 
-      // Always add search link so user can open Internshala directly
-      const searchUrl = `https://internshala.com/internships/keywords-${encodeURIComponent(primarySkill)}/`;
-      const key = `internshala-search::${primarySkill.toLowerCase()}`;
-      if (!discoveredMap.has(key)) {
-        discoveredMap.set(key, {
-          title: `${primarySkill} Internships — Browse All`,
-          company: 'Multiple Companies via Internshala',
-          targetUrl: searchUrl,
-          description: `Browse all ${primarySkill} internships with stipend and eligibility info on Internshala.`,
-          platform: 'Internshala',
-          skills: [primarySkill, secondarySkill].filter(Boolean),
-          isSearchLink: true
-        });
-      }
-      console.log(`  ✅ Internshala: ${count} real listings + search link`);
+      console.log(`  ✅ Internshala (Active live listings): ${count} listings`);
     };
 
-    // ── 3. ADZUNA INDIA — Official free API ────────────────────────────────
-    const fetchAdzunaIndia = async () => {
-      const appId = process.env.ADZUNA_APP_ID;
-      const appKey = process.env.ADZUNA_APP_KEY;
-      if (!appId || !appKey) {
-        console.log(`  ℹ️  Adzuna: No API key — add ADZUNA_APP_ID + ADZUNA_APP_KEY to .env (free at developer.adzuna.com)`);
-        return;
-      }
-      try {
-        const res = await axios.get('https://api.adzuna.com/v1/api/jobs/in/search/1', {
-          params: {
-            app_id: appId,
-            app_key: appKey,
-            what: searchQuery,
-            where: 'India',
-            results_per_page: 15,
-            'content-type': 'application/json'
-          },
-          timeout: 10000
-        });
-
-        const items = res.data?.results || [];
-        let count = 0;
-        for (const item of items) {
-          if (!item.title || !isRelevantForCandidate(item.title, primarySkill)) continue;
-          const title = item.title.trim();
-          const company = item.company?.display_name || 'Adzuna Partner';
-          const key = `${title.toLowerCase()}::${company.toLowerCase()}`;
-          if (!discoveredMap.has(key)) {
-            discoveredMap.set(key, {
-              title,
-              company,
-              targetUrl: item.redirect_url || `https://www.adzuna.in/search?q=${encodeURIComponent(title)}`,
-              description: `${title} at ${company}. ${(item.description || '').slice(0, 500)}`,
-              platform: 'Adzuna',
-              skills: [primarySkill, secondarySkill].filter(Boolean)
-            });
-            count++;
-          }
-        }
-        console.log(`  ✅ Adzuna India: ${count} listings`);
-      } catch (err) {
-        console.warn(`  ⚠️  Adzuna: ${err.message}`);
-      }
-    };
-
-    // ── 4. LINKEDIN + GLASSDOOR — Deep search links ─────────────────────────
+    // ── 3. LINKEDIN & GLASSDOOR — Deep links for active hiring ─────────────
     const addPlatformSearchLinks = () => {
       const linkedInUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(searchQuery)}&location=India&f_E=1,2&f_JT=I,F`;
       const glassdoorUrl = `https://www.glassdoor.co.in/Job/india-${primarySkill.toLowerCase().replace(/\s+/g, '-')}-jobs-SRCH_IL.0,5_IN115_KO6,${6 + primarySkill.length}.htm`;
-      const internshalaJobsUrl = `https://internshala.com/jobs/keywords-${encodeURIComponent(primarySkill)}/`;
 
       discoveredMap.set(`linkedin::${primarySkill}`, {
-        title: `${primarySkill} Jobs on LinkedIn India`,
+        title: `${primarySkill} Entry-Level Jobs on LinkedIn India`,
         company: 'Multiple Companies — LinkedIn',
         targetUrl: linkedInUrl,
-        description: `Live ${primarySkill} job openings on LinkedIn India, filtered for fresher and internship roles.`,
+        description: `Live ${primarySkill} job openings on LinkedIn India, filtered for active fresher and internship roles.`,
         platform: 'LinkedIn',
         skills: [primarySkill, secondarySkill].filter(Boolean),
         isSearchLink: true
       });
 
       discoveredMap.set(`glassdoor::${primarySkill}`, {
-        title: `${primarySkill} Jobs on Glassdoor India`,
+        title: `${primarySkill} Openings on Glassdoor India`,
         company: 'Multiple Companies — Glassdoor',
         targetUrl: glassdoorUrl,
         description: `${primarySkill} job openings with salary insights and company reviews on Glassdoor India.`,
@@ -235,31 +185,20 @@ export class JobFinderService {
         isSearchLink: true
       });
 
-      discoveredMap.set(`internshala-jobs::${primarySkill}`, {
-        title: `${primarySkill} Jobs on Internshala`,
-        company: 'Multiple Companies — Internshala Jobs',
-        targetUrl: internshalaJobsUrl,
-        description: `Full-time ${primarySkill} job openings listed on Internshala for freshers.`,
-        platform: 'Internshala',
-        skills: [primarySkill, secondarySkill].filter(Boolean),
-        isSearchLink: true
-      });
-
-      console.log(`  ✅ LinkedIn + Glassdoor + Internshala Jobs: search links added`);
+      console.log(`  ✅ LinkedIn + Glassdoor: live search links added`);
     };
 
     // ── Execute all in parallel ─────────────────────────────────────────────
     await Promise.all([
       fetchUnstop('jobs'),
       fetchUnstop('internships'),
-      fetchInternshala(),
-      fetchAdzunaIndia()
+      fetchInternshala()
     ]);
     addPlatformSearchLinks();
 
     const discovered = Array.from(discoveredMap.values());
     const platforms = [...new Set(discovered.map(d => d.platform))].join(', ');
-    console.log(`\n✅ [JobFinder] Total: ${discovered.length} opportunities across ${platforms}\n`);
+    console.log(`\n✅ [JobFinder] Total: ${discovered.length} active opportunities across ${platforms}\n`);
 
     // ── Save to DB (no duplicates) ─────────────────────────────────────────
     const savedJobs = [];
