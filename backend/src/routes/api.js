@@ -233,7 +233,13 @@ router.post('/jobs/batch-match', [body('resumeId').optional().isString()], valid
     }
 
     const NON_TECH_FILTER = /\b(sales|marketing|telecaller|tele-caller|receptionist|hr intern|recruiter|call center|customer care|bpo|business development associate|bda|growth associate)\b/i;
-    const isTechResume = /react|node|python|javascript|developer|engineer|software|full stack|frontend|backend|java|c\+\+|coder|data/i.test((resume.category || '') + ' ' + (resume.title || ''));
+    const resumeSkillsText = [
+      resume.category || '',
+      resume.title || '',
+      ...(Array.isArray(resume.original?.skills) ? resume.original.skills : []),
+      ...(Array.isArray(resume.optimized?.skills) ? resume.optimized.skills : [])
+    ].join(' ');
+    const isTechResume = /react|node|python|javascript|developer|engineer|software|full.?stack|frontend|backend|java\b|c\+\+|coder|data science|flutter|android|ios|machine learning|ml\b/i.test(resumeSkillsText);
 
     const rawJobs = await prisma.job.findMany({
       where: { userId },
@@ -349,7 +355,17 @@ router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()]
     });
 
     const NON_TECH_FILTER = /\b(sales|marketing|telecaller|tele-caller|receptionist|hr intern|recruiter|call center|customer care|bpo|business development associate|bda|growth associate)\b/i;
-    const isTechResume = /react|node|python|javascript|developer|engineer|software|full stack|frontend|backend|java|c\+\+|coder|data/i.test(candidateTitle + ' ' + skills.join(' '));
+    const isTechResume = /react|node|python|javascript|developer|engineer|software|full.?stack|frontend|backend|java\b|c\+\+|coder|data science|flutter|android|ios|machine learning|ml\b/i.test(candidateTitle + ' ' + skills.join(' '));
+
+    // Permanently purge stale non-tech DB records for tech candidates
+    if (isTechResume) {
+      const staleJobs = await prisma.job.findMany({ where: { userId }, select: { id: true, title: true } });
+      const staleIds = staleJobs.filter(j => NON_TECH_FILTER.test(j.title || '')).map(j => j.id);
+      if (staleIds.length > 0) {
+        await prisma.job.deleteMany({ where: { id: { in: staleIds } } });
+        console.log(`🗑️  [Api] Deleted ${staleIds.length} stale non-tech job records from DB`);
+      }
+    }
 
     const rawJobs = await prisma.job.findMany({
       where: { userId },
