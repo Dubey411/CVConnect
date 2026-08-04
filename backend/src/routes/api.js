@@ -347,7 +347,8 @@ router.post('/jobs/discover-and-match', [body('resumeId').optional().isString()]
       : typeof resumeData.skills === 'string'
         ? resumeData.skills.split(',').map(s => s.trim())
         : [];
-    const candidateTitle = resume.category || resume.title || 'Software Developer';
+    // Clear stale historical job records so only fresh, live active jobs are returned
+    await prisma.job.deleteMany({ where: { userId } }).catch(e => console.warn('[Api] DB purge notice:', e.message));
 
     const finder = new JobFinderService();
     await finder.discoverJobsForCandidate(userId, skills, candidateTitle).catch(err => {
