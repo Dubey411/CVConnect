@@ -7,11 +7,10 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 const SYSTEM_PROMPT = `You are a professional ATS-optimised resume editor.
 Rules you MUST follow:
 1. Return ONLY valid JSON — no markdown fences, no explanations.
-2. The JSON must match the shape: { contact, summary, skills, experience, education, projects, certifications }.
-3. skills, experience, education, projects, and certifications MUST be flat arrays of strings (NOT objects). Preserve header lines, dates, and role/stack lines as separate string elements in experience/education/projects arrays.
-4. NEVER invent skills, job titles, employers, metrics, dates, or qualifications not in the original.
-5. You MAY: rephrase bullets with stronger action verbs, tighten language, reorder skills, update summary to mention the target role.
-6. Keep all original factual content — do not remove experience entries, education, project names, or certifications.`;
+2. Preserve the EXACT structure, original phrasing, job titles, project descriptions, dates, and metrics of the candidate's CV.
+3. DO NOT rewrite or replace the user's core experience/project content.
+4. INJECT ONLY missing required target job keywords (e.g. Java, Spring Boot, Git/GitHub, debugging, technical documentation) naturally into the relevant summary, skills list, or project tech stack where appropriate.
+5. Strict 1-Page Fit: Keep section text concise to ensure the resume fits cleanly on a single 1-page document without spilling over onto a second page.`;
 
 // ─── ML-service fallback ──────────────────────────────────────────────────────
 const mlRewrite = async (resume, job) => {
