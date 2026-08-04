@@ -6,8 +6,8 @@ import os from 'node:os';
 // ─── Section header helper ────────────────────────────────────────────────────
 
 function sectionHeader(doc, title, margin, contentWidth, colors) {
-  doc.moveDown(0.4);
-  doc.fontSize(9.5)
+  doc.moveDown(0.25);
+  doc.fontSize(9)
      .font('Helvetica-Bold')
      .fillColor(colors.accent)
      .text(title, margin);
@@ -15,9 +15,9 @@ function sectionHeader(doc, title, margin, contentWidth, colors) {
   doc.moveTo(margin, y)
      .lineTo(margin + contentWidth, y)
      .strokeColor(colors.accent)
-     .lineWidth(0.6)
+     .lineWidth(0.5)
      .stroke();
-  doc.moveDown(0.35);
+  doc.moveDown(0.2);
 }
 
 // ─── Main PDF generator ───────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export async function generateResumePdf(resumeJson) {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
-        margin: 50,
+        margin: 36,
         size: 'A4',
         info: {
           Title: 'Resume',
@@ -58,7 +58,7 @@ export async function generateResumePdf(resumeJson) {
         light:   '#888888',
       };
 
-      const MARGIN       = 50;
+      const MARGIN       = 36;
       const PAGE_W       = doc.page.width;
       const CONTENT_W    = PAGE_W - MARGIN * 2;
 
