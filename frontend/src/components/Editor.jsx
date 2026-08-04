@@ -447,15 +447,19 @@ export default function Editor({ rewrite }) {
       <style>{`
         @media print {
           @page {
-            margin: 8mm 10mm;
+            margin: 0;
             size: A4 portrait;
           }
           body {
             background: #fff !important;
             color: #000 !important;
           }
-          .no-print, header, nav, aside {
-            display: none !important;
+          body * {
+            visibility: hidden !important;
+          }
+          .printable-resume,
+          .printable-resume * {
+            visibility: visible !important;
           }
         }
         .calibri-resume {
