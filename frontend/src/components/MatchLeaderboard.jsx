@@ -46,10 +46,22 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
   const fetchResumes = async () => {
     try {
-      const res = await request({ method: 'get', url: '/resumes?limit=20' });
+      const res = await request({ method: 'get', url: '/resumes?limit=50' });
       if (res.items && res.items.length > 0) {
-        setResumes(res.items);
-        if (!selectedResumeId) setSelectedResumeId(res.items[0].id);
+        // Deduplicate resumes by title + category to prevent repetitive dropdown lists
+        const uniqueMap = new Map();
+        for (const r of res.items) {
+          const displayTitle = r.title || r.category || 'Resume';
+          const key = `${displayTitle.trim().toLowerCase()}::${(r.category || 'general').trim().toLowerCase()}`;
+          if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, r);
+          }
+        }
+        const uniqueResumes = Array.from(uniqueMap.values());
+        setResumes(uniqueResumes);
+        if (!selectedResumeId && uniqueResumes.length > 0) {
+          setSelectedResumeId(uniqueResumes[0].id);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch resumes:', err);
