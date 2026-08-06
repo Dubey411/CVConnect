@@ -102,7 +102,7 @@ export default function Insights() {
   const successPct = appSummary.total ? Math.round((appSummary.submitted / appSummary.total) * 100) : 100;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
