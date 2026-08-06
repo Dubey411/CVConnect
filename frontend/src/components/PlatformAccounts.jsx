@@ -562,7 +562,7 @@ export default function PlatformAccounts() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
