@@ -123,11 +123,18 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
   // Derive unique platforms from results
   const availablePlatforms = [...new Set(rankedJobs.map(j => j.platform || j.requirements?.platform).filter(Boolean))];
 
+  const allScores = rankedJobs.map(j => j.selectionChance || j.matchScore || 50);
+  const maxScore = allScores.length ? Math.max(...allScores) : 50;
+
+  // Relative cutoffs based on candidate's actual score range
+  const topCutoff = Math.max(45, Math.round(maxScore * 0.85));
+  const goodCutoff = Math.max(40, Math.round(maxScore * 0.70));
+
   const filteredJobs = rankedJobs.filter(job => {
     const chance = job.selectionChance || job.matchScore || 50;
     const platform = job.platform || job.requirements?.platform;
-    const passScore = filter === 'top' ? chance >= 75
-      : filter === 'good' ? chance >= 60
+    const passScore = filter === 'top' ? chance >= topCutoff
+      : filter === 'good' ? chance >= goodCutoff
       : true;
     const passPlatform = platformFilter === 'all' || platform === platformFilter;
     return passScore && passPlatform;
@@ -216,8 +223,8 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl flex-wrap">
           {[
             { id: 'all',  label: `All (${rankedJobs.length})` },
-            { id: 'top',  label: '🟢 Top Fits (75%+)' },
-            { id: 'good', label: '🟡 Strong Fits (60%+)' }
+            { id: 'top',  label: `🟢 Top Fits (${topCutoff}%+)` },
+            { id: 'good', label: `🟡 Strong Fits (${goodCutoff}%+)` }
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setFilter(id)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
@@ -285,22 +292,37 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
           <Briefcase size={40} className="text-slate-600 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-white font-medium text-lg">No Opportunities Found Yet</h3>
+            <h3 className="text-white font-medium text-lg">
+              {rankedJobs.length > 0 ? `No roles matched active filter '${filter}'` : 'No Opportunities Found Yet'}
+            </h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Upload your resume and click <strong>Find Jobs from Resume</strong> — we'll search Unstop, Internshala, Indeed India, LinkedIn & Glassdoor live for you.
+              {rankedJobs.length > 0
+                ? `Your top match score among these opportunities is ${maxScore}%. Clear active filters to view all ${rankedJobs.length} live jobs.`
+                : "Upload your resume and click Find Jobs from Resume — we'll search Unstop, Internshala, Indeed India, LinkedIn & Glassdoor live for you."}
             </p>
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
-            <button onClick={() => runDiscoverAndMatch(selectedResumeId)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
-            >
-              <Search size={15} />Find Live Jobs for My Resume
-            </button>
-            <button onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all"
-            >
-              <Plus size={15} />Upload Resume PDF
-            </button>
+            {rankedJobs.length > 0 ? (
+              <button
+                onClick={() => { setFilter('all'); setPlatformFilter('all'); }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
+              >
+                Show All {rankedJobs.length} Opportunities
+              </button>
+            ) : (
+              <>
+                <button onClick={() => runDiscoverAndMatch(selectedResumeId)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
+                >
+                  <Search size={15} />Find Live Jobs for My Resume
+                </button>
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all"
+                >
+                  <Plus size={15} />Upload Resume PDF
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -310,8 +332,8 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         <div className="space-y-4">
           {filteredJobs.map((job, idx) => {
             const chance = job.selectionChance || job.matchScore || 50;
-            const isTop = chance >= 80;
-            const isGood = chance >= 65 && chance < 80;
+            const isTop = chance >= topCutoff;
+            const isGood = chance >= goodCutoff && !isTop;
             const platform = job.platform || job.requirements?.platform;
             const targetUrl = job.targetUrl || job.requirements?.targetUrl;
             const isSearchLink = job.requirements?.isSearchLink;
