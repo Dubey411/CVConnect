@@ -285,12 +285,12 @@ function Shell() {
             )}
             {activeTab === 'workspace' && (
               <>
-                <div className="mb-6 max-w-5xl mx-auto">
+                <div className="mb-6 max-w-6xl mx-auto">
                   <h1 className="text-2xl font-bold text-white tracking-tight">Tailoring Studio & Auto-Apply</h1>
                   <p className="text-xs text-slate-400 mt-1">Upload your resume, paste a target job URL, and trigger 1-click auto-apply across platforms.</p>
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[1fr_360px] max-w-5xl mx-auto">
+                <div className="grid gap-6 xl:grid-cols-[1fr_360px] max-w-6xl mx-auto">
                   <div className="space-y-6">
                     <section className="grid gap-5 lg:grid-cols-2">
                       <div>
