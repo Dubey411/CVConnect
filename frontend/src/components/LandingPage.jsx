@@ -103,13 +103,26 @@ function AmbientBackground() {
 
 /* ─── Nav ─────────────────────────────────────────────────────────────── */
 function Nav({ onGetStarted, onSignIn }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="sticky top-0 z-50 border-b border-[#20364d]/50 backdrop-blur-xl"
-      style={{ background: 'rgba(8,20,34,0.85)' }}
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 backdrop-blur-xl ${
+        scrolled
+          ? 'bg-[#081422]/95 border-b border-[#3be0c5]/30 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)]'
+          : 'bg-[#081422]/70 border-b border-[#20364d]/40'
+      }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -231,7 +244,7 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
         <Nav onGetStarted={onGetStarted} onSignIn={onSignIn} />
 
         {/* Hero */}
-        <div className="relative">
+        <div className="relative pt-16">
           <HeroSection onGetStarted={onGetStarted} onSignIn={onSignIn} />
           <ScrollIndicator />
         </div>
