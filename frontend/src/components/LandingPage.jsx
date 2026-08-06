@@ -118,21 +118,23 @@ function Nav({ onGetStarted, onSignIn }) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 backdrop-blur-xl ${
-        scrolled
-          ? 'bg-[#081422]/95 border-b border-[#3be0c5]/30 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)]'
-          : 'bg-[#081422]/70 border-b border-[#20364d]/40'
-      }`}
+      className="fixed top-0 left-0 right-0 z-[100] px-4 pt-3 pointer-events-none"
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div
+        className={`max-w-6xl mx-auto h-14 px-5 rounded-2xl flex items-center justify-between pointer-events-auto transition-all duration-300 backdrop-blur-xl ${
+          scrolled
+            ? 'bg-[#0c1b2c]/90 border border-[#3be0c5]/25 shadow-[0_12px_40px_rgba(0,0,0,0.7)]'
+            : 'bg-[#081422]/60 border border-white/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
+        }`}
+      >
         <div className="flex items-center gap-2.5">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[#081422] text-sm"
+            className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[#081422] text-xs"
             style={{ background: 'linear-gradient(135deg, #3be0c5, #60a5fa)' }}
           >
             CV
           </div>
-          <span className="font-semibold text-white tracking-tight">CVConnect</span>
+          <span className="font-semibold text-white text-sm tracking-tight">CVConnect</span>
           <span
             className="ml-1 px-1.5 py-0.5 rounded-full font-mono text-[9px] text-[#3be0c5] border border-[#3be0c5]/30 uppercase tracking-widest"
             style={{ background: 'rgba(59,224,197,0.06)' }}
@@ -148,7 +150,7 @@ function Nav({ onGetStarted, onSignIn }) {
             onClick={onGetStarted}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#081422] px-4 py-2 rounded-lg"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[#081422] px-3.5 py-1.5 rounded-xl"
             style={{
               background: 'linear-gradient(135deg, #3be0c5, #5de8d2)',
               boxShadow: '0 0 20px rgba(59,224,197,0.3)',
