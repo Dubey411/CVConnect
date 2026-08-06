@@ -68,7 +68,7 @@ export default function History({ onLoadResume, onNavigateToPlatforms }) {
   });
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
