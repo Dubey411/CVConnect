@@ -4,7 +4,7 @@
  * - Mounts hero section (existing) + ScrollStory (GSAP-driven cinematic sections)
  * - Mouse spotlight, ambient particles, sticky nav
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { gsap } from 'gsap';
