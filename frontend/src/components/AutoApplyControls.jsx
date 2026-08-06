@@ -330,7 +330,7 @@ export default function AutoApplyControls() {
   const totalDailyTarget = rules.reduce((acc, r) => acc + (r.isEnabled ? r.dailyLimit : 0), 0);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Page Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
