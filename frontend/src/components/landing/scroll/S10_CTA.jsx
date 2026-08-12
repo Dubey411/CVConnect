@@ -28,16 +28,16 @@ function ParticleCanvas() {
     resize();
     window.addEventListener('resize', resize);
 
-    // Spawn particles
-    for (let i = 0; i < 80; i++) {
+    // Spawn particles — fewer, smaller, more subtle
+    for (let i = 0; i < 40; i++) {
       particles.push({
         x:  Math.random() * canvas.width,
         y:  Math.random() * canvas.height,
-        r:  Math.random() * 1.5 + 0.5,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        alpha: Math.random() * 0.5 + 0.1,
-        color: Math.random() > 0.6 ? '#3be0c5' : '#60a5fa',
+        r:  Math.random() * 1 + 0.3,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
+        alpha: Math.random() * 0.25 + 0.05,
+        color: Math.random() > 0.7 ? '#3be0c5' : '#94a3b8',
       });
     }
 
@@ -55,17 +55,17 @@ function ParticleCanvas() {
         ctx.globalAlpha = p.alpha;
         ctx.fill();
 
-        // Draw connection lines to nearby particles
+        // Draw connection lines — only very close particles
         particles.forEach(p2 => {
           const dx = p.x - p2.x, dy = p.y - p2.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
+          if (dist < 80) {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = p.color;
-            ctx.globalAlpha = (1 - dist / 120) * 0.15;
-            ctx.lineWidth   = 0.5;
+            ctx.strokeStyle = '#3be0c5';
+            ctx.globalAlpha = (1 - dist / 80) * 0.07;
+            ctx.lineWidth   = 0.4;
             ctx.stroke();
           }
         });
@@ -145,36 +145,15 @@ export default function S10_CTA({ onGetStarted }) {
     >
       <ParticleCanvas />
 
-      {/* Animated gradient blobs */}
-      <motion.div
+      {/* Subtle top-center glow */}
+      <div
         className="absolute pointer-events-none"
-        style={{ width: 700, height: 700, top: '50%', left: '50%', x: '-50%', y: '-50%' }}
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-      >
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'conic-gradient(from 0deg, rgba(59,224,197,0.06), rgba(96,165,250,0.04), rgba(167,139,250,0.03), rgba(59,224,197,0.06))',
-          borderRadius: '50%',
-          filter: 'blur(60px)',
-        }} />
-      </motion.div>
-
-      {/* Noise texture overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundSize: '200px 200px',
-        }}
-      />
-
-      {/* Grid lines */}
-      <div
-        className="absolute inset-0 opacity-[0.025] pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(rgba(59,224,197,1) 1px, transparent 1px), linear-gradient(90deg, rgba(59,224,197,1) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
+          width: 600, height: 600,
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(ellipse, rgba(59,224,197,0.04) 0%, transparent 60%)',
+          filter: 'blur(40px)',
         }}
       />
 
