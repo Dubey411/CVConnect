@@ -76,18 +76,17 @@ export default function S9_FeatureStack() {
                   key={card.title}
                   className="rounded-2xl p-6 border transition-all duration-700 relative overflow-hidden"
                   style={{
-                    background: visible ? 'rgba(12,27,44,0.9)' : 'rgba(12,27,44,0.1)',
-                    borderColor: visible ? `${card.color}40` : 'rgba(32,54,77,0.3)',
-                    boxShadow: visible ? `0 0 30px ${card.color}10` : 'none',
+                    background: visible ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)',
+                    borderColor: visible ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: 'none',
                     opacity: visible ? 1 : 0,
-                    transform: visible ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.96)',
+                    transform: visible ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.98)',
                   }}
                 >
-                  {/* Glow on visible */}
                   {visible && (
                     <div
-                      className="absolute inset-0 rounded-2xl pointer-events-none"
-                      style={{ background: `radial-gradient(ellipse at 20% 20%, ${card.color}06, transparent 70%)` }}
+                      className="absolute inset-0 rounded-2xl pointer-events-none opacity-50"
+                      style={{ background: `radial-gradient(ellipse at 20% 20%, ${card.color}04, transparent 70%)` }}
                     />
                   )}
                   {/* Bottom accent */}
@@ -97,10 +96,10 @@ export default function S9_FeatureStack() {
                   />
 
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: `${card.color}12`, border: `1px solid ${card.color}30` }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                   >
-                    <card.icon size={20} style={{ color: card.color }} />
+                    <card.icon size={18} style={{ color: 'rgba(255,255,255,0.6)' }} />
                   </div>
                   <h3 className="text-sm font-semibold text-white mb-2">{card.title}</h3>
                   <p className="text-slate-400 text-xs leading-relaxed">{card.desc}</p>
