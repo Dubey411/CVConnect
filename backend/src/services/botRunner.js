@@ -657,7 +657,46 @@ export class BotRunner {
       if (applyBtn) {
         console.log('  🖱️ [BotRunner:Unstop] Quick Apply button found! Executing click...');
         await humanClick(applyBtn);
-        await delay(3000, 5000);
+
+        // Wait for navigation to /register page — up to 12s with retries
+        let navConfirmed = false;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          await delay(2500, 3500);
+          const currentUrl = page.url().toLowerCase();
+          if (currentUrl.includes('/register') || currentUrl.includes('rstatus=1')) {
+            console.log(`  ✅ [BotRunner:Unstop] Navigated to registration page: ${page.url()}`);
+            navConfirmed = true;
+            break;
+          }
+          // If page shows "Cancel Application" already, user was already registered
+          const bodyCheck = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+          if (
+            bodyCheck.includes('cancel application') ||
+            bodyCheck.includes('update details') ||
+            bodyCheck.includes('already registered')
+          ) {
+            console.log('  ✅ [BotRunner:Unstop] User already registered — detected after Quick Apply click.');
+            this.emit(userId, appId, 'complete', '✅ Already registered on Unstop!', 100);
+            return true;
+          }
+          console.log(`  ⏳ [BotRunner:Unstop] Waiting for /register nav... attempt ${attempt + 1}/4`);
+          // Try clicking again if still on listing page
+          if (attempt < 2) {
+            const retryBtn = await findVisible(page, [
+              '#un-register-btn',
+              'button:has-text("Quick Apply")',
+              'a:has-text("Quick Apply")',
+            ], 2000).catch(() => null);
+            if (retryBtn) {
+              console.log('  🔁 [BotRunner:Unstop] Retrying Quick Apply click...');
+              await humanClick(retryBtn);
+            }
+          }
+        }
+
+        if (!navConfirmed) {
+          console.warn('  ⚠️ [BotRunner:Unstop] Did not navigate to /register after Quick Apply click — proceeding anyway.');
+        }
       } else {
         console.warn('  ⚠️ [BotRunner:Unstop] Quick Apply button not found on listing page.');
       }
