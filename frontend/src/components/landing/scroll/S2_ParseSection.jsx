@@ -1,9 +1,6 @@
 /**
  * S2_ParseSection — AI Resume Parsing
- * Pin duration: 200vh
- * - Resume preview on screen
- * - Cyan scanning beam animates top → bottom (scrubbed to scroll)
- * - Resume sections highlight one by one: Skills → Experience → Education → Projects
+ * Pin: 200vh  |  Scrub: 1.8  |  Glow: minimal
  */
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
@@ -30,7 +27,7 @@ export default function S2_ParseSection() {
           trigger: wrapRef.current,
           start: 'top top',
           end: '+=200%',
-          scrub: 1.2,
+          scrub: 1.8,
           pin: stickyRef.current,
           anticipatePin: 1,
         },
@@ -50,8 +47,8 @@ export default function S2_ParseSection() {
       RESUME_SECTIONS.forEach((sec, i) => {
         tl.to(`#highlight-${sec.id}`, {
           opacity: 1,
-          boxShadow: '0 0 18px 4px rgba(59,224,197,0.55)',
-          background: 'rgba(59,224,197,0.08)',
+          boxShadow: '0 0 10px 2px rgba(59,224,197,0.2)',
+          background: 'rgba(59,224,197,0.06)',
           duration: 0.25,
         }, `<${i === 0 ? 0.3 : 0.15}`);
         tl.to(`#check-${sec.id}`, { opacity: 1, scale: 1, duration: 0.2 }, '<0.05');
@@ -75,12 +72,10 @@ export default function S2_ParseSection() {
         <div id="s2-content" className="w-full max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Label */}
           <div className="space-y-5">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-[#3be0c5]">Step 01 — AI Parsing</p>
+            <p className="text-xs text-[#3be0c5]/70 mb-2">Step 01 — AI Parsing</p>
             <h2 className="text-4xl lg:text-5xl font-bold text-white tracking-tight leading-[1.1]">
               AI reads every{' '}
-              <span className="bg-gradient-to-r from-[#3be0c5] to-[#60a5fa] bg-clip-text text-transparent">
-                line of your resume.
-              </span>
+              <span className="text-[#3be0c5]">line of your resume.</span>
             </h2>
             <p className="text-slate-400 text-base leading-relaxed">
               Our NLP engine extracts structured data from every section — then maps it to your target role requirements.
@@ -111,32 +106,28 @@ export default function S2_ParseSection() {
 
           {/* Right: Resume preview with scan beam */}
           <div className="relative">
-            {/* Outer glow */}
-            <div className="absolute -inset-4 rounded-2xl blur-xl opacity-30 pointer-events-none"
-              style={{ background: 'radial-gradient(#3be0c5, transparent 70%)' }} />
-
-            <div className="relative rounded-xl overflow-hidden border border-[#20364d]"
-              style={{ background: '#0c1b2c', minHeight: 400 }}>
+            <div className="relative rounded-xl overflow-hidden"
+              style={{ background: '#0d1f30', border: '1px solid rgba(255,255,255,0.07)', minHeight: 400 }}>
 
               {/* Scan beam */}
               <div
                 ref={beamRef}
                 className="absolute left-0 right-0 pointer-events-none z-20"
                 style={{
-                  height: 3,
-                  background: 'linear-gradient(90deg, transparent, #3be0c5, #60a5fa, transparent)',
-                  boxShadow: '0 0 24px 8px rgba(59,224,197,0.5)',
+                  height: 2,
+                  background: 'linear-gradient(90deg, transparent, rgba(59,224,197,0.7), transparent)',
+                  boxShadow: '0 0 12px 3px rgba(59,224,197,0.2)',
                   top: '0%',
                 }}
               />
 
               {/* Resume header */}
-              <div className="p-5 border-b border-[#20364d]/60">
-                <div className="text-white font-semibold text-base">Shubham Dubey</div>
-                <div className="text-slate-400 text-xs mt-0.5">Computer Engineer · dubeytech9619@gmail.com</div>
+              <div className="p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="text-white font-semibold text-sm">Shubham Dubey</div>
+                <div className="text-slate-500 text-xs mt-0.5">Computer Engineer · dubeytech9619@gmail.com</div>
                 <div className="flex gap-2 mt-2">
                   {['React', 'Node.js', 'Python', 'SQL'].map(sk => (
-                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] border border-[#20364d] text-slate-400">
+                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] text-slate-500" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
                       {sk}
                     </span>
                   ))}
