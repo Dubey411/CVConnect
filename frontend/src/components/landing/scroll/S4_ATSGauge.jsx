@@ -37,11 +37,10 @@ export default function S4_ATSGauge() {
           trigger: wrapRef.current,
           start: 'top top',
           end: '+=250%',
-          scrub: 1.5,
+          scrub: 1.8,
           pin: stickyRef.current,
           anticipatePin: 1,
           onUpdate: (self) => {
-            // Derive live score from progress
             const p = Math.min(self.progress, 1);
             const live = Math.round(54 + (91 - 54) * p);
             setScore(live);
@@ -69,9 +68,7 @@ export default function S4_ATSGauge() {
         {/* Dynamic background glow */}
         <div
           className="absolute inset-0 pointer-events-none transition-all duration-700"
-          style={{
-            background: `radial-gradient(ellipse 60% 60% at 50% 50%, rgba(59,224,197,${0.02 + glowIntensity * 0.001}), transparent)`,
-          }}
+          style={{ background: 'rgba(59,224,197,0.04)', border: '1px solid rgba(59,224,197,0.1)' }}
         />
 
         <div id="s4-content" className="w-full max-w-5xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
@@ -101,7 +98,7 @@ export default function S4_ATSGauge() {
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={circumference - strokeDash}
-                  style={{ transition: 'stroke-dashoffset 0.1s linear', filter: `drop-shadow(0 0 ${6 + glowIntensity * 0.4}px rgba(59,224,197,0.8))` }}
+                  style={{ transition: 'stroke-dashoffset 0.1s linear' }}
                 />
                 <defs>
                   <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -115,8 +112,7 @@ export default function S4_ATSGauge() {
                   className="text-5xl font-bold font-mono tabular-nums"
                   style={{
                     color: '#3be0c5',
-                    textShadow: `0 0 ${glowIntensity}px rgba(59,224,197,0.6)`,
-                    transition: 'text-shadow 0.2s',
+                    transition: 'none',
                   }}
                 >
                   {score}%
