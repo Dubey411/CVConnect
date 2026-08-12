@@ -1040,8 +1040,21 @@ export async function verifyUnstopRegistration(page, oppId) {
       bodyText.includes('already registered') ||
       bodyText.includes('cancel application') ||
       bodyText.includes('update details') ||
-      bodyText.includes('my details')
+      bodyText.includes('my details') ||
+      bodyText.includes('withdraw application') ||
+      bodyText.includes('view my registration') ||
+      bodyText.includes('registered successfully') ||
+      bodyText.includes('you are registered') ||
+      bodyText.includes('registered!') ||
+      bodyText.includes('submission successful') ||
+      bodyText.includes('your application has been') ||
+      bodyText.includes('application received')
     );
+
+    // Explicit negative signal: if "Quick Apply" is still on the page, user is NOT registered
+    const quickApplyStillPresent = await page.locator(
+      'button:has-text("Quick Apply"), a:has-text("Quick Apply"), #un-register-btn'
+    ).count().catch(() => 0) > 0;
 
     const hasRegisteredBtn = await page.locator(
       'button:has-text("Registered"), button:has-text("Applied"), a:has-text("Registered"), button:has-text("Cancel Application"), button:has-text("Update Details")'
@@ -1050,8 +1063,11 @@ export async function verifyUnstopRegistration(page, oppId) {
     console.log(`  -> URL: ${url}`);
     console.log(`  -> Text Matched: ${isRegisteredText}`);
     console.log(`  -> Button Text "Registered/Cancel" Visible: ${hasRegisteredBtn}`);
+    console.log(`  -> "Quick Apply" still present (negative signal): ${quickApplyStillPresent}`);
 
-    const verified = isRegisteredText || hasRegisteredBtn;
+    // If Quick Apply is gone and we have any positive signal, trust it
+    // If Quick Apply is still present, it overrides text matches (page not yet transitioned)
+    const verified = (isRegisteredText || hasRegisteredBtn) && !quickApplyStillPresent;
 
     if (!verified && oppId) {
       console.log(`  -> Querying Unstop opportunity API for opportunity #${oppId}...`);
