@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, FileText, Sparkles, X, Menu, ArrowLeft, Target } from 'lucide-react';
+import { BarChart3, FileText, Sparkles, X, Menu, ArrowLeft, Target, ChevronRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
