@@ -1,56 +1,39 @@
 import { useEffect, useState } from 'react';
 import {
-  BarChart3, TrendingUp, Target, Award, Lightbulb, RefreshCw,
-  Zap, CheckCircle2, AlertCircle, Layers, PieChart, ShieldCheck
+  BarChart3, Target, Award, Lightbulb, RefreshCw,
+  FileText, CheckCircle2, AlertCircle, Layers, Sparkles
 } from 'lucide-react';
 import { request } from '../api';
 
-const PLATFORM_META = {
-  unstop:      { name: 'Unstop',     icon: '⚡', color: '#F7C948', bg: 'rgba(247,201,72,0.12)' },
-  wellfound:   { name: 'Wellfound',  icon: '🚀', color: '#00B894', bg: 'rgba(0,184,148,0.12)' },
-  linkedin:    { name: 'LinkedIn',    icon: '🔗', color: '#0A66C2', bg: 'rgba(10,102,194,0.12)' },
-  internshala: { name: 'Internshala',icon: '🎓', color: '#00B5AD', bg: 'rgba(0,181,173,0.12)' },
-  indeed:      { name: 'Indeed',     icon: '🏢', color: '#2164F3', bg: 'rgba(33,100,243,0.12)' },
-  glassdoor:   { name: 'Glassdoor',  icon: '🔮', color: '#0CAA41', bg: 'rgba(12,170,65,0.12)' },
-  naukri:      { name: 'Naukri',     icon: '📋', color: '#FF7555', bg: 'rgba(255,117,85,0.12)' },
-};
-
 export default function Insights() {
   const [loading, setLoading] = useState(true);
-  const [appSummary, setAppSummary] = useState({
-    total: 0,
-    todayCount: 0,
-    submitted: 0,
-    failed: 0,
-    platforms: {}
-  });
   const [resumeStats, setResumeStats] = useState({
     totalResumes: 0,
+    tailoredCount: 0,
     avgMatch: 0,
     avgAts: 0,
     topGaps: [],
-    topSkills: []
+    topSkills: [],
+    categories: {}
   });
 
   const fetchInsights = async () => {
     setLoading(true);
     try {
-      const [appsRes, resumesRes] = await Promise.all([
-        request({ method: 'get', url: '/applications' }),
-        request({ method: 'get', url: '/resumes?limit=100' }),
-      ]);
-
-      setAppSummary(appsRes.summary || { total: 0, todayCount: 0, submitted: 0, failed: 0, platforms: {} });
-
+      const resumesRes = await request({ method: 'get', url: '/resumes?limit=100' });
       const items = resumesRes.items || [];
+
       let totalMatch = 0;
       let totalAts = 0;
       let matchCount = 0;
       let atsCount = 0;
+      let tailoredCount = 0;
       const gapCounts = {};
       const skillCounts = {};
+      const catCounts = {};
 
       items.forEach(item => {
+        if (item.optimized) tailoredCount++;
         if (item.matchScore) {
           totalMatch += item.matchScore;
           matchCount++;
@@ -59,14 +42,18 @@ export default function Insights() {
           totalAts += item.atsScore;
           atsCount++;
         }
+
+        const cat = item.category || 'General';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+
         if (item.skillGap && Array.isArray(item.skillGap)) {
           item.skillGap.forEach(skill => {
-            gapCounts[skill] = (gapCounts[skill] || 0) + 1;
+            if (skill) gapCounts[skill] = (gapCounts[skill] || 0) + 1;
           });
         }
         if (item.optimized?.skills && Array.isArray(item.optimized.skills)) {
           item.optimized.skills.forEach(skill => {
-            skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+            if (skill) skillCounts[skill] = (skillCounts[skill] || 0) + 1;
           });
         }
       });
@@ -83,10 +70,12 @@ export default function Insights() {
 
       setResumeStats({
         totalResumes: items.length,
+        tailoredCount,
         avgMatch: matchCount ? Math.round(totalMatch / matchCount) : 0,
         avgAts: atsCount ? Math.round(totalAts / atsCount) : 0,
         topGaps,
-        topSkills
+        topSkills,
+        categories: catCounts
       });
     } catch (err) {
       console.error('Failed to load insights data:', err);
@@ -99,16 +88,20 @@ export default function Insights() {
     fetchInsights();
   }, []);
 
-  const successPct = appSummary.total ? Math.round((appSummary.submitted / appSummary.total) * 100) : 100;
+  const tailoredPct = resumeStats.totalResumes
+    ? Math.round((resumeStats.tailoredCount / resumeStats.totalResumes) * 100)
+    : 0;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Analytics & Application Intelligence</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">Career & Auto-Apply Insights</h1>
-          <p className="mt-1 text-sm text-slate-400">Data-driven analysis connecting auto-apply velocity, platform distribution, ATS match scores, and skill gap intelligence.</p>
+          <p className="eyebrow">Resume & Match Intelligence</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">Resume Analytics</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Data-driven analysis of your resume drafts, ATS compliance ratings, match scores, and recurring skill gaps.
+          </p>
         </div>
         <button
           onClick={fetchInsights}
@@ -122,7 +115,7 @@ export default function Insights() {
       {loading ? (
         <div className="panel p-12 text-center text-slate-400">
           <RefreshCw size={24} className="animate-spin mx-auto mb-3 text-aqua" />
-          Analyzing your application portfolio & resume metrics...
+          Analyzing your resume portfolio & match metrics...
         </div>
       ) : (
         <div className="space-y-6">
@@ -130,20 +123,20 @@ export default function Insights() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="panel p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                <span>Total Applications</span>
-                <Zap size={16} className="text-amber-400" />
+                <span>Total Saved Drafts</span>
+                <FileText size={16} className="text-amber-400" />
               </div>
-              <p className="text-3xl font-bold font-mono text-white">{appSummary.total}</p>
-              <p className="text-[11px] text-slate-400 mt-1 font-mono">{appSummary.todayCount} submitted today</p>
+              <p className="text-3xl font-bold font-mono text-white">{resumeStats.totalResumes}</p>
+              <p className="text-[11px] text-slate-400 mt-1 font-mono">{resumeStats.tailoredCount} AI-tailored versions</p>
             </div>
 
             <div className="panel p-5">
               <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                <span>Submission Success Rate</span>
-                <ShieldCheck size={16} className="text-emerald-400" />
+                <span>Tailored Version Rate</span>
+                <Sparkles size={16} className="text-emerald-400" />
               </div>
-              <p className="text-3xl font-bold font-mono text-emerald-400">{successPct}%</p>
-              <p className="text-[11px] text-slate-400 mt-1">{appSummary.submitted} succeeded · {appSummary.failed} failed</p>
+              <p className="text-3xl font-bold font-mono text-emerald-400">{tailoredPct}%</p>
+              <p className="text-[11px] text-slate-400 mt-1">{resumeStats.tailoredCount} tailored · {resumeStats.totalResumes - resumeStats.tailoredCount} original</p>
             </div>
 
             <div className="panel p-5">
@@ -165,29 +158,28 @@ export default function Insights() {
             </div>
           </div>
 
-          {/* Platform Distribution Breakdown Section */}
+          {/* Category Distribution Breakdown Section */}
           <div className="panel p-6">
             <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-              <PieChart size={16} className="text-aqua" /> Platform Application Volume Breakdown
+              <Layers size={16} className="text-aqua" /> Target Role Categories
             </h2>
 
-            {Object.keys(appSummary.platforms || {}).length === 0 ? (
-              <p className="text-xs text-slate-400 italic py-4">No applications submitted across platforms yet. Use Auto-Apply Controls to begin.</p>
+            {Object.keys(resumeStats.categories || {}).length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-4">No resume categories logged yet. Upload or match resumes in the Workspace to begin.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(appSummary.platforms).map(([platform, count]) => {
-                  const meta = PLATFORM_META[platform] || { name: platform, icon: '🌐', color: '#3be0c5', bg: 'rgba(59,224,197,0.12)' };
-                  const pct = Math.round((count / (appSummary.total || 1)) * 100);
+                {Object.entries(resumeStats.categories).map(([cat, count]) => {
+                  const pct = Math.round((count / (resumeStats.totalResumes || 1)) * 100);
 
                   return (
-                    <div key={platform} className="p-3.5 rounded-xl border border-line bg-surface/60 flex items-center justify-between gap-3">
+                    <div key={cat} className="p-3.5 rounded-xl border border-line bg-surface/60 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 flex items-center justify-center rounded-lg text-lg" style={{ background: meta.bg }}>
-                          {meta.icon}
+                        <div className="h-9 w-9 flex items-center justify-center rounded-lg text-sm bg-aqua/10 text-aqua font-mono font-bold border border-aqua/20">
+                          {cat.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-white capitalize">{meta.name}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{count} applications ({pct}%)</p>
+                          <p className="text-xs font-semibold text-white capitalize">{cat}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{count} drafts ({pct}%)</p>
                         </div>
                       </div>
                       <div className="h-2 w-16 rounded-full bg-surface overflow-hidden">
@@ -228,10 +220,10 @@ export default function Insights() {
               <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-400" /> Top Matching Strengths
               </h3>
-              <p className="text-xs text-slate-400 mb-4">Core competencies consistently verified and highlighted in your Role Resumes.</p>
+              <p className="text-xs text-slate-400 mb-4">Core competencies consistently verified and highlighted in your tailored resumes.</p>
 
               {resumeStats.topSkills.length === 0 ? (
-                <p className="text-xs text-slate-500 italic py-4">Upload role resumes in Auto-Apply Controls to highlight strengths.</p>
+                <p className="text-xs text-slate-500 italic py-4">Tailor resumes in the Workspace to highlight your key strengths.</p>
               ) : (
                 <div className="space-y-2">
                   {resumeStats.topSkills.map(skill => (
@@ -252,10 +244,10 @@ export default function Insights() {
             <div className="flex items-start gap-3">
               <Lightbulb size={20} className="text-aqua shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-semibold text-white">Strategic Optimization Tip</h3>
+                <h3 className="text-sm font-semibold text-white">Strategic Tailoring Tip</h3>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  Your portfolio has <strong className="text-white">{appSummary.submitted} verified auto-applies</strong> across platforms.
-                  Ensure your <strong className="text-aqua">Data Engineer</strong> and <strong className="text-aqua">Full Stack</strong> Role Resumes in the Auto-Apply Vault are updated with your latest projects to maximize interview callback rates!
+                  You have <strong className="text-white">{resumeStats.totalResumes} saved resume drafts</strong> in your portfolio.
+                  Focus on filling the top missing skills identified above in your experience bullet points to bring your average ATS match score above <strong className="text-aqua">80%</strong>!
                 </p>
               </div>
             </div>
