@@ -146,21 +146,20 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" />
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900/40 via-purple-900/30 to-indigo-900/40 border border-violet-500/20 p-6 md:p-8 backdrop-blur-xl">
-        <div className="absolute -right-12 -top-12 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0c1b2c] via-[#0d2035] to-[#0c1b2c] border border-aqua/15 p-6 md:p-8">
+        <div className="absolute -right-12 -top-12 w-64 h-64 bg-aqua/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles size={13} className="animate-pulse" />
-              AI Multi-Platform Job Matcher
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aqua/10 border border-aqua/30 text-aqua text-xs font-semibold">
+              <Target size={13} />
+              AI Job Matching · Live Search
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-              Best Matched Opportunities Leaderboard
+              Find Best Matching Jobs
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl">
-              Live search across <strong className="text-violet-400">Unstop · Internshala · Indeed India · LinkedIn · Glassdoor</strong>.
-              ML-scored and ranked for your resume.
+              Searches across <strong className="text-white">Unstop · Internshala · Indeed India · LinkedIn · Glassdoor</strong> and ranks them by how well they match your resume.
             </p>
           </div>
 
@@ -431,7 +430,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                         </a>
                       )}
 
-                      {/* Auto-Apply (only for real listings, not search links) */}
+                      {/* Tailor Resume (only for real listings, not search links) */}
                       {!isSearchLink && (
                         <button
                           onClick={() => {
@@ -440,12 +439,12 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                           }}
                           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold text-xs transition-all ${
                             isTop
-                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
-                              : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30'
+                              ? 'bg-aqua/15 hover:bg-aqua/25 text-aqua border border-aqua/30'
+                              : 'bg-slate-700/60 hover:bg-slate-700 text-slate-200 border border-slate-700'
                           }`}
                         >
-                          <Zap size={12} />
-                          Auto-Apply
+                          <Sparkles size={12} />
+                          Tailor Resume
                         </button>
                       )}
                     </div>
