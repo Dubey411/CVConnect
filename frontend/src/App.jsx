@@ -273,7 +273,6 @@ function Shell() {
                   dispatch(setResume(item));
                   setActiveTab('workspace');
                 }}
-                onNavigateToPlatforms={() => setActiveTab('platforms')}
               />
             )}
             {activeTab === 'workspace' && (
