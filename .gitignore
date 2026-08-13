@@ -12,3 +12,4 @@ test_*
 profiles/
 backend/profiles/
 artifacts/
+scratch/
