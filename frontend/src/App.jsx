@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Bell, ChevronRight, FileText, LogOut, Menu, Sparkles, X, ArrowLeft, Globe, Sliders } from 'lucide-react';
+import { BarChart3, FileText, Sparkles, X, Menu, ArrowLeft, Target } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { request } from './api';
@@ -12,11 +12,7 @@ import Editor from './components/Editor';
 import LandingPage from './components/LandingPage';
 import History from './components/History';
 import Insights from './components/Insights';
-import PlatformAccounts from './components/PlatformAccounts';
-import AutoApplyControls from './components/AutoApplyControls';
-
 import MatchLeaderboard from './components/MatchLeaderboard';
-import { Target } from 'lucide-react';
 
 function Auth({ mode, setMode, onBack }) {
   const dispatch = useDispatch();
@@ -65,19 +61,19 @@ function Auth({ mode, setMode, onBack }) {
             <span className="eyebrow">Enterprise-grade application automation</span>
             <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white font-sans">
               Tailor every resume. <br />
-              <span className="text-aqua">Auto-apply with total proof.</span>
+              <span className="text-aqua">Tailor every resume.</span>
             </h1>
             <p className="max-w-md text-sm leading-relaxed text-slate-400">
-              Transform your raw CV into precision-targeted applications for Unstop, LinkedIn, Wellfound, Internshala, Indeed, Naukri, and Glassdoor.
+              Upload your resume, paste a job description, and let AI tailor your resume to what the JD requires — with an ATS score, keyword gap analysis, and a print-ready PDF in under 5 seconds.
             </p>
           </div>
 
           <div className="flex items-center gap-4 text-xs font-mono text-slate-500">
             <span>✓ DeepSeek V3 AI</span>
             <span>•</span>
-            <span>✓ Anti-Bot Stealth</span>
+            <span>✓ ATS Keyword Analysis</span>
             <span>•</span>
-            <span>✓ Live Proof logs</span>
+            <span>✓ Print-Ready PDF</span>
           </div>
         </div>
       </section>
@@ -96,7 +92,7 @@ function Auth({ mode, setMode, onBack }) {
               {mode === 'login' ? 'Welcome back' : 'Create your account'}
             </h2>
             <p className="mt-1 text-xs text-slate-400">
-              {mode === 'login' ? 'Sign in to access your Tailoring Studio and Auto-Apply bots.' : 'Get started with automated job applications in under 2 minutes.'}
+              {mode === 'login' ? 'Sign in to access your Resume Builder and Job Match dashboard.' : 'Get started — tailor your resume to any job description in under 60 seconds.'}
             </p>
           </div>
 
@@ -185,12 +181,10 @@ function Shell() {
   const doRewrite = () => resume && job && dispatch(rewriteResume({ resumeId: resume.id, jobId: job.id }));
 
   const nav = [
-    ['Workspace', Sparkles, 'workspace'],
-    ['Job Matcher', Target, 'matcher'],
-    ['Platforms', Globe, 'platforms'],
-    ['Auto Apply', Sliders, 'controls'],
-    ['Insights', BarChart3, 'insights'],
-    ['History', FileText, 'history'],
+    ['Workspace',  Sparkles, 'workspace'],
+    ['Find Jobs',  Target,   'matcher'],
+    ['Insights',   BarChart3, 'insights'],
+    ['History',    FileText,  'history'],
   ];
 
   return (
@@ -253,15 +247,16 @@ function Shell() {
               <p className="font-semibold text-white">System Status</p>
               <p className="mt-1 text-[11px] text-emerald-400 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"/>
-                All 7 Bots Active & Ready
+                AI Engine Ready
               </p>
+              <p className="mt-1 text-[11px] text-slate-500">Resume ML · ATS Scoring · PDF export</p>
             </div>
           </div>
         </aside>
 
         <main className="flex-1 p-5 md:p-8 overflow-x-hidden">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-            {activeTab === 'matcher' && (
+            {activeTab === 'matcher'  && (
               <MatchLeaderboard
                 onSelectJob={(selectedJob) => {
                   dispatch(analyzeJob({ description: selectedJob.description, title: selectedJob.title, company: selectedJob.company }));
@@ -271,10 +266,8 @@ function Shell() {
                 }}
               />
             )}
-            {activeTab === 'platforms' && <PlatformAccounts />}
-            {activeTab === 'controls' && <AutoApplyControls />}
             {activeTab === 'insights' && <Insights />}
-            {activeTab === 'history' && (
+            {activeTab === 'history'  && (
               <History
                 onLoadResume={(item) => {
                   dispatch(setResume(item));
@@ -286,19 +279,19 @@ function Shell() {
             {activeTab === 'workspace' && (
               <>
                 <div className="mb-6 max-w-6xl mx-auto">
-                  <h1 className="text-2xl font-bold text-white tracking-tight">Tailoring Studio & Auto-Apply</h1>
-                  <p className="text-xs text-slate-400 mt-1">Upload your resume, paste a target job URL, and trigger 1-click auto-apply across platforms.</p>
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Resume Builder &amp; Job Match</h1>
+                  <p className="text-xs text-slate-400 mt-1">Paste a job description, upload your resume, and get an AI-tailored resume optimized for that specific role — with keyword gap analysis and a downloadable PDF.</p>
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-[1fr_360px] max-w-6xl mx-auto">
                   <div className="space-y-6">
                     <section className="grid gap-5 lg:grid-cols-2">
                       <div>
-                        <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">01 / Source resume</p>
+                        <p className="mb-3 text-xs text-slate-500">01 / Your resume</p>
                         <ResumeUpload resume={resume} busy={busy} onUpload={doUpload}/>
                       </div>
                       <div>
-                        <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">02 / Target position</p>
+                        <p className="mb-3 text-xs text-slate-500">02 / Job description</p>
                         <JobDescriptionInput job={job} busy={busy} onAnalyze={doAnalyze}/>
                       </div>
                     </section>
