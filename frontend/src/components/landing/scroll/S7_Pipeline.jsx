@@ -12,13 +12,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const NODES = [
-  { id: 'n1', label: 'Upload',    sub: 'PDF / DOCX',       color: '#C17A5B' },
-  { id: 'n2', label: 'Parse',     sub: 'Structure extract', color: '#1E2B37' },
-  { id: 'n3', label: 'Analyze',   sub: 'ATS scoring',       color: '#C17A5B' },
-  { id: 'n4', label: 'Rewrite',   sub: 'NLP bullets',       color: '#1E2B37' },
-  { id: 'n5', label: 'Optimize',  sub: 'Keyword inject',    color: '#C17A5B' },
-  { id: 'n6', label: 'ATS Score', sub: 'Final check',       color: '#1E2B37' },
-  { id: 'n7', label: 'PDF',       sub: 'Calibri A4',        color: '#C17A5B' },
+  { id: 'n1', label: 'Upload',    sub: 'PDF / DOCX',       color: '#9E6634' },
+  { id: 'n2', label: 'Parse',     sub: 'Structure extract', color: '#16202C' },
+  { id: 'n3', label: 'Analyze',   sub: 'ATS scoring',       color: '#9E6634' },
+  { id: 'n4', label: 'Rewrite',   sub: 'NLP bullets',       color: '#16202C' },
+  { id: 'n5', label: 'Optimize',  sub: 'Keyword inject',    color: '#9E6634' },
+  { id: 'n6', label: 'ATS Score', sub: 'Final check',       color: '#16202C' },
+  { id: 'n7', label: 'PDF',       sub: 'Calibri A4',        color: '#9E6634' },
 ];
 
 export default function S7_Pipeline() {
@@ -74,10 +74,10 @@ export default function S7_Pipeline() {
 
         <div id="s7-content" className="w-full max-w-6xl mx-auto px-6">
           <div className="text-center mb-16 space-y-2">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 06 — Full Pipeline</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-[#9E6634]">Step 06 — Full Pipeline</p>
             <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               Seven steps.{' '}
-              <span className="text-[#1E2B37]">
+              <span className="text-[#16202C]">
                 Under 5 seconds.
               </span>
             </h2>
@@ -93,7 +93,7 @@ export default function S7_Pipeline() {
               preserveAspectRatio="none"
             >
               {/* Background track */}
-              <line x1="60" y1="28" x2="940" y2="28" stroke="rgba(30,43,55,0.15)" strokeWidth="2" />
+              <line x1="60" y1="28" x2="940" y2="28" stroke="rgba(22,32,44,0.15)" strokeWidth="2" />
               {/* Animated progress line */}
               <line
                 ref={lineRef}
@@ -104,9 +104,9 @@ export default function S7_Pipeline() {
               />
               <defs>
                 <linearGradient id="pipelineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#C17A5B" />
-                  <stop offset="50%"  stopColor="#1E2B37" />
-                  <stop offset="100%" stopColor="#C17A5B" />
+                  <stop offset="0%"   stopColor="#9E6634" />
+                  <stop offset="50%"  stopColor="#16202C" />
+                  <stop offset="100%" stopColor="#9E6634" />
                 </linearGradient>
               </defs>
             </svg>
@@ -121,10 +121,10 @@ export default function S7_Pipeline() {
                     <div
                       className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-500"
                       style={{
-                        background:   isActive ? 'rgba(193,122,91,0.15)' : '#FAF7F2',
-                        borderColor:  isActive ? '#C17A5B' : 'rgba(30,43,55,0.2)',
-                        color:        isActive ? '#C17A5B' : '#6E6259',
-                        boxShadow:    isActive ? '0 0 20px rgba(193,122,91,0.25)' : 'none',
+                        background:   isActive ? 'rgba(158,102,52,0.15)' : '#FAF7F2',
+                        borderColor:  isActive ? '#9E6634' : 'rgba(22,32,44,0.2)',
+                        color:        isActive ? '#9E6634' : '#6E6259',
+                        boxShadow:    isActive ? '0 0 20px rgba(158,102,52,0.25)' : 'none',
                         transform:    isActive ? 'scale(1.08)' : 'scale(1)',
                       }}
                     >
