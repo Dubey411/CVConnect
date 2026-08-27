@@ -13,10 +13,10 @@ gsap.registerPlugin(ScrollTrigger);
 
 const CATEGORIES = [
   { label: 'Skills Match',     from: 48, to: 92, color: '#C17A5B' },
-  { label: 'Keywords',         from: 40, to: 88, color: '#5B3A4A' },
+  { label: 'Keywords',         from: 40, to: 88, color: '#1E2B37' },
   { label: 'Experience Fit',   from: 55, to: 82, color: '#8C4E34' },
   { label: 'Education',        from: 70, to: 95, color: '#C17A5B' },
-  { label: 'Domain Alignment', from: 45, to: 85, color: '#5B3A4A' },
+  { label: 'Domain Alignment', from: 45, to: 85, color: '#1E2B37' },
 ];
 
 export default function S4_ATSGauge() {
@@ -88,7 +88,7 @@ export default function S4_ATSGauge() {
             <div className="relative" style={{ width: 220, height: 220 }}>
               <svg width="220" height="220" viewBox="0 0 220 220" className="-rotate-90">
                 {/* Track */}
-                <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(91,58,74,0.15)" strokeWidth="14" />
+                <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(30,43,55,0.15)" strokeWidth="14" />
                 {/* Progress */}
                 <circle
                   cx="110" cy="110" r={radius}
@@ -103,7 +103,7 @@ export default function S4_ATSGauge() {
                 <defs>
                   <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%"   stopColor="#C17A5B" />
-                    <stop offset="100%" stopColor="#5B3A4A" />
+                    <stop offset="100%" stopColor="#1E2B37" />
                   </linearGradient>
                 </defs>
               </svg>
@@ -127,12 +127,12 @@ export default function S4_ATSGauge() {
                 <div key={m} className="text-center">
                   <div
                     className="text-sm font-bold font-mono"
-                    style={{ color: score >= m ? '#C17A5B' : 'rgba(91,58,74,0.25)' }}
+                    style={{ color: score >= m ? '#C17A5B' : 'rgba(30,43,55,0.25)' }}
                   >
                     {m}%
                   </div>
                   <div className="w-1.5 h-1.5 rounded-full mx-auto mt-1"
-                    style={{ background: score >= m ? '#C17A5B' : 'rgba(91,58,74,0.25)' }} />
+                    style={{ background: score >= m ? '#C17A5B' : 'rgba(30,43,55,0.25)' }} />
                 </div>
               ))}
             </div>
@@ -147,7 +147,7 @@ export default function S4_ATSGauge() {
                   <span className="text-[#6E6259]">{cat.label}</span>
                   <span className="font-mono text-[#2A2622]">{barPcts[i]}%</span>
                 </div>
-                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(91,58,74,0.12)' }}>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(30,43,55,0.12)' }}>
                   <div
                     className="h-full rounded-full"
                     style={{
