@@ -178,7 +178,7 @@ export default function S10_CTA({ onGetStarted }) {
           className="text-5xl lg:text-6xl font-bold text-[#2A2622] tracking-tight leading-[1.08]"
         >
           Ready to beat{' '}
-          <span className="text-[#5B3A4A]">
+          <span className="text-[#1E2B37]">
             ATS filters?
           </span>
         </motion.h2>
@@ -212,7 +212,7 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-10 pt-6 border-t border-[#5B3A4A]/15"
+          className="flex items-center justify-center gap-10 pt-6 border-t border-[#1E2B37]/15"
         >
           {[
             ['98%', 'ATS Accuracy'],
