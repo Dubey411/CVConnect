@@ -119,7 +119,7 @@ function DashboardMockup() {
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs text-[#6E6259]">ATS Score</span>
             <motion.span
-              className="font-mono text-sm font-bold text-[#C17A5BX]"
+              className="font-mono text-sm font-bold text-[#C17A5B]"
               key={score}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -131,7 +131,7 @@ function DashboardMockup() {
             <motion.div
               className="h-full rounded-full"
               style={{ background: 'linear-gradient(90deg, #C17A5B, #5B3A4A)' }}
-              animate={{ width: `${score}%` }}
+              animate={{ width: score + '%' }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             />
           </div>
