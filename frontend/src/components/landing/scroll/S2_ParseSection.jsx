@@ -107,7 +107,7 @@ export default function S2_ParseSection() {
           {/* Right: Resume preview with scan beam */}
           <div className="relative">
             <div className="relative rounded-xl overflow-hidden"
-              style={{ background: '#FAF7F2', border: '1px solid rgba(91,58,74,0.18)', boxShadow: '0 20px 50px rgba(91,58,74,0.1)', minHeight: 400 }}>
+              style={{ background: '#FAF7F2', border: '1px solid rgba(30,43,55,0.18)', boxShadow: '0 20px 50px rgba(30,43,55,0.1)', minHeight: 400 }}>
 
               {/* Scan beam */}
               <div
@@ -122,12 +122,12 @@ export default function S2_ParseSection() {
               />
 
               {/* Resume header */}
-              <div className="p-5 border-b" style={{ borderColor: 'rgba(91,58,74,0.1)', background: 'rgba(245,240,232,0.8)' }}>
+              <div className="p-5 border-b" style={{ borderColor: 'rgba(30,43,55,0.1)', background: 'rgba(245,240,232,0.8)' }}>
                 <div className="text-[#2A2622] font-semibold text-sm">Shubham Dubey</div>
                 <div className="text-[#6E6259] text-xs mt-0.5">Computer Engineer · dubeytech9619@gmail.com</div>
                 <div className="flex gap-2 mt-2">
                   {['React', 'Node.js', 'Python', 'SQL'].map(sk => (
-                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] text-[#6E6259]" style={{ border: '1px solid rgba(91,58,74,0.15)', background: '#F5F0E8' }}>
+                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] text-[#6E6259]" style={{ border: '1px solid rgba(30,43,55,0.15)', background: '#F5F0E8' }}>
                       {sk}
                     </span>
                   ))}
@@ -143,7 +143,7 @@ export default function S2_ParseSection() {
                     className="rounded-lg p-3 border transition-all"
                     style={{
                       opacity: 0.15,
-                      borderColor: 'rgba(91,58,74,0.12)',
+                      borderColor: 'rgba(30,43,55,0.12)',
                       background: 'transparent',
                     }}
                   >
@@ -153,7 +153,7 @@ export default function S2_ParseSection() {
                     <div className="space-y-1.5">
                       {[1, 2].map(l => (
                         <div key={l}
-                          className="h-2 rounded-full bg-[#5B3A4A]/20"
+                          className="h-2 rounded-full bg-[#1E2B37]/20"
                           style={{ width: l === 1 ? '80%' : '55%' }}
                         />
                       ))}
