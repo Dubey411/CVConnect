@@ -36,7 +36,7 @@ function renderHighlighted(text) {
   return parts.map((part, i) => {
     if (part.startsWith('[') && part.endsWith(']')) {
       return (
-        <mark key={i} style={{ background: 'rgba(59,224,197,0.15)', color: '#3be0c5', borderRadius: 3, padding: '0 3px' }}>
+        <mark key={i} style={{ background: 'rgba(193,122,91,0.15)', color: '#C17A5B', borderRadius: 3, padding: '0 3px' }}>
           {part.slice(1, -1)}
         </mark>
       );
@@ -69,26 +69,26 @@ function BulletRow({ bullet, phase }) {
   return (
     <div className="rounded-xl p-4 border transition-all duration-500 relative overflow-hidden"
       style={{
-        background: phase >= 1 ? 'rgba(59,224,197,0.04)' : 'rgba(12,27,44,0.8)',
-        borderColor: phase >= 1 ? 'rgba(59,224,197,0.3)' : 'rgba(32,54,77,0.7)',
-        boxShadow: phase >= 1 ? '0 0 20px rgba(59,224,197,0.06)' : 'none',
+        background: phase >= 1 ? '#FAF7F2' : 'rgba(250,247,242,0.6)',
+        borderColor: phase >= 1 ? '#C17A5B' : 'rgba(91,58,74,0.15)',
+        boxShadow: phase >= 1 ? '0 8px 24px rgba(193,122,91,0.1)' : 'none',
       }}
     >
       {/* Before (shown while phase === 0) */}
-      <p className="text-sm text-slate-400 leading-relaxed transition-all duration-500"
+      <p className="text-sm text-[#6E6259] leading-relaxed transition-all duration-500"
         style={{ opacity: phase === 0 ? 1 : 0, position: phase > 0 ? 'absolute' : 'relative', pointerEvents: 'none' }}>
         {bullet.before}
       </p>
 
       {/* After (types in during phase === 1, shows highlighted in phase === 2) */}
       {phase > 0 && (
-        <p className="text-sm text-slate-100 leading-relaxed">
+        <p className="text-sm text-[#2A2622] leading-relaxed font-medium">
           {phase === 2
             ? renderHighlighted(bullet.after)
             : (
               <>
                 {typed}
-                <span className="inline-block w-0.5 h-3.5 bg-[#3be0c5] ml-0.5 animate-pulse align-middle" />
+                <span className="inline-block w-0.5 h-3.5 bg-[#C17A5B] ml-0.5 animate-pulse align-middle" />
               </>
             )
           }
@@ -100,7 +100,7 @@ function BulletRow({ bullet, phase }) {
         <div className="mt-2 flex gap-2">
           {['Action verb', 'Metric', 'Keyword'].map(tag => (
             <span key={tag} className="text-[9px] px-2 py-0.5 rounded-full font-mono"
-              style={{ background: 'rgba(59,224,197,0.1)', color: '#3be0c5', border: '1px solid rgba(59,224,197,0.25)' }}>
+              style={{ background: 'rgba(91,58,74,0.08)', color: '#5B3A4A', border: '1px solid rgba(91,58,74,0.2)' }}>
               {tag}
             </span>
           ))}
@@ -149,20 +149,20 @@ export default function S5_RewriteSection() {
   return (
     <section ref={wrapRef} style={{ height: '300vh' }} className="relative">
       <div ref={stickyRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
-        style={{ background: '#081422' }}>
+        style={{ background: 'transparent' }}>
 
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(167,139,250,0.04),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(193,122,91,0.04),transparent)] pointer-events-none" />
 
         <div id="s5-content" className="w-full max-w-4xl mx-auto px-6">
           <div className="text-center mb-10 space-y-2">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-[#3be0c5]">Step 04 — AI Rewrite</p>
-            <h2 className="text-4xl font-bold text-white tracking-tight">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 04 — AI Rewrite</p>
+            <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               Weak bullets become{' '}
-              <span className="bg-gradient-to-r from-[#a78bfa] to-[#3be0c5] bg-clip-text text-transparent">
+              <span className="text-[#5B3A4A]">
                 powerful achievements.
               </span>
             </h2>
-            <p className="text-slate-400 text-sm">Watch AI rewrite your resume bullets with action verbs, metrics and keywords.</p>
+            <p className="text-[#6E6259] text-sm">Watch AI rewrite your resume bullets with action verbs, metrics and keywords.</p>
           </div>
 
           <div className="space-y-3">
