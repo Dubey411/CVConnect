@@ -13,9 +13,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 const KPIS = [
   { label: 'ATS Score',       from: 54,  to: 91,  suffix: '%',  color: '#C17A5B', up: true  },
-  { label: 'Keywords Added',  from: 0,   to: 12,  suffix: '',   color: '#5B3A4A', up: true  },
+  { label: 'Keywords Added',  from: 0,   to: 12,  suffix: '',   color: '#1E2B37', up: true  },
   { label: 'Grammar Issues',  from: 8,   to: 0,   suffix: '',   color: '#C17A5B', up: false },
-  { label: 'Role Match',      from: 63,  to: 88,  suffix: '%',  color: '#5B3A4A', up: true  },
+  { label: 'Role Match',      from: 63,  to: 88,  suffix: '%',  color: '#1E2B37', up: true  },
 ];
 
 function KPICard({ kpi, value }) {
@@ -25,8 +25,8 @@ function KPICard({ kpi, value }) {
       className="rounded-xl p-5 flex flex-col gap-1 border transition-all"
       style={{
         background: '#FAF7F2',
-        borderColor: 'rgba(91,58,74,0.16)',
-        boxShadow: '0 4px 20px rgba(91,58,74,0.06)',
+        borderColor: 'rgba(30,43,55,0.16)',
+        boxShadow: '0 4px 20px rgba(30,43,55,0.06)',
       }}
     >
       <p className="text-[10px] font-mono text-[#6E6259] uppercase tracking-widest">{kpi.label}</p>
@@ -44,7 +44,7 @@ function KPICard({ kpi, value }) {
         </span>
       </div>
       {/* Mini bar */}
-      <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(91,58,74,0.1)' }}>
+      <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(30,43,55,0.1)' }}>
         <div
           className="h-full rounded-full"
           style={{
@@ -115,7 +115,7 @@ export default function S8_Dashboard() {
             <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 07 — Live Dashboard</p>
             <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               Watch every metric{' '}
-              <span className="text-[#5B3A4A]">
+              <span className="text-[#1E2B37]">
                 improve in real time.
               </span>
             </h2>
@@ -124,16 +124,16 @@ export default function S8_Dashboard() {
           {/* Dashboard panel */}
           <div ref={panelRef} className="mx-auto" style={{ width: '60%' }}>
             {/* Dashboard chrome */}
-            <div className="rounded-2xl overflow-hidden border border-[#5B3A4A]/20"
-              style={{ background: '#FAF7F2', boxShadow: '0 20px 60px rgba(91,58,74,0.12)' }}>
+            <div className="rounded-2xl overflow-hidden border border-[#1E2B37]/20"
+              style={{ background: '#FAF7F2', boxShadow: '0 20px 60px rgba(30,43,55,0.12)' }}>
 
               {/* Title bar */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#5B3A4A]/12"
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1E2B37]/12"
                 style={{ background: 'rgba(245,240,232,0.85)' }}>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#C17A5B]" />
                   <span className="w-2.5 h-2.5 rounded-full bg-[#D49B82]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#5B3A4A]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1E2B37]" />
                 </div>
                 <span className="font-mono text-[10px] text-[#6E6259]">CVConnect Analytics</span>
                 <div className="flex items-center gap-1.5">
@@ -151,7 +151,7 @@ export default function S8_Dashboard() {
 
               {/* Chart area */}
               <div className="px-5 pb-5">
-                <div className="rounded-xl p-4 border border-[#5B3A4A]/20/60" style={{ background: 'rgba(12,27,44,0.5)' }}>
+                <div className="rounded-xl p-4 border border-[#1E2B37]/20/60" style={{ background: 'rgba(12,27,44,0.5)' }}>
                   <p className="font-mono text-[10px] text-[#6E6259] uppercase tracking-widest mb-4">ATS Score Progression</p>
                   <div className="flex items-end gap-2 h-20">
                     {[54, 62, 68, 74, 82, 87, 91].map((val, i) => (
