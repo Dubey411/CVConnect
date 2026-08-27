@@ -57,9 +57,9 @@ export default function S3_KeywordSection() {
             ease: 'none',
           }, '<0.15');
           tl.to(`#kw-match-${i}`, {
-            color: '#3be0c5',
-            borderColor: 'rgba(59,224,197,0.5)',
-            background: 'rgba(59,224,197,0.08)',
+            color: '#C17A5B',
+            borderColor: '#C17A5B',
+            background: 'rgba(193,122,91,0.08)',
             duration: 0.2,
           }, '<');
         }
@@ -81,16 +81,16 @@ export default function S3_KeywordSection() {
   return (
     <section ref={wrapRef} style={{ height: '300vh' }} className="relative">
       <div ref={stickyRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
-        style={{ background: '#081422' }}>
+        style={{ background: 'transparent' }}>
 
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,rgba(96,165,250,0.04),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,rgba(193,122,91,0.05),transparent)] pointer-events-none" />
 
         <div id="s3-content" className="w-full max-w-6xl mx-auto px-6">
           <div className="text-center mb-10 space-y-2">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-[#3be0c5]">Step 02 — Keyword Intelligence</p>
-            <h2 className="text-4xl font-bold text-white tracking-tight">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 02 — Keyword Intelligence</p>
+            <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               AI maps your skills to{' '}
-              <span className="bg-gradient-to-r from-[#60a5fa] to-[#a78bfa] bg-clip-text text-transparent">
+              <span className="text-[#5B3A4A]">
                 the job requirements.
               </span>
             </h2>
@@ -98,23 +98,23 @@ export default function S3_KeywordSection() {
 
           <div className="relative grid grid-cols-[1fr_80px_1fr] gap-0 items-start">
             {/* Resume keywords (left) */}
-            <div className="rounded-2xl p-5 space-y-2.5" style={{ background: 'rgba(12,27,44,0.9)', border: '1px solid rgba(32,54,77,0.8)' }}>
-              <p className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-3">Your Resume</p>
+            <div className="rounded-2xl p-5 space-y-2.5" style={{ background: '#FAF7F2', border: '1px solid rgba(91,58,74,0.16)', boxShadow: '0 12px 36px rgba(91,58,74,0.08)' }}>
+              <p className="font-mono text-[10px] text-[#6E6259] uppercase tracking-widest mb-3">Your Resume</p>
               {KEYWORDS.map((k, i) => (
                 <div
                   key={k.kw}
                   id={`kw-match-${i}`}
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all"
                   style={{
-                    border: '1px solid rgba(32,54,77,0.8)',
-                    color: k.match ? '#94a3b8' : '#fb8d76',
-                    background: k.match ? 'transparent' : 'rgba(251,141,118,0.05)',
-                    borderColor: k.match ? 'rgba(32,54,77,0.8)' : 'rgba(251,141,118,0.3)',
+                    border: '1px solid rgba(91,58,74,0.12)',
+                    color: k.match ? '#6E6259' : '#C17A5B',
+                    background: k.match ? 'transparent' : 'rgba(193,122,91,0.06)',
+                    borderColor: k.match ? 'rgba(91,58,74,0.12)' : 'rgba(193,122,91,0.3)',
                   }}
                 >
                   <span>{k.kw}</span>
                   {!k.match && (
-                    <span className="kw-missing text-[10px] opacity-0" style={{ color: '#fb8d76' }}>Missing ✕</span>
+                    <span className="kw-missing text-[10px] opacity-0" style={{ color: '#C17A5B' }}>Missing ✕</span>
                   )}
                 </div>
               ))}
@@ -131,7 +131,7 @@ export default function S3_KeywordSection() {
                       key={k.kw}
                       id={`kw-line-${KEYWORDS.findIndex(kw => kw.kw === k.kw)}`}
                       d={`M 0 ${yi} C 40 ${yi}, 40 ${yi}, 80 ${yi}`}
-                      stroke="#3be0c5"
+                      stroke="#C17A5B"
                       strokeWidth="1.5"
                       fill="none"
                       opacity="0.7"
@@ -144,11 +144,11 @@ export default function S3_KeywordSection() {
             </div>
 
             {/* JD keywords (right) */}
-            <div ref={jdRef} className="rounded-2xl p-5 space-y-2.5" style={{ background: 'rgba(12,27,44,0.9)', border: '1px solid rgba(32,54,77,0.8)' }}>
-              <p className="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-3">Job Description</p>
+            <div ref={jdRef} className="rounded-2xl p-5 space-y-2.5" style={{ background: '#FAF7F2', border: '1px solid rgba(91,58,74,0.16)', boxShadow: '0 12px 36px rgba(91,58,74,0.08)' }}>
+              <p className="font-mono text-[10px] text-[#6E6259] uppercase tracking-widest mb-3">Job Description</p>
               {KEYWORDS.map((k) => (
                 <div key={k.kw} className="px-3 py-2 rounded-lg text-xs font-medium"
-                  style={{ background: 'rgba(59,224,197,0.05)', border: '1px solid rgba(59,224,197,0.15)', color: '#3be0c5' }}>
+                  style={{ background: 'rgba(193,122,91,0.08)', border: '1px solid rgba(193,122,91,0.25)', color: '#2A2622' }}>
                   {k.kw}
                 </div>
               ))}
@@ -161,10 +161,10 @@ export default function S3_KeywordSection() {
             className="mt-6 flex flex-wrap gap-2 justify-center"
             style={{ opacity: 0, transform: 'translateY(12px)' }}
           >
-            <p className="w-full text-center text-xs text-slate-500 mb-1 font-mono">AI suggests adding:</p>
+            <p className="w-full text-center text-xs text-[#6E6259] mb-1 font-mono">AI suggests adding:</p>
             {SUGGESTIONS.map(s => (
-              <span key={s} className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#a78bfa]"
-                style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.3)' }}>
+              <span key={s} className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#5B3A4A]"
+                style={{ background: 'rgba(91,58,74,0.08)', border: '1px solid rgba(91,58,74,0.25)' }}>
                 + {s}
               </span>
             ))}
