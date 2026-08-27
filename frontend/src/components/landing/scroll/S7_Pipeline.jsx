@@ -13,11 +13,11 @@ gsap.registerPlugin(ScrollTrigger);
 
 const NODES = [
   { id: 'n1', label: 'Upload',    sub: 'PDF / DOCX',       color: '#C17A5B' },
-  { id: 'n2', label: 'Parse',     sub: 'Structure extract', color: '#5B3A4A' },
+  { id: 'n2', label: 'Parse',     sub: 'Structure extract', color: '#1E2B37' },
   { id: 'n3', label: 'Analyze',   sub: 'ATS scoring',       color: '#C17A5B' },
-  { id: 'n4', label: 'Rewrite',   sub: 'NLP bullets',       color: '#5B3A4A' },
+  { id: 'n4', label: 'Rewrite',   sub: 'NLP bullets',       color: '#1E2B37' },
   { id: 'n5', label: 'Optimize',  sub: 'Keyword inject',    color: '#C17A5B' },
-  { id: 'n6', label: 'ATS Score', sub: 'Final check',       color: '#5B3A4A' },
+  { id: 'n6', label: 'ATS Score', sub: 'Final check',       color: '#1E2B37' },
   { id: 'n7', label: 'PDF',       sub: 'Calibri A4',        color: '#C17A5B' },
 ];
 
@@ -77,7 +77,7 @@ export default function S7_Pipeline() {
             <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 06 — Full Pipeline</p>
             <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               Seven steps.{' '}
-              <span className="text-[#5B3A4A]">
+              <span className="text-[#1E2B37]">
                 Under 5 seconds.
               </span>
             </h2>
@@ -93,7 +93,7 @@ export default function S7_Pipeline() {
               preserveAspectRatio="none"
             >
               {/* Background track */}
-              <line x1="60" y1="28" x2="940" y2="28" stroke="rgba(91,58,74,0.15)" strokeWidth="2" />
+              <line x1="60" y1="28" x2="940" y2="28" stroke="rgba(30,43,55,0.15)" strokeWidth="2" />
               {/* Animated progress line */}
               <line
                 ref={lineRef}
@@ -105,7 +105,7 @@ export default function S7_Pipeline() {
               <defs>
                 <linearGradient id="pipelineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%"   stopColor="#C17A5B" />
-                  <stop offset="50%"  stopColor="#5B3A4A" />
+                  <stop offset="50%"  stopColor="#1E2B37" />
                   <stop offset="100%" stopColor="#C17A5B" />
                 </linearGradient>
               </defs>
@@ -122,7 +122,7 @@ export default function S7_Pipeline() {
                       className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-500"
                       style={{
                         background:   isActive ? 'rgba(193,122,91,0.15)' : '#FAF7F2',
-                        borderColor:  isActive ? '#C17A5B' : 'rgba(91,58,74,0.2)',
+                        borderColor:  isActive ? '#C17A5B' : 'rgba(30,43,55,0.2)',
                         color:        isActive ? '#C17A5B' : '#6E6259',
                         boxShadow:    isActive ? '0 0 20px rgba(193,122,91,0.25)' : 'none',
                         transform:    isActive ? 'scale(1.08)' : 'scale(1)',
