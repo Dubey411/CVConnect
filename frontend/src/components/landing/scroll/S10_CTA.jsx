@@ -37,7 +37,7 @@ function ParticleCanvas() {
         vx: (Math.random() - 0.5) * 0.2,
         vy: (Math.random() - 0.5) * 0.2,
         alpha: Math.random() * 0.25 + 0.05,
-        color: Math.random() > 0.7 ? '#3be0c5' : '#94a3b8',
+        color: Math.random() > 0.7 ? '#C17A5B' : '#6E6259',
       });
     }
 
@@ -63,7 +63,7 @@ function ParticleCanvas() {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = '#3be0c5';
+            ctx.strokeStyle = '#C17A5B';
             ctx.globalAlpha = (1 - dist / 80) * 0.07;
             ctx.lineWidth   = 0.4;
             ctx.stroke();
@@ -113,10 +113,10 @@ function MagneticButton({ onClick, children }) {
       onClick={onClick}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="group relative flex items-center gap-3 font-bold text-[#081422] py-5 px-10 rounded-2xl text-base overflow-hidden"
+      className="group relative flex items-center gap-3 font-bold text-[#F5F0E8] py-5 px-10 rounded-2xl text-base overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #3be0c5, #5de8d2)',
-        boxShadow: '0 0 50px rgba(59,224,197,0.45), 0 0 100px rgba(59,224,197,0.15)',
+        background: 'linear-gradient(135deg, #C17A5B, #A05A44)',
+        boxShadow: '0 12px 36px rgba(193,122,91,0.35)',
         x: springX,
         y: springY,
       }}
@@ -141,7 +141,7 @@ export default function S10_CTA({ onGetStarted }) {
   return (
     <section
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden text-center px-6"
-      style={{ background: '#081422' }}
+      style={{ background: 'transparent' }}
     >
       <ParticleCanvas />
 
@@ -152,7 +152,7 @@ export default function S10_CTA({ onGetStarted }) {
           width: 600, height: 600,
           top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(ellipse, rgba(59,224,197,0.04) 0%, transparent 60%)',
+          background: 'radial-gradient(ellipse, transparent 0%, transparent 60%)',
           filter: 'blur(40px)',
         }}
       />
@@ -163,10 +163,10 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#3be0c5]/30 font-mono text-[10px] tracking-widest uppercase text-[#3be0c5]"
-          style={{ background: 'rgba(59,224,197,0.06)' }}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#C17A5B]/30 font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]"
+          style={{ background: 'rgba(193,122,91,0.08)' }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3be0c5] animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C17A5B] animate-pulse" />
           100% Free to Start
         </motion.div>
 
@@ -175,10 +175,10 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="text-5xl lg:text-6xl font-bold text-white tracking-tight leading-[1.08]"
+          className="text-5xl lg:text-6xl font-bold text-[#2A2622] tracking-tight leading-[1.08]"
         >
           Ready to beat{' '}
-          <span className="bg-gradient-to-r from-[#3be0c5] via-[#60a5fa] to-[#a78bfa] bg-clip-text text-transparent">
+          <span className="text-[#5B3A4A]">
             ATS filters?
           </span>
         </motion.h2>
@@ -188,7 +188,7 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-slate-400 text-lg leading-relaxed max-w-xl mx-auto"
+          className="text-[#6E6259] text-lg leading-relaxed max-w-xl mx-auto"
         >
           Upload your resume. In under 5 seconds — ATS-optimized, keyword-perfect, print-ready PDF delivered.
         </motion.p>
@@ -203,7 +203,7 @@ export default function S10_CTA({ onGetStarted }) {
           <MagneticButton onClick={onGetStarted}>
             Analyze Resume
           </MagneticButton>
-          <p className="text-xs text-slate-600 font-mono">No account required · Zero data retention</p>
+          <p className="text-xs text-[#6E6259] font-mono">No account required · Zero data retention</p>
         </motion.div>
 
         {/* Trust stats */}
@@ -212,7 +212,7 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-10 pt-6 border-t border-[#20364d]/60"
+          className="flex items-center justify-center gap-10 pt-6 border-t border-[#5B3A4A]/15"
         >
           {[
             ['98%', 'ATS Accuracy'],
@@ -220,8 +220,8 @@ export default function S10_CTA({ onGetStarted }) {
             ['Free', 'To Start'],
           ].map(([val, label]) => (
             <div key={label} className="text-center">
-              <p className="text-xl font-bold text-[#3be0c5] font-mono">{val}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-widest font-mono">{label}</p>
+              <p className="text-xl font-bold text-[#C17A5B] font-mono">{val}</p>
+              <p className="text-[10px] text-[#6E6259] mt-0.5 uppercase tracking-widest font-mono">{label}</p>
             </div>
           ))}
         </motion.div>
