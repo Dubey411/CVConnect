@@ -14,11 +14,11 @@ gsap.registerPlugin(ScrollTrigger);
 
 const CARDS = [
   { icon: Zap,      title: 'ATS Analysis',         desc: 'Multidimensional scoring across skills, domain, and experience.',  color: '#C17A5B' },
-  { icon: Cpu,      title: 'AI Resume Rewrite',     desc: 'Action-verb optimization and metric-driven bullet improvements.',   color: '#5B3A4A' },
+  { icon: Cpu,      title: 'AI Resume Rewrite',     desc: 'Action-verb optimization and metric-driven bullet improvements.',   color: '#1E2B37' },
   { icon: Key,      title: 'Keyword Intelligence',  desc: 'Gap detection and truthful keyword injection from your real skills.',color: '#C17A5B' },
-  { icon: Shield,   title: 'Local ML Fallback',     desc: 'Scikit-learn NLP engine activates when cloud LLMs are unavailable.', color: '#5B3A4A' },
+  { icon: Shield,   title: 'Local ML Fallback',     desc: 'Scikit-learn NLP engine activates when cloud LLMs are unavailable.', color: '#1E2B37' },
   { icon: FileText, title: 'PDF Export',            desc: 'Calibri A4 print-ready templates. No watermarks. Ever.',            color: '#C17A5B' },
-  { icon: Layers,   title: 'Resume Parsing',        desc: 'Deep structured extraction of your resume into semantic JSON.',     color: '#5B3A4A' },
+  { icon: Layers,   title: 'Resume Parsing',        desc: 'Deep structured extraction of your resume into semantic JSON.',     color: '#1E2B37' },
 ];
 
 export default function S9_FeatureStack() {
@@ -60,7 +60,7 @@ export default function S9_FeatureStack() {
           <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Capabilities</p>
           <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
             Everything you need,{' '}
-            <span className="text-[#5B3A4A]">
+            <span className="text-[#1E2B37]">
               nothing you don't.
             </span>
           </h2>
@@ -77,8 +77,8 @@ export default function S9_FeatureStack() {
                   className="rounded-2xl p-6 border transition-all duration-700 relative overflow-hidden"
                   style={{
                     background: visible ? '#FAF7F2' : 'rgba(250,247,242,0.5)',
-                    borderColor: visible ? 'rgba(91,58,74,0.18)' : 'rgba(91,58,74,0.08)',
-                    boxShadow: visible ? '0 10px 30px rgba(91,58,74,0.06)' : 'none',
+                    borderColor: visible ? 'rgba(30,43,55,0.18)' : 'rgba(30,43,55,0.08)',
+                    boxShadow: visible ? '0 10px 30px rgba(30,43,55,0.06)' : 'none',
                     opacity: visible ? 1 : 0,
                     transform: visible ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.98)',
                   }}
@@ -97,7 +97,7 @@ export default function S9_FeatureStack() {
 
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: 'rgba(245,240,232,0.85)', border: '1px solid rgba(91,58,74,0.12)' }}
+                    style={{ background: 'rgba(245,240,232,0.85)', border: '1px solid rgba(30,43,55,0.12)' }}
                   >
                     <card.icon size={18} style={{ color: '#C17A5B' }} />
                   </div>
@@ -127,7 +127,7 @@ export default function S9_FeatureStack() {
                 style={{
                   width:  i < visibleCount ? 20 : 6,
                   height: 6,
-                  background: i < visibleCount ? '#C17A5B' : 'rgba(91,58,74,0.15)',
+                  background: i < visibleCount ? '#C17A5B' : 'rgba(30,43,55,0.15)',
                 }}
               />
             ))}
