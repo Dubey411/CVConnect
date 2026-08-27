@@ -12,11 +12,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const CATEGORIES = [
-  { label: 'Skills Match',     from: 48, to: 92, color: '#C17A5B' },
-  { label: 'Keywords',         from: 40, to: 88, color: '#1E2B37' },
+  { label: 'Skills Match',     from: 48, to: 92, color: '#9E6634' },
+  { label: 'Keywords',         from: 40, to: 88, color: '#16202C' },
   { label: 'Experience Fit',   from: 55, to: 82, color: '#8C4E34' },
-  { label: 'Education',        from: 70, to: 95, color: '#C17A5B' },
-  { label: 'Domain Alignment', from: 45, to: 85, color: '#1E2B37' },
+  { label: 'Education',        from: 70, to: 95, color: '#9E6634' },
+  { label: 'Domain Alignment', from: 45, to: 85, color: '#16202C' },
 ];
 
 export default function S4_ATSGauge() {
@@ -75,10 +75,10 @@ export default function S4_ATSGauge() {
           {/* Left: Radial gauge */}
           <div className="flex flex-col items-center gap-6">
             <div>
-              <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B] text-center mb-2">Step 03 — ATS Optimization</p>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-[#9E6634] text-center mb-2">Step 03 — ATS Optimization</p>
               <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight text-center leading-[1.15]">
                 Watch your score{' '}
-                <span className="text-[#C17A5BX]">
+                <span className="text-[#9E6634X]">
                   climb in real time.
                 </span>
               </h2>
@@ -88,7 +88,7 @@ export default function S4_ATSGauge() {
             <div className="relative" style={{ width: 220, height: 220 }}>
               <svg width="220" height="220" viewBox="0 0 220 220" className="-rotate-90">
                 {/* Track */}
-                <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(30,43,55,0.15)" strokeWidth="14" />
+                <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(22,32,44,0.15)" strokeWidth="14" />
                 {/* Progress */}
                 <circle
                   cx="110" cy="110" r={radius}
@@ -102,8 +102,8 @@ export default function S4_ATSGauge() {
                 />
                 <defs>
                   <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%"   stopColor="#C17A5B" />
-                    <stop offset="100%" stopColor="#1E2B37" />
+                    <stop offset="0%"   stopColor="#9E6634" />
+                    <stop offset="100%" stopColor="#16202C" />
                   </linearGradient>
                 </defs>
               </svg>
@@ -127,12 +127,12 @@ export default function S4_ATSGauge() {
                 <div key={m} className="text-center">
                   <div
                     className="text-sm font-bold font-mono"
-                    style={{ color: score >= m ? '#C17A5B' : 'rgba(30,43,55,0.25)' }}
+                    style={{ color: score >= m ? '#9E6634' : 'rgba(22,32,44,0.25)' }}
                   >
                     {m}%
                   </div>
                   <div className="w-1.5 h-1.5 rounded-full mx-auto mt-1"
-                    style={{ background: score >= m ? '#C17A5B' : 'rgba(30,43,55,0.25)' }} />
+                    style={{ background: score >= m ? '#9E6634' : 'rgba(22,32,44,0.25)' }} />
                 </div>
               ))}
             </div>
@@ -147,7 +147,7 @@ export default function S4_ATSGauge() {
                   <span className="text-[#6E6259]">{cat.label}</span>
                   <span className="font-mono text-[#2A2622]">{barPcts[i]}%</span>
                 </div>
-                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(30,43,55,0.12)' }}>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(22,32,44,0.12)' }}>
                   <div
                     className="h-full rounded-full"
                     style={{
