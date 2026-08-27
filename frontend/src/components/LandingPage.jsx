@@ -24,7 +24,7 @@ function AmbientBackground() {
         className="absolute inset-0"
         style={{
           backgroundColor: '#F5F0E8',
-          backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F5F0E8 15%, rgba(193, 122, 91, 0.38) 55%, #5B3A4A 90%)',
+          backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F5F0E8 15%, rgba(193, 122, 91, 0.38) 55%, #1E2B37 90%)',
         }}
       />
       <div 
@@ -57,15 +57,15 @@ function Nav({ onGetStarted, onSignIn }) {
       <header
         className={`max-w-xl mx-auto h-12 px-4 rounded-full flex items-center justify-between pointer-events-auto transition-all duration-500 ${
           scrolled
-            ? 'bg-[#F5F0E8]/90 backdrop-blur-xl border border-[#5B3A4A]/20 shadow-[0_8px_30px_rgba(91,58,74,0.12)]'
-            : 'bg-[#F5F0E8]/75 backdrop-blur-md border border-[#5B3A4A+]/12 shadow-[0_4px_20px_rgba(91,58,74,0.06)]'
+            ? 'bg-[#F5F0E8]/90 backdrop-blur-xl border border-[#1E2B37]/20 shadow-[0_8px_30px_rgba(30,43,55,0.12)]'
+            : 'bg-[#F5F0E8]/75 backdrop-blur-md border border-[#1E2B37+]/12 shadow-[0_4px_20px_rgba(30,43,55,0.06)]'
         }`}
       >
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#F5F0E8] text-[10px] shrink-0 shadow-sm"
-            style={{ background: '#5B3A4A' }}
+            style={{ background: '#1E2B37' }}
           >
             CV
           </div>
@@ -103,12 +103,12 @@ function Nav({ onGetStarted, onSignIn }) {
 /* ─── Footer ─────────────────────────────────────────────────────────── */
 function Footer() {
   return (
-    <footer className="border-t border-[#5B3A4A]/15 py-10 relative z-10 bg-[#F5F0E8]/40 backdrop-blur-sm">
+    <footer className="border-t border-[#1E2B37]/15 py-10 relative z-10 bg-[#F5F0E8]/40 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-5">
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#081422] text-[10px]"
-            style={{ background: '#5B3A4A' }}
+            style={{ background: '#1E2B37' }}
           >CV</div>
           <span className="font-medium text-[#2A2622] text-sm tracking-tight">CVConnect</span>
         </div>
