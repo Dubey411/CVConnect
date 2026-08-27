@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 /* ─── Floating status chips — fewer, less intrusive ─────────────────── */
 const floatingCards = [
   { label: 'ATS Score +15',   color: '#C17A5B', delay: 0.3,  top: '12%',  left: '-10%'  },
-  { label: 'Keyword Added',   color: '#5B3A4A', delay: 0.8,  top: '42%',  left: '-13%'  },
+  { label: 'Keyword Added',   color: '#1E2B37', delay: 0.8,  top: '42%',  left: '-13%'  },
   { label: 'PDF Ready',       color: '#C17A5B', delay: 1.1,  top: '70%',  left: '-8%'   },
-  { label: 'Role Match 88%',  color: '#5B3A4A', delay: 0.5,  top: '10%',  right: '-10%' },
+  { label: 'Role Match 88%',  color: '#1E2B37', delay: 0.5,  top: '10%',  right: '-10%' },
   { label: 'Grammar Fixed',   color: '#C17A5B', delay: 1.0,  top: '40%',  right: '-13%' },
 ];
 
@@ -26,7 +26,7 @@ function FloatingCard({ label, color, delay, top, left, right }) {
         background: 'rgba(250,247,242,0.9)',
         border: `1px solid ${color}40`,
         color: '#2A2622',
-        boxShadow: '0 4px 16px rgba(91,58,74,0.08)',
+        boxShadow: '0 4px 16px rgba(30,43,55,0.08)',
       }}
     >
       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
@@ -75,18 +75,18 @@ function DashboardMockup() {
       className="rounded-2xl overflow-hidden"
       style={{
         background: '#FAF7F2',
-        border: '1px solid rgba(91,58,74,0.16)',
-        boxShadow: '0 24px 60px rgba(91,58,74,0.12)',
+        border: '1px solid rgba(30,43,55,0.16)',
+        boxShadow: '0 24px 60px rgba(30,43,55,0.12)',
       }}
     >
       {/* Title bar */}
       <div
         className="flex items-center gap-2 px-4 py-3 border-b"
-        style={{ borderColor: 'rgba(91,58,74,0.1)', background: 'rgba(245,240,232,0.8)' }}
+        style={{ borderColor: 'rgba(30,43,55,0.1)', background: 'rgba(245,240,232,0.8)' }}
       >
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#C17A5B' }} />
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D59B82' }} />
-        <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#5B3A4A' }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#1E2B37' }} />
         <span className="ml-auto text-[10px] text-[#6E6259] font-mono">CVConnect Studio</span>
       </div>
 
@@ -95,7 +95,7 @@ function DashboardMockup() {
         <div className="grid grid-cols-2 gap-3">
           <div
             className="p-3 rounded-lg"
-            style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(91,58,74,0.1)' }}
+            style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(30,43,55,0.1)' }}
           >
             <p className="text-[9px] text-[#6E6259] mb-1 uppercase tracking-wider">Candidate</p>
             <p className="text-xs font-semibold text-[#2A2622]">Shubham Dubey</p>
@@ -103,7 +103,7 @@ function DashboardMockup() {
           </div>
           <div
             className="p-3 rounded-lg"
-            style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(91,58,74,0.1)' }}
+            style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(30,43,55,0.1)' }}
           >
             <p className="text-[9px] text-[#6E6259] mb-1 uppercase tracking-wider">Target Role</p>
             <p className="text-xs font-semibold text-[#C17A5B]">Data Analyst</p>
@@ -114,7 +114,7 @@ function DashboardMockup() {
         {/* ATS Score */}
         <div
           className="p-4 rounded-lg"
-          style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(91,58,74,0.1)' }}
+          style={{ background: 'rgba(245,240,232,0.65)', border: '1px solid rgba(30,43,55,0.1)' }}
         >
           <div className="flex justify-between items-center mb-3">
             <span className="text-xs text-[#6E6259]">ATS Score</span>
@@ -127,10 +127,10 @@ function DashboardMockup() {
               {score}%
             </motion.span>
           </div>
-          <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: 'rgba(91,58,74,0.1)' }}>
+          <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: 'rgba(30,43,55,0.1)' }}>
             <motion.div
               className="h-full rounded-full"
-              style={{ background: 'linear-gradient(90deg, #C17A5B, #5B3A4A)' }}
+              style={{ background: 'linear-gradient(90deg, #C17A5B, #1E2B37)' }}
               animate={{ width: score + '%' }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             />
@@ -140,11 +140,11 @@ function DashboardMockup() {
         {/* Before / After */}
         <div
           className="rounded-lg overflow-hidden text-[10px]"
-          style={{ border: '1px solid rgba(91,58,74,0.12)' }}
+          style={{ border: '1px solid rgba(30,43,55,0.12)' }}
         >
           <div
             className="grid grid-cols-2 px-3 py-2 border-b"
-            style={{ borderColor: 'rgba(91,58,74,0.1)', background: 'rgba(245,240,232,0.85)' }}
+            style={{ borderColor: 'rgba(30,43,55,0.1)', background: 'rgba(245,240,232,0.85)' }}
           >
             <span className="text-[#6E6259]">Before</span>
             <span className="text-[#C17A5B] font-medium">After</span>
@@ -174,7 +174,7 @@ function DashboardMockup() {
               animate={{
                 background: i === activeStep ? 'rgba(193,122,91,0.12)' : 'rgba(245,240,232,0.5)',
                 color:      i === activeStep ? '#C17A5B' : '#6E6259',
-                borderColor: i === activeStep ? 'rgba(193,122,91,0.35)' : 'rgba(91,58,74,0.1)',
+                borderColor: i === activeStep ? 'rgba(193,122,91,0.35)' : 'rgba(30,43,55,0.1)',
               }}
               transition={{ duration: 0.3 }}
               style={{ border: '1px solid' }}
@@ -256,8 +256,8 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           <motion.button
             onClick={onSignIn}
             whileHover={{ scale: 1.01 }}
-            className="flex items-center text-sm text-[#2A2622] hover:text-[#5B3A4A] py-3 px-7 rounded-xl transition-colors"
-            style={{ border: '1px solid rgba(91,58,74,0.2)', background: 'rgba(245,240,232,0.7)' }}
+            className="flex items-center text-sm text-[#2A2622] hover:text-[#1E2B37] py-3 px-7 rounded-xl transition-colors"
+            style={{ border: '1px solid rgba(30,43,55,0.2)', background: 'rgba(245,240,232,0.7)' }}
           >
             Sign in to Dashboard
           </motion.button>
@@ -269,7 +269,7 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.72, duration: 0.6 }}
           className="flex flex-wrap items-center gap-5 pt-3 border-t text-xs text-[#6E6259]"
-          style={{ borderColor: 'rgba(91,58,74,0.12)' }}
+          style={{ borderColor: 'rgba(30,43,55,0.12)' }}
         >
           {['100% Free Tier', 'Calibri Print-Ready', 'No Hallucinations'].map(t => (
             <div key={t} className="flex items-center gap-1.5">
