@@ -1,9 +1,116 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 @tailwind base; @tailwind components; @tailwind utilities;
-@layer base { body { @apply bg-ink text-mist font-display antialiased; } button,input,textarea { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-aqua focus-visible:ring-offset-2 focus-visible:ring-offset-ink; } }
-@layer components { .rule { @apply border-b border-line/80; } .eyebrow { @apply font-mono text-[10px] font-medium uppercase tracking-[.16em] text-aqua; } .button { @apply inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition duration-200; } .button-primary { @apply button bg-aqua text-white hover:bg-[#855224]; } .button-quiet { @apply button border border-line bg-white/[.03] text-mist hover:border-aqua/60 hover:bg-white/[.06]; } .input { @apply w-full rounded-sm border border-line bg-surface/60 px-3 py-2.5 text-sm text-mist placeholder:text-slate-500 focus:border-aqua; } .panel { @apply border border-line bg-surface/65; } }
 
-/* Print Styles: Hide all app UI (forms, position boxes, headers) and render ONLY the 1-page resume */
+@layer base {
+  body {
+    background-color: #F7F5F0;
+    color: #1E2226;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, textarea {
+    outline: none;
+  }
+}
+
+@layer components {
+  .rule {
+    border-bottom: 1px solid rgba(22, 32, 44, 0.1);
+  }
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #9E6634;
+  }
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .button-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #9E6634, #7D4E24) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 16px rgba(158, 102, 52, 0.25);
+    transition: all 0.2s ease;
+  }
+  .button-primary:hover {
+    background: linear-gradient(135deg, #855224, #663D18) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(158, 102, 52, 0.35);
+  }
+  .button-quiet {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid rgba(22, 32, 44, 0.15);
+    background: #FAF8F4;
+    color: #1E2226;
+    transition: all 0.2s ease;
+  }
+  .button-quiet:hover {
+    border-color: #9E6634;
+    color: #9E6634;
+    background: #F7F5F0;
+  }
+  .input {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(22, 32, 44, 0.18);
+    background: #FFFFFF;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: #1E2226;
+    transition: border-color 0.2s ease;
+  }
+  .input:focus {
+    border-color: #9E6634;
+    outline: none;
+  }
+  .input::placeholder {
+    color: #8C827A;
+  }
+  .panel {
+    border: 1px solid rgba(22, 32, 44, 0.12);
+    background: #FAF8F4;
+    border-radius: 0.75rem;
+    color: #1E2226;
+    box-shadow: 0 2px 10px rgba(22, 32, 44, 0.04);
+  }
+}
+
+/* Explicit color helper overrides to guarantee zero-cyan */
+.text-aqua { color: #9E6634 !important; }
+.bg-aqua { background-color: #9E6634 !important; }
+.border-aqua { border-color: #9E6634 !important; }
+.text-ink { color: #1E2226 !important; }
+.bg-ink { background-color: #F7F5F0 !important; }
+.bg-surface { background-color: #FAF8F4 !important; }
+.border-line { border-color: rgba(22, 32, 44, 0.12) !important; }
+.text-mist { color: #1E2226 !important; }
+
+/* Print Styles */
 @media print {
   @page {
     margin: 0;
@@ -17,12 +124,10 @@
     padding: 0 !important;
   }
 
-  /* Hide all app elements by default */
   body * {
     visibility: hidden !important;
   }
 
-  /* Show ONLY the printable resume container and its children */
   .printable-resume,
   .printable-resume * {
     visibility: visible !important;
@@ -44,4 +149,3 @@
     z-index: 99999 !important;
   }
 }
-
