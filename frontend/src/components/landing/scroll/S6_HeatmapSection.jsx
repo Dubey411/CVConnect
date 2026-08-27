@@ -48,8 +48,8 @@ export default function S6_HeatmapSection() {
         tl.to(`#${zone.id}`, {
           opacity: 1,
           boxShadow: zone.strength === 'strong'
-            ? '0 0 24px 8px rgba(59,224,197,0.6)'
-            : '0 0 24px 8px rgba(251,141,118,0.6)',
+            ? '0 0 24px 8px #C17A5B'
+            : '0 0 24px 8px rgba(91,58,74,0.4)',
           duration: 0.25,
         }, `<${i === 0 ? 0.3 : 0.15}`);
       });
@@ -74,42 +74,42 @@ export default function S6_HeatmapSection() {
   return (
     <section ref={wrapRef} style={{ height: '300vh' }} className="relative">
       <div ref={stickyRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
-        style={{ background: '#081422' }}>
+        style={{ background: 'transparent' }}>
 
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(59,224,197,0.03),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(193,122,91,0.04),transparent)] pointer-events-none" />
 
         <div id="s6-content" className="w-full max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           {/* Labels */}
           <div className="space-y-6">
             <div>
-              <p className="font-mono text-[10px] tracking-widest uppercase text-[#3be0c5] mb-2">Step 05 — AI Vision Mode</p>
-              <h2 className="text-4xl font-bold text-white tracking-tight leading-[1.1]">
+              <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B] mb-2">Step 05 — AI Vision Mode</p>
+              <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight leading-[1.1]">
                 AI identifies what{' '}
-                <span className="bg-gradient-to-r from-[#3be0c5] to-[#fb923c] bg-clip-text text-transparent">
+                <span className="text-[#C17A5BX]">
                   needs attention.
                 </span>
               </h2>
-              <p className="text-slate-400 text-sm mt-4 leading-relaxed">
+              <p className="text-[#6E6259] text-sm mt-4 leading-relaxed">
                 A heatmap overlay reveals strong and weak sections instantly. Strong areas glow cyan — weak areas glow orange.
               </p>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded" style={{ background: 'rgba(59,224,197,0.3)', boxShadow: '0 0 10px #3be0c5' }} />
-                <span className="text-sm text-slate-300">Strong — high ATS impact</span>
+                <div className="w-4 h-4 rounded" style={{ background: 'rgba(193,122,91,0.3)', boxShadow: '0 0 10px #C17A5B' }} />
+                <span className="text-sm text-[#2A2622] font-medium">Strong — high ATS impact</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded" style={{ background: 'rgba(251,141,118,0.3)', boxShadow: '0 0 10px #fb8d76' }} />
-                <span className="text-sm text-slate-300">Weak — needs optimization</span>
+                <div className="w-4 h-4 rounded" style={{ background: 'rgba(91,58,74,0.3)', boxShadow: '0 0 10px #5B3A4A' }} />
+                <span className="text-sm text-[#2A2622] font-medium">Weak — needs optimization</span>
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-[#20364d]/60">
+            <div className="space-y-2 pt-2 border-t border-[#5B3A4A]/15">
               {HEATMAP_ZONES.map(zone => (
                 <div key={zone.id} className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 capitalize">{zone.label}</span>
-                  <span className="font-mono" style={{ color: zone.strength === 'strong' ? '#3be0c5' : '#fb8d76' }}>
+                  <span className="text-[#6E6259] capitalize font-medium">{zone.label}</span>
+                  <span className="font-mono" style={{ color: zone.strength === 'strong' ? '#C17A5B' : '#5B3A4A' }}>
                     {zone.strength === 'strong' ? '● Strong' : '● Needs work'}
                   </span>
                 </div>
@@ -122,13 +122,13 @@ export default function S6_HeatmapSection() {
             <div className="absolute -inset-3 rounded-2xl blur-xl opacity-20 pointer-events-none"
               style={{ background: 'radial-gradient(#3be0c5, #fb8d76, transparent 70%)' }} />
 
-            <div className="relative rounded-xl overflow-hidden border border-[#20364d]"
-              style={{ background: '#010810', minHeight: 460 }}>
+            <div className="relative rounded-xl overflow-hidden border border-[#5B3A4A]/20"
+              style={{ background: '#FAF7F2', minHeight: 460, boxShadow: '0 20px 50px rgba(91,58,74,0.1)' }}>
 
               {/* Dark overlay that fades in */}
               <div id="hz-resume-overlay"
                 className="absolute inset-0 z-10 pointer-events-none rounded-xl"
-                style={{ background: 'rgba(1,8,16,0.9)', opacity: 0 }}
+                style={{ background: 'rgba(42,38,34,0.12)', opacity: 0 }}
               />
 
               {/* Looping scan beam */}
@@ -137,7 +137,7 @@ export default function S6_HeatmapSection() {
                 className="absolute left-0 right-0 z-30 pointer-events-none"
                 style={{
                   height: 2,
-                  background: 'linear-gradient(90deg, transparent, rgba(59,224,197,0.6), transparent)',
+                  background: 'linear-gradient(90deg, transparent, #C17A5B, transparent)',
                   boxShadow: '0 0 16px 4px rgba(59,224,197,0.3)',
                   top: '-2%',
                 }}
@@ -146,7 +146,7 @@ export default function S6_HeatmapSection() {
               {/* Resume placeholder content */}
               <div className="p-5 space-y-3 relative z-0">
                 <div className="pb-3 border-b border-[#20364d]/40">
-                  <div className="h-4 w-40 rounded bg-slate-700/50 mb-1" />
+                  <div className="h-4 w-40 rounded bg-[#5B3A4A]/20 mb-1" />
                   <div className="h-2 w-56 rounded bg-slate-700/30" />
                 </div>
                 {[...Array(8)].map((_, i) => (
@@ -173,7 +173,7 @@ export default function S6_HeatmapSection() {
                 >
                   <span
                     className="absolute top-1 right-2 text-[9px] font-mono uppercase tracking-widest"
-                    style={{ color: zone.strength === 'strong' ? '#3be0c5' : '#fb8d76' }}
+                    style={{ color: zone.strength === 'strong' ? '#C17A5B' : '#5B3A4A' }}
                   >
                     {zone.label} — {zone.strength}
                   </span>
