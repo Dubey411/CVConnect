@@ -47,80 +47,82 @@ function Auth({ mode, setMode, onBack }) {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_.9fr]">
       {/* Visual panel */}
-      <section className="relative hidden overflow-hidden bg-surface p-10 lg:block">
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#9E6634 1px, transparent 1px)', backgroundSize: '25px 25px' }}/>
-        <div className="relative flex h-full max-w-xl flex-col justify-between">
-          <div className="flex items-center gap-2 font-semibold tracking-tight text-white">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-aqua/10 text-aqua font-bold text-base border border-aqua/30">
+      <section className="relative hidden overflow-hidden p-10 lg:block" style={{ backgroundColor: '#F7F5F0', borderRight: '1px solid rgba(22, 32, 44, 0.1)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F7F5F0 15%, rgba(184, 155, 114, 0.28) 55%, #16202C 90%)' }} />
+        <div className="absolute inset-0 opacity-[0.035] pointer-events-none" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\"><filter id=\"noiseFilter\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.82\" numOctaves=\"3\" stitchTiles=\"stitch\"/></filter><rect width=\"100%\" height=\"100%\" filter=\"url(%23noiseFilter)\"/></svg>')" }} />
+
+        <div className="relative flex h-full max-w-xl flex-col justify-between z-10">
+          <div className="flex items-center gap-2 font-semibold tracking-tight text-[#1E2226]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FAF8F4] text-[#9E6634] font-bold text-base border border-[#9E6634]/30 shadow-sm">
               CV
             </div>
             CVConnect
           </div>
 
           <div className="space-y-6">
-            <span className="eyebrow">Enterprise-grade application automation</span>
-            <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white font-sans">
-              Tailor every resume. <br />
-              <span className="text-aqua">Tailor every resume.</span>
+            <span className="font-mono text-[10px] font-medium tracking-widest uppercase text-[#9E6634]">Tailored Career Intelligence</span>
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-[#1E2226]">
+              Give your resume <br />
+              <span className="text-[#9E6634]">a clearer voice.</span>
             </h1>
-            <p className="max-w-md text-sm leading-relaxed text-slate-400">
+            <p className="max-w-md text-sm leading-relaxed text-[#635A52]">
               Upload your resume, paste a job description, and let AI tailor your resume to what the JD requires — with an ATS score, keyword gap analysis, and a print-ready PDF in under 5 seconds.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono text-slate-500">
-            <span>✓ DeepSeek V3 AI</span>
+          <div className="flex items-center gap-4 text-xs font-mono text-[#635A52]">
+            <span className="flex items-center gap-1.5"><span className="text-[#9E6634]">✓</span> DeepSeek V3 AI</span>
             <span>•</span>
-            <span>✓ ATS Keyword Analysis</span>
+            <span className="flex items-center gap-1.5"><span className="text-[#9E6634]">✓</span> ATS Keyword Analysis</span>
             <span>•</span>
-            <span>✓ Print-Ready PDF</span>
+            <span className="flex items-center gap-1.5"><span className="text-[#9E6634]">✓</span> Print-Ready PDF</span>
           </div>
         </div>
       </section>
 
       {/* Form panel */}
-      <section className="flex flex-col justify-between p-6 sm:p-10 lg:p-12 bg-ink">
+      <section className="flex flex-col justify-between p-6 sm:p-10 lg:p-12" style={{ backgroundColor: '#FAF8F4' }}>
         <div className="flex items-center justify-between">
-          <button onClick={onBack} className="button-quiet text-xs py-1.5 px-3 flex items-center gap-1.5">
+          <button onClick={onBack} className="inline-flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-full border border-[#16202C]/15 bg-[#F7F5F0] text-[#1E2226] hover:border-[#9E6634] transition-colors">
             <ArrowLeft size={14}/> Back
           </button>
         </div>
 
-        <motion.form key={mode} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} onSubmit={submit} className="mx-auto w-full max-w-sm my-auto space-y-4">
+        <motion.form key={mode} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} onSubmit={submit} className="mx-auto w-full max-w-sm my-auto space-y-5">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-3xl font-bold tracking-tight text-[#1E2226]">
               {mode === 'login' ? 'Welcome back' : 'Create your account'}
             </h2>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-[#635A52] leading-relaxed">
               {mode === 'login' ? 'Sign in to access your Resume Builder and Job Match dashboard.' : 'Get started — tailor your resume to any job description in under 60 seconds.'}
             </p>
           </div>
 
           {mode === 'register' && (
-            <label className="block text-xs text-slate-400">
+            <label className="block text-xs font-medium text-[#635A52]">
               Full name
-              <input required type="text" className="input mt-1.5" value={name} onChange={e => setName(e.target.value)} placeholder="Shubham Dubey"/>
+              <input required type="text" className="w-full mt-1.5 rounded-lg border border-[#16202C]/18 bg-white px-3.5 py-2.5 text-sm text-[#1E2226] placeholder-[#8C827A] focus:outline-none focus:border-[#9E6634] transition-colors shadow-sm" value={name} onChange={e => setName(e.target.value)} placeholder="Shubham Dubey"/>
             </label>
           )}
 
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs font-medium text-[#635A52]">
             Email address
-            <input required type="email" className="input mt-1.5" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="username"/>
+            <input required type="email" className="w-full mt-1.5 rounded-lg border border-[#16202C]/18 bg-white px-3.5 py-2.5 text-sm text-[#1E2226] placeholder-[#8C827A] focus:outline-none focus:border-[#9E6634] transition-colors shadow-sm" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="username"/>
           </label>
 
-          <label className="mt-4 block text-xs text-slate-400">
+          <label className="mt-4 block text-xs font-medium text-[#635A52]">
             Password
-            <input required minLength="6" type="password" className="input mt-1.5" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
+            <input required minLength="6" type="password" className="w-full mt-1.5 rounded-lg border border-[#16202C]/18 bg-white px-3.5 py-2.5 text-sm text-[#1E2226] placeholder-[#8C827A] focus:outline-none focus:border-[#9E6634] transition-colors shadow-sm" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
           </label>
 
-          {error && <p role="alert" className="mt-4 border-l-2 border-coral bg-coral/10 p-3 text-xs text-coral">{error}</p>}
+          {error && <p role="alert" className="mt-4 border-l-2 border-[#B85D38] bg-[#B85D38]/10 p-3 text-xs text-[#B85D38] rounded-r">{error}</p>}
           
-          <button disabled={busy} className="button-primary mt-6 w-full disabled:opacity-60">
+          <button disabled={busy} className="inline-flex items-center justify-center gap-2 mt-6 w-full py-3 px-4 rounded-xl text-sm font-semibold text-white transition-all shadow-md hover:shadow-lg disabled:opacity-60" style={{ background: 'linear-gradient(135deg, #9E6634, #7D4E24)', boxShadow: '0 8px 24px rgba(158, 102, 52, 0.25)' }}>
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'} <ChevronRight size={15}/>
           </button>
           
-          <p className="mt-6 text-center text-xs text-slate-400">
-            {mode === 'login' ? 'New to CVConnect?' : 'Already have an account?'} <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="font-semibold text-aqua">{mode === 'login' ? 'Create one' : 'Sign in'}</button>
+          <p className="mt-6 text-center text-xs text-[#635A52]">
+            {mode === 'login' ? 'New to CVConnect?' : 'Already have an account?'} <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="font-semibold text-[#9E6634] hover:underline ml-1">{mode === 'login' ? 'Create one' : 'Sign in'}</button>
           </p>
         </motion.form>
       </section>
@@ -188,8 +190,8 @@ function Shell() {
   ];
 
   return (
-    <div className="min-h-screen bg-ink">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-ink/95 px-5 backdrop-blur md:px-8">
+    <div className="min-h-screen bg-[#F7F5F0] text-[#1E2226]">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#16202C]/10 bg-[#FAF8F4]/90 px-5 backdrop-blur md:px-8">
         <button onClick={() => setSidebar(!sidebar)} className="button-quiet p-2 md:hidden" aria-label="Toggle navigation">
           {sidebar ? <X size={18}/> : <Menu size={18}/>}
         </button>
@@ -197,7 +199,7 @@ function Shell() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aqua/10 text-aqua font-bold text-lg border border-aqua/30">
             CV
           </div>
-          <span className="font-semibold tracking-tight text-white">CVConnect</span>
+          <span className="font-semibold tracking-tight text-[#1E2226]">CVConnect</span>
           <span className="ml-2 rounded-full border border-aqua/30 bg-aqua/10 px-2 py-0.5 font-mono text-[10px] font-medium text-aqua uppercase">
             v2.4 Production
           </span>
@@ -226,7 +228,7 @@ function Shell() {
 
       <div className="flex">
         {/* Sticky Desktop Navigation Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-30 w-64 transform border-r border-line bg-surface/95 p-5 transition-transform duration-200 ease-in-out md:static md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebar ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-30 w-64 transform border-r border-[#16202C]/10 bg-[#FAF8F4] p-5 transition-transform duration-200 ease-in-out md:static md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 ${sidebar ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex h-full flex-col justify-between">
             <nav className="space-y-1">
               {nav.map(([label, Icon, tabKey]) => (
@@ -234,7 +236,7 @@ function Shell() {
                   key={tabKey}
                   onClick={() => { setActiveTab(tabKey); setSidebar(false); }}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    activeTab === tabKey ? 'bg-aqua/10 text-aqua border border-aqua/30' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    activeTab === tabKey ? 'bg-[#9E6634]/10 text-[#9E6634] border border-[#9E6634]/30' : 'text-[#635A52] hover:bg-[#F7F5F0] hover:text-[#1E2226]'
                   }`}
                 >
                   <Icon size={16} />
@@ -243,8 +245,8 @@ function Shell() {
               ))}
             </nav>
 
-            <div className="rounded-lg border border-line bg-black/20 p-3 text-xs text-slate-400">
-              <p className="font-semibold text-white">System Status</p>
+            <div className="rounded-lg border border-[#16202C]/10 bg-[#F7F5F0] p-3 text-xs text-[#635A52]">
+              <p className="font-semibold text-[#1E2226]">System Status</p>
               <p className="mt-1 text-[11px] text-emerald-400 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"/>
                 AI Engine Ready
@@ -278,7 +280,7 @@ function Shell() {
             {activeTab === 'workspace' && (
               <>
                 <div className="mb-6 max-w-6xl mx-auto">
-                  <h1 className="text-2xl font-bold text-white tracking-tight">Resume Builder &amp; Job Match</h1>
+                  <h1 className="text-2xl font-bold text-[#1E2226] tracking-tight">Resume Builder &amp; Job Match</h1>
                   <p className="text-xs text-slate-400 mt-1">Paste a job description, upload your resume, and get an AI-tailored resume optimized for that specific role — with keyword gap analysis and a downloadable PDF.</p>
                 </div>
 
