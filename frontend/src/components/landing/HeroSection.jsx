@@ -8,7 +8,7 @@ const floatingCards = [
   { label: 'Keyword Added',   color: '#5B3A4A', delay: 0.8,  top: '42%',  left: '-13%'  },
   { label: 'PDF Ready',       color: '#C17A5B', delay: 1.1,  top: '70%',  left: '-8%'   },
   { label: 'Role Match 88%',  color: '#5B3A4A', delay: 0.5,  top: '10%',  right: '-10%' },
-  { label: 'Grammar Fixed',   color: '#C17A5B', delay: 1.0,  top: '40%',  right: '-13'' },
+  { label: 'Grammar Fixed',   color: '#C17A5B', delay: 1.0,  top: '40%',  right: '-13%' },
 ];
 
 function FloatingCard({ label, color, delay, top, left, right }) {
