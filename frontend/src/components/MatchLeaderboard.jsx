@@ -146,7 +146,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" />
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0c1b2c] via-[#0d2035] to-[#0c1b2c] border border-aqua/15 p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#16202C] via-[#1E2C3A] to-[#16202C] border border-aqua/15 p-6 md:p-8">
         <div className="absolute -right-12 -top-12 w-64 h-64 bg-aqua/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
