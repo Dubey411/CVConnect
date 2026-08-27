@@ -48,7 +48,7 @@ export default function S2_ParseSection() {
         tl.to(`#highlight-${sec.id}`, {
           opacity: 1,
           boxShadow: '0 0 12px 2px rgba(193,122,91,0.25)',
-          background: 'rgba(193,122,91,0.08)',',
+          background: 'rgba(193,122,91,0.08)',
           duration: 0.25,
         }, `<${i === 0 ? 0.3 : 0.15}`);
         tl.to(`#check-${sec.id}`, { opacity: 1, scale: 1, duration: 0.2 }, '<0.05');
