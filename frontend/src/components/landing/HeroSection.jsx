@@ -24,7 +24,7 @@ function FloatingCard({ label, color, delay, top, left, right }) {
       style={{
         top, left, right,
         background: 'rgba(250,247,242,0.9)',
-        border: `1px solid ${color}40a,
+        border: `1px solid ${color}40`,
         color: '#2A2622',
         boxShadow: '0 4px 16px rgba(91,58,74,0.08)',
       }}
