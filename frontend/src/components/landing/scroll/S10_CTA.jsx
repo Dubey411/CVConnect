@@ -37,7 +37,7 @@ function ParticleCanvas() {
         vx: (Math.random() - 0.5) * 0.2,
         vy: (Math.random() - 0.5) * 0.2,
         alpha: Math.random() * 0.25 + 0.05,
-        color: Math.random() > 0.7 ? '#C17A5B' : '#6E6259',
+        color: Math.random() > 0.7 ? '#9E6634' : '#6E6259',
       });
     }
 
@@ -63,7 +63,7 @@ function ParticleCanvas() {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = '#C17A5B';
+            ctx.strokeStyle = '#9E6634';
             ctx.globalAlpha = (1 - dist / 80) * 0.07;
             ctx.lineWidth   = 0.4;
             ctx.stroke();
@@ -115,8 +115,8 @@ function MagneticButton({ onClick, children }) {
       onMouseLeave={handleLeave}
       className="group relative flex items-center gap-3 font-bold text-[#F5F0E8] py-5 px-10 rounded-2xl text-base overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #C17A5B, #A05A44)',
-        boxShadow: '0 12px 36px rgba(193,122,91,0.35)',
+        background: 'linear-gradient(135deg, #9E6634, #7D4E24)',
+        boxShadow: '0 12px 36px rgba(158,102,52,0.35)',
         x: springX,
         y: springY,
       }}
@@ -163,10 +163,10 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#C17A5B]/30 font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]"
-          style={{ background: 'rgba(193,122,91,0.08)' }}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#9E6634]/30 font-mono text-[10px] tracking-widest uppercase text-[#9E6634]"
+          style={{ background: 'rgba(158,102,52,0.08)' }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#C17A5B] animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#9E6634] animate-pulse" />
           100% Free to Start
         </motion.div>
 
@@ -178,7 +178,7 @@ export default function S10_CTA({ onGetStarted }) {
           className="text-5xl lg:text-6xl font-bold text-[#2A2622] tracking-tight leading-[1.08]"
         >
           Ready to beat{' '}
-          <span className="text-[#1E2B37]">
+          <span className="text-[#16202C]">
             ATS filters?
           </span>
         </motion.h2>
@@ -212,7 +212,7 @@ export default function S10_CTA({ onGetStarted }) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-10 pt-6 border-t border-[#1E2B37]/15"
+          className="flex items-center justify-center gap-10 pt-6 border-t border-[#16202C]/15"
         >
           {[
             ['98%', 'ATS Accuracy'],
@@ -220,7 +220,7 @@ export default function S10_CTA({ onGetStarted }) {
             ['Free', 'To Start'],
           ].map(([val, label]) => (
             <div key={label} className="text-center">
-              <p className="text-xl font-bold text-[#C17A5B] font-mono">{val}</p>
+              <p className="text-xl font-bold text-[#9E6634] font-mono">{val}</p>
               <p className="text-[10px] text-[#6E6259] mt-0.5 uppercase tracking-widest font-mono">{label}</p>
             </div>
           ))}
