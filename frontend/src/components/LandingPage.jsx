@@ -23,8 +23,8 @@ function AmbientBackground() {
       <div 
         className="absolute inset-0"
         style={{
-          backgroundColor: '#F5F0E8',
-          backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F5F0E8 15%, rgba(193, 122, 91, 0.38) 55%, #1E2B37 90%)',
+          backgroundColor: '#F7F5F0',
+          backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F7F5F0 15%, rgba(184, 155, 114, 0.28) 55%, #16202C 90%)',
         }}
       />
       <div 
@@ -57,22 +57,22 @@ function Nav({ onGetStarted, onSignIn }) {
       <header
         className={`max-w-xl mx-auto h-12 px-4 rounded-full flex items-center justify-between pointer-events-auto transition-all duration-500 ${
           scrolled
-            ? 'bg-[#F5F0E8]/90 backdrop-blur-xl border border-[#1E2B37]/20 shadow-[0_8px_30px_rgba(30,43,55,0.12)]'
-            : 'bg-[#F5F0E8]/75 backdrop-blur-md border border-[#1E2B37+]/12 shadow-[0_4px_20px_rgba(30,43,55,0.06)]'
+            ? 'bg-[#F5F0E8]/90 backdrop-blur-xl border border-[#16202C]/20 shadow-[0_8px_30px_rgba(22,32,44,0.12)]'
+            : 'bg-[#F5F0E8]/75 backdrop-blur-md border border-[#16202C+]/12 shadow-[0_4px_20px_rgba(22,32,44,0.06)]'
         }`}
       >
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#F5F0E8] text-[10px] shrink-0 shadow-sm"
-            style={{ background: '#1E2B37' }}
+            style={{ background: '#16202C' }}
           >
             CV
           </div>
           <span className="font-semibold text-[#2A2622] text-xs tracking-tight">CVConnect</span>
           <span
-            className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] font-mono text-[#C17A5B] border border-[#C17A5B]/25"
-            style={{ background: 'rgba(193, 122, 91, 0.08)' }}
+            className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] font-mono text-[#9E6634] border border-[#9E6634]/25"
+            style={{ background: 'rgba(158, 102, 52, 0.08)' }}
           >
             v2.4
           </span>
@@ -90,7 +90,7 @@ function Nav({ onGetStarted, onSignIn }) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center gap-1 text-[11px] font-semibold text-[#F5F0E8] px-3.5 py-1.5 rounded-full shadow-sm"
-            style={{ background: '#C17A5B' }}
+            style={{ background: '#9E6634' }}
           >
             Get started <ArrowRight size={11} />
           </motion.button>
@@ -103,12 +103,12 @@ function Nav({ onGetStarted, onSignIn }) {
 /* ─── Footer ─────────────────────────────────────────────────────────── */
 function Footer() {
   return (
-    <footer className="border-t border-[#1E2B37]/15 py-10 relative z-10 bg-[#F5F0E8]/40 backdrop-blur-sm">
+    <footer className="border-t border-[#16202C]/15 py-10 relative z-10 bg-[#F5F0E8]/40 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-5">
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#081422] text-[10px]"
-            style={{ background: '#1E2B37' }}
+            style={{ background: '#16202C' }}
           >CV</div>
           <span className="font-medium text-[#2A2622] text-sm tracking-tight">CVConnect</span>
         </div>
@@ -116,7 +116,7 @@ function Footer() {
           © {new Date().getFullYear()} CVConnect · AI Resume Optimization · v2.4
         </p>
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#C17A5B] animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#9E6634] animate-pulse" />
           <span className="text-[11px] text-[#6E6259]">All systems operational</span>
         </div>
       </div>
@@ -135,7 +135,7 @@ function ScrollIndicator() {
     >
       <motion.div
         className="w-px h-10 rounded-full"
-        style={{ background: 'linear-gradient(180deg, transparent, #C17A5B, transparent)' }}
+        style={{ background: 'linear-gradient(180deg, transparent, #9E6634, transparent)' }}
         animate={{ scaleY: [0.6, 1, 0.6], opacity: [0.3, 0.8, 0.3] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
       />
@@ -169,8 +169,8 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
 
   return (
     <div
-      className="min-h-screen text-[#2A2622] selection:bg-[#C17A5B]/25 selection:text-[#2A2622] relative overflow-x-hidden"
-      style={{ backgroundColor: '#F5F0E8' }}
+      className="min-h-screen text-[#2A2622] selection:bg-[#9E6634]/25 selection:text-[#2A2622] relative overflow-x-hidden"
+      style={{ backgroundColor: '#F7F5F0' }}
     >
       <AmbientBackground />
 
