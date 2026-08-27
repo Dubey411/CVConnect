@@ -128,10 +128,10 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
       <div className="h-44">
         <ResponsiveContainer>
           <RadarChart data={radarData}>
-            <PolarGrid stroke="#20364d" />
+            <PolarGrid stroke="#2A3C4E" />
             <PolarAngleAxis dataKey="dimension" tick={{ fill: '#9eacb9', fontSize: 10 }} />
-            <Radar dataKey="value" stroke="#3be0c5" fill="#3be0c5" fillOpacity={0.2} />
-            <Tooltip contentStyle={{ background: '#0c1b2c', border: '1px solid #20364d', fontSize: 11 }} />
+            <Radar dataKey="value" stroke="#9E6634" fill="#9E6634" fillOpacity={0.25} />
+            <Tooltip contentStyle={{ background: '#1E2C3A', border: '1px solid #2A3C4E', fontSize: 11 }} />
           </RadarChart>
         </ResponsiveContainer>
       </div>
