@@ -48,7 +48,7 @@ function Auth({ mode, setMode, onBack }) {
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_.9fr]">
       {/* Visual panel */}
       <section className="relative hidden overflow-hidden bg-surface p-10 lg:block">
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#3be0c5 1px, transparent 1px)', backgroundSize: '25px 25px' }}/>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#9E6634 1px, transparent 1px)', backgroundSize: '25px 25px' }}/>
         <div className="relative flex h-full max-w-xl flex-col justify-between">
           <div className="flex items-center gap-2 font-semibold tracking-tight text-white">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-aqua/10 text-aqua font-bold text-base border border-aqua/30">
