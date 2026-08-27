@@ -36,7 +36,7 @@ function renderHighlighted(text) {
   return parts.map((part, i) => {
     if (part.startsWith('[') && part.endsWith(']')) {
       return (
-        <mark key={i} style={{ background: 'rgba(193,122,91,0.15)', color: '#C17A5B', borderRadius: 3, padding: '0 3px' }}>
+        <mark key={i} style={{ background: 'rgba(158,102,52,0.15)', color: '#9E6634', borderRadius: 3, padding: '0 3px' }}>
           {part.slice(1, -1)}
         </mark>
       );
@@ -70,8 +70,8 @@ function BulletRow({ bullet, phase }) {
     <div className="rounded-xl p-4 border transition-all duration-500 relative overflow-hidden"
       style={{
         background: phase >= 1 ? '#FAF7F2' : 'rgba(250,247,242,0.6)',
-        borderColor: phase >= 1 ? '#C17A5B' : 'rgba(30,43,55,0.15)',
-        boxShadow: phase >= 1 ? '0 8px 24px rgba(193,122,91,0.1)' : 'none',
+        borderColor: phase >= 1 ? '#9E6634' : 'rgba(22,32,44,0.15)',
+        boxShadow: phase >= 1 ? '0 8px 24px rgba(158,102,52,0.1)' : 'none',
       }}
     >
       {/* Before (shown while phase === 0) */}
@@ -88,7 +88,7 @@ function BulletRow({ bullet, phase }) {
             : (
               <>
                 {typed}
-                <span className="inline-block w-0.5 h-3.5 bg-[#C17A5B] ml-0.5 animate-pulse align-middle" />
+                <span className="inline-block w-0.5 h-3.5 bg-[#9E6634] ml-0.5 animate-pulse align-middle" />
               </>
             )
           }
@@ -100,7 +100,7 @@ function BulletRow({ bullet, phase }) {
         <div className="mt-2 flex gap-2">
           {['Action verb', 'Metric', 'Keyword'].map(tag => (
             <span key={tag} className="text-[9px] px-2 py-0.5 rounded-full font-mono"
-              style={{ background: 'rgba(30,43,55,0.08)', color: '#1E2B37', border: '1px solid rgba(30,43,55,0.2)' }}>
+              style={{ background: 'rgba(22,32,44,0.08)', color: '#16202C', border: '1px solid rgba(22,32,44,0.2)' }}>
               {tag}
             </span>
           ))}
@@ -151,14 +151,14 @@ export default function S5_RewriteSection() {
       <div ref={stickyRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
         style={{ background: 'transparent' }}>
 
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(193,122,91,0.04),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(158,102,52,0.04),transparent)] pointer-events-none" />
 
         <div id="s5-content" className="w-full max-w-4xl mx-auto px-6">
           <div className="text-center mb-10 space-y-2">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-[#C17A5B]">Step 04 — AI Rewrite</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-[#9E6634]">Step 04 — AI Rewrite</p>
             <h2 className="text-4xl font-bold text-[#2A2622] tracking-tight">
               Weak bullets become{' '}
-              <span className="text-[#1E2B37]">
+              <span className="text-[#16202C]">
                 powerful achievements.
               </span>
             </h2>
