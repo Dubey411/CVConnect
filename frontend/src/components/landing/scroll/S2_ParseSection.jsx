@@ -47,8 +47,8 @@ export default function S2_ParseSection() {
       RESUME_SECTIONS.forEach((sec, i) => {
         tl.to(`#highlight-${sec.id}`, {
           opacity: 1,
-          boxShadow: '0 0 10px 2px rgba(59,224,197,0.2)',
-          background: 'rgba(59,224,197,0.06)',
+          boxShadow: '0 0 12px 2px rgba(193,122,91,0.25)',
+          background: 'rgba(193,122,91,0.08)',',
           duration: 0.25,
         }, `<${i === 0 ? 0.3 : 0.15}`);
         tl.to(`#check-${sec.id}`, { opacity: 1, scale: 1, duration: 0.2 }, '<0.05');
@@ -64,20 +64,20 @@ export default function S2_ParseSection() {
   return (
     <section ref={wrapRef} style={{ height: '300vh' }} className="relative">
       <div ref={stickyRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
-        style={{ background: '#081422' }}>
+        style={{ background: 'transparent' }}>
 
         {/* Background glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,rgba(59,224,197,0.04),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,rgba(193,122,91,0.06),transparent)] pointer-events-none" />
 
         <div id="s2-content" className="w-full max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Label */}
           <div className="space-y-5">
-            <p className="text-xs text-[#3be0c5]/70 mb-2">Step 01 — AI Parsing</p>
-            <h2 className="text-4xl lg:text-5xl font-bold text-white tracking-tight leading-[1.1]">
+            <p className="text-xs text-[#C17A5B] font-mono mb-2">Step 01 — AI Parsing</p>
+            <h2 className="text-4xl lg:text-5xl font-bold text-[#2A2622] tracking-tight leading-[1.1]">
               AI reads every{' '}
-              <span className="text-[#3be0c5]">line of your resume.</span>
+              <span className="text-[#C17A5B]">line of your resume.</span>
             </h2>
-            <p className="text-slate-400 text-base leading-relaxed">
+            <p className="text-[#6E6259] text-base leading-relaxed">
               Our NLP engine extracts structured data from every section — then maps it to your target role requirements.
             </p>
 
@@ -91,14 +91,14 @@ export default function S2_ParseSection() {
                     style={{
                       opacity: 0,
                       scale: 0.5,
-                      background: 'rgba(59,224,197,0.15)',
-                      border: '1px solid rgba(59,224,197,0.5)',
-                      color: '#3be0c5',
+                      background: 'rgba(193,122,91,0.15)',
+                      border: '1px solid #C17A5B',
+                      color: '#C17A5B',
                     }}
                   >
                     ✓
                   </div>
-                  <span className="text-sm text-slate-300 capitalize">{sec.label} detected</span>
+                  <span className="text-sm text-[#2A2622] capitalize font-medium">{sec.label} detected</span>
                 </div>
               ))}
             </div>
@@ -107,7 +107,7 @@ export default function S2_ParseSection() {
           {/* Right: Resume preview with scan beam */}
           <div className="relative">
             <div className="relative rounded-xl overflow-hidden"
-              style={{ background: '#0d1f30', border: '1px solid rgba(255,255,255,0.07)', minHeight: 400 }}>
+              style={{ background: '#FAF7F2', border: '1px solid rgba(91,58,74,0.18)', boxShadow: '0 20px 50px rgba(91,58,74,0.1)', minHeight: 400 }}>
 
               {/* Scan beam */}
               <div
@@ -115,19 +115,19 @@ export default function S2_ParseSection() {
                 className="absolute left-0 right-0 pointer-events-none z-20"
                 style={{
                   height: 2,
-                  background: 'linear-gradient(90deg, transparent, rgba(59,224,197,0.7), transparent)',
-                  boxShadow: '0 0 12px 3px rgba(59,224,197,0.2)',
+                  background: 'linear-gradient(90deg, transparent, #C17A5B, transparent)',
+                  boxShadow: '0 0 12px 3px rgba(193,122,91,0.35)',
                   top: '0%',
                 }}
               />
 
               {/* Resume header */}
-              <div className="p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                <div className="text-white font-semibold text-sm">Shubham Dubey</div>
-                <div className="text-slate-500 text-xs mt-0.5">Computer Engineer · dubeytech9619@gmail.com</div>
+              <div className="p-5 border-b" style={{ borderColor: 'rgba(91,58,74,0.1)', background: 'rgba(245,240,232,0.8)' }}>
+                <div className="text-[#2A2622] font-semibold text-sm">Shubham Dubey</div>
+                <div className="text-[#6E6259] text-xs mt-0.5">Computer Engineer · dubeytech9619@gmail.com</div>
                 <div className="flex gap-2 mt-2">
                   {['React', 'Node.js', 'Python', 'SQL'].map(sk => (
-                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] text-slate-500" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <span key={sk} className="px-2 py-0.5 rounded text-[10px] text-[#6E6259]" style={{ border: '1px solid rgba(91,58,74,0.15)', background: '#F5F0E8' }}>
                       {sk}
                     </span>
                   ))}
@@ -143,17 +143,17 @@ export default function S2_ParseSection() {
                     className="rounded-lg p-3 border transition-all"
                     style={{
                       opacity: 0.15,
-                      borderColor: 'rgba(32,54,77,0.6)',
+                      borderColor: 'rgba(91,58,74,0.12)',
                       background: 'transparent',
                     }}
                   >
-                    <p className="text-[10px] font-mono text-[#3be0c5] uppercase tracking-widest mb-2">
+                    <p className="text-[10px] font-mono text-[#C17A5B] uppercase tracking-widest mb-2">
                       {sec.label}
                     </p>
                     <div className="space-y-1.5">
                       {[1, 2].map(l => (
                         <div key={l}
-                          className="h-2 rounded-full bg-slate-700/60"
+                          className="h-2 rounded-full bg-[#5B3A4A]/20"
                           style={{ width: l === 1 ? '80%' : '55%' }}
                         />
                       ))}
