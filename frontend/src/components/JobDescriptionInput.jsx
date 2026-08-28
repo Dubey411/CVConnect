@@ -57,13 +57,13 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
       </div>
 
       {/* URL Link Extractor Option */}
-      <div className="p-3 bg-surface/60 rounded border border-line space-y-2">
-        <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400">
+      <div className="p-3.5 bg-[#F5EFE4] rounded-xl border border-[#2B2D42]/12 space-y-2.5">
+        <label className="block text-[11px] font-mono uppercase tracking-wider text-[#5F6170]">
           Option A: Auto-Extract from Job Link
         </label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Link2 size={14} className="absolute left-3 top-2.5 text-slate-500" />
+            <Link2 size={14} className="absolute left-3 top-2.5 text-[#5F6170]" />
             <input
               type="url"
               className="input pl-8 text-xs py-1.5"
@@ -76,7 +76,7 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
             type="button"
             disabled={fetchingUrl || !jobUrl}
             onClick={handleFetchUrl}
-            className="button-quiet border border-aqua/30 text-aqua hover:bg-aqua/10 text-xs py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-40"
+            className="button-quiet border border-[#A8412E]/35 text-[#A8412E] hover:bg-[#A8412E]/10 text-xs py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-40"
           >
             {fetchingUrl ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {fetchingUrl ? 'Extracting...' : 'Fetch Link'}
@@ -87,12 +87,12 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
         )}
       </div>
 
-      <div className="text-[10px] font-mono uppercase text-slate-500 text-center">
+      <div className="text-[10px] font-mono uppercase text-[#5F6170] text-center">
         — OR Option B: Enter Job Details Manually —
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-[#5F6170]">
           Role title
           <input
             className="input mt-1 text-xs"
@@ -101,7 +101,7 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
             placeholder="e.g. Data Analyst / Software Engineer"
           />
         </label>
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-[#5F6170]">
           Company <span className="text-slate-600">optional</span>
           <input
             className="input mt-1 text-xs"
@@ -112,7 +112,7 @@ export default function JobDescriptionInput({ job, busy, onAnalyze }) {
         </label>
       </div>
 
-      <label className="block text-xs text-slate-400">
+      <label className="block text-xs text-[#5F6170]">
         Job description
         <textarea
           className="input mt-1 min-h-32 text-xs resize-y leading-relaxed"
