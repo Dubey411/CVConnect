@@ -151,7 +151,10 @@ function Shell() {
   }, [activeTab]);
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000');
+    const defaultWsUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+      ? 'https://cvconnect.onrender.com'
+      : 'http://localhost:5000';
+    const socket = io(import.meta.env.VITE_WEBSOCKET_URL || defaultWsUrl);
     socket.emit('subscribe', user.id);
     return () => socket.close();
   }, [user.id]);
