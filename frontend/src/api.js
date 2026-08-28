@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api' });
+const defaultApiUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? 'https://cvconnect.onrender.com/api'
+  : 'http://localhost:5000/api';
+
+const apiBaseUrl = import.meta.env.VITE_API_URL || defaultApiUrl;
+
+const api = axios.create({ baseURL: apiBaseUrl });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('cvconnect_token');
@@ -21,7 +27,7 @@ api.interceptors.response.use(
       if (refreshToken && !isRefreshing) {
         isRefreshing = true;
         try {
-          const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`, { refreshToken });
+          const res = await axios.post(`${apiBaseUrl}/auth/refresh`, { refreshToken });
           const newAccessToken = res.data?.accessToken;
           const newRefreshToken = res.data?.refreshToken;
           if (newAccessToken) {
