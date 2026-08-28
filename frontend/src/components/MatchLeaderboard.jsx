@@ -17,7 +17,7 @@ const PLATFORM_META = {
 };
 
 function PlatformBadge({ platform }) {
-  const meta = PLATFORM_META[platform] || { color: 'bg-slate-700/40 border-slate-600/30 text-slate-400', dot: 'bg-slate-500' };
+  const meta = PLATFORM_META[platform] || { color: 'bg-[#D4A24C]/20 text-[#2B2D42]/40 border-slate-600/30 text-[#5F6170]', dot: 'bg-slate-500' };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${meta.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
@@ -146,34 +146,34 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={handleFileUpload} className="hidden" />
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#16202C] via-[#1E2C3A] to-[#16202C] border border-aqua/15 p-6 md:p-8">
-        <div className="absolute -right-12 -top-12 w-64 h-64 bg-aqua/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl bg-[#FAF6EE] border border-[#2B2D42]/14 shadow-[0_4px_24px_rgba(43,45,66,0.05)] p-6 md:p-8">
+        <div className="absolute -right-12 -top-12 w-64 h-64 bg-[#A8412E]/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aqua/10 border border-aqua/30 text-aqua text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#A8412E]/10 border border-[#A8412E]/30 text-[#A8412E] text-xs font-semibold">
               <Target size={13} />
               AI Job Matching · Live Search
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold text-[#2B2D42] tracking-tight font-serif-fraunces">
               Find Best Matching Jobs
             </h1>
-            <p className="text-slate-400 text-sm max-w-2xl">
-              Searches across <strong className="text-white">Unstop · Internshala · Indeed India · LinkedIn · Glassdoor</strong> and ranks them by how well they match your resume.
+            <p className="text-[#5F6170] text-sm max-w-2xl">
+              Searches across <strong className="text-[#2B2D42]">Unstop · Internshala · Indeed India · LinkedIn · Glassdoor</strong> and ranks them by how well they match your resume.
             </p>
           </div>
 
           {/* Resume Selector & Inline Upload */}
-          <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl w-full md:w-auto md:min-w-[320px] space-y-2">
+          <div className="bg-[#F5EFE4] border border-[#2B2D42]/12 p-3.5 rounded-xl w-full md:w-auto md:min-w-[320px] space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-xs font-medium text-slate-400 flex items-center gap-1.5 shrink-0">
+              <label className="text-xs font-medium text-[#5F6170] flex items-center gap-1.5 shrink-0">
                 <FileText size={13} className="text-violet-400" />
                 Active Resume:
               </label>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[11px] font-semibold transition-colors shadow-sm shadow-violet-600/30 shrink-0 whitespace-nowrap"
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#A8412E] hover:bg-[#8F3423] text-[#F5EFE4] rounded-md text-[11px] font-semibold transition-colors shadow-sm shadow-violet-600/30 shrink-0 whitespace-nowrap"
               >
                 <Plus size={12} />
                 <span>{uploading ? 'Uploading…' : 'Upload Resume'}</span>
@@ -182,7 +182,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
             <select
               value={selectedResumeId}
               onChange={(e) => setSelectedResumeId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500 transition-colors"
+              className="w-full bg-[#FAF6EE] border border-[#2B2D42]/16 text-[#2B2D42] text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500 transition-colors"
             >
               {resumes.length === 0 ? (
                 <option value="">No Resumes Uploaded</option>
@@ -196,19 +196,19 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
         </div>
 
         {/* Summary Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#2B2D42]/10 relative z-10">
           {[
             { label: 'Top Fit Score', value: summary.topMatchScore > 0 ? `${summary.topMatchScore}%` : 'N/A', icon: <Target size={20}/>, color: 'emerald' },
             { label: 'High Match Roles', value: `${summary.highFitCount}`, suffix: 'roles', icon: <Award size={20}/>, color: 'violet' },
             { label: 'Average Match', value: summary.avgScore > 0 ? `${summary.avgScore}%` : 'N/A', icon: <Zap size={20}/>, color: 'sky' },
             { label: 'Total Opportunities', value: `${summary.totalJobs}`, suffix: 'jobs', icon: <Briefcase size={20}/>, color: 'purple' }
           ].map(({ label, value, suffix, icon, color }) => (
-            <div key={label} className="bg-slate-950/40 border border-white/5 rounded-xl p-3.5 flex items-center gap-3">
+            <div key={label} className="bg-[#F5EFE4] border border-[#2B2D42]/10 rounded-xl p-3.5 flex items-center gap-3">
               <div className={`p-2.5 rounded-lg bg-${color}-500/10 text-${color}-400 border border-${color}-500/20`}>{icon}</div>
               <div>
-                <div className="text-xs text-slate-400 font-medium">{label}</div>
+                <div className="text-xs text-[#5F6170] font-medium">{label}</div>
                 <div className={`text-xl font-bold text-${color}-400`}>
-                  {value} {suffix && <span className="text-xs text-slate-500 font-normal">{suffix}</span>}
+                  {value} {suffix && <span className="text-xs text-[#5F6170] font-normal">{suffix}</span>}
                 </div>
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         {/* Score Filter */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 bg-[#FAF6EE] border border-[#2B2D42]/12 rounded-xl flex-wrap">
           {[
             { id: 'all',  label: `All (${rankedJobs.length})` },
             { id: 'top',  label: `🟢 Top Fits (${topCutoff}%+)` },
@@ -227,18 +227,18 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setFilter(id)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                filter === id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-400 hover:text-white'
+                filter === id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-[#5F6170] hover:text-[#2B2D42]'
               }`}
             >{label}</button>
           ))}
           {/* Platform Filter Pills */}
           {availablePlatforms.length > 0 && (
-            <span className="mx-1 w-px h-4 bg-slate-700 self-center" />
+            <span className="mx-1 w-px h-4 bg-[#D4A24C]/20 text-[#2B2D42] self-center" />
           )}
           {availablePlatforms.map(p => (
             <button key={p} onClick={() => setPlatformFilter(prev => prev === p ? 'all' : p)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                platformFilter === p ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'
+                platformFilter === p ? 'bg-[#A8412E] text-[#F5EFE4]' : 'text-[#5F6170] hover:text-[#2B2D42]'
               }`}
             >{p}</button>
           ))}
@@ -257,7 +257,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
           <button
             onClick={() => runBatchMatch(selectedResumeId)}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-medium text-slate-300 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#FAF6EE] hover:bg-[#F5EFE4] border border-[#2B2D42]/12 rounded-lg text-xs font-medium text-[#2B2D42] transition-colors"
           >
             <RefreshCw size={13} className={loading && !discovering ? 'animate-spin text-violet-400' : ''} />
             Refresh
@@ -267,13 +267,13 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
       {/* Loading */}
       {loading && (
-        <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+        <div className="py-16 text-center space-y-4 bg-[#FAF6EE]/40 border border-[#2B2D42]/12/80 rounded-2xl">
           <RefreshCw size={32} className="animate-spin text-violet-500 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-white font-semibold">
+            <h3 className="text-[#2B2D42] font-semibold">
               {discovering ? '🔍 Searching Unstop · Internshala · Indeed India · LinkedIn…' : 'Running ML Match Scoring…'}
             </h3>
-            <p className="text-xs text-slate-400">Fetching real live job listings and computing ML selection probability</p>
+            <p className="text-xs text-[#5F6170]">Fetching real live job listings and computing ML selection probability</p>
           </div>
         </div>
       )}
@@ -288,13 +288,13 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
 
       {/* Empty */}
       {!loading && !error && filteredJobs.length === 0 && (
-        <div className="py-16 text-center space-y-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6">
+        <div className="py-16 text-center space-y-4 bg-[#FAF6EE]/40 border border-[#2B2D42]/12/80 rounded-2xl p-6">
           <Briefcase size={40} className="text-slate-600 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-white font-medium text-lg">
+            <h3 className="text-[#2B2D42] font-medium text-lg font-serif-fraunces">
               {rankedJobs.length > 0 ? `No roles matched active filter '${filter}'` : 'No Opportunities Found Yet'}
             </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-[#5F6170] max-w-md mx-auto">
               {rankedJobs.length > 0
                 ? `Your top match score among these opportunities is ${maxScore}%. Clear active filters to view all ${rankedJobs.length} live jobs.`
                 : "Upload your resume and click Find Jobs from Resume — we'll search Unstop, Internshala, Indeed India, LinkedIn & Glassdoor live for you."}
@@ -304,19 +304,19 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
             {rankedJobs.length > 0 ? (
               <button
                 onClick={() => { setFilter('all'); setPlatformFilter('all'); }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#A8412E] hover:bg-[#8F3423] text-[#F5EFE4] rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
               >
                 Show All {rankedJobs.length} Opportunities
               </button>
             ) : (
               <>
                 <button onClick={() => runDiscoverAndMatch(selectedResumeId)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#A8412E] hover:bg-[#8F3423] text-[#F5EFE4] rounded-xl text-xs font-semibold shadow-lg shadow-violet-600/30 transition-all"
                 >
                   <Search size={15} />Find Live Jobs for My Resume
                 </button>
                 <button onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-[#D4A24C]/20 text-[#2B2D42] text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all"
                 >
                   <Plus size={15} />Upload Resume PDF
                 </button>
@@ -340,11 +340,11 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
             return (
               <div
                 key={job.id}
-                className={`group relative overflow-hidden rounded-2xl bg-slate-900/80 border transition-all duration-300 hover:border-slate-700 p-5 md:p-6 ${
+                className={`group relative overflow-hidden rounded-2xl bg-[#FAF6EE] border transition-all duration-300 hover:border-[#A8412E]/40 p-5 md:p-6 ${
                   isTop ? 'border-emerald-500/30 hover:border-emerald-500/60 shadow-lg shadow-emerald-500/5'
                   : isGood ? 'border-sky-500/30 hover:border-sky-500/60'
                   : isSearchLink ? 'border-violet-500/20 hover:border-violet-500/40'
-                  : 'border-slate-800'
+                  : 'border-[#2B2D42]/12'
                 }`}
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -352,7 +352,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                        idx === 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'
+                        idx === 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[#F5EFE4] text-[#5F6170]'
                       }`}>
                         #{idx + 1}
                       </span>
@@ -370,16 +370,16 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                     </div>
 
                     <div>
-                      <h2 className="text-lg font-bold text-white group-hover:text-violet-400 transition-colors">
+                      <h2 className="text-lg font-bold text-[#2B2D42] group-hover:text-[#A8412E] transition-colors">
                         {job.title}
                       </h2>
-                      <p className="text-xs text-slate-400 mt-0.5">{job.company}</p>
+                      <p className="text-xs text-[#5F6170] mt-0.5">{job.company}</p>
                     </div>
 
                     {/* Matched Skills */}
                     {job.matchedSkills?.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-slate-400 mr-1">Matched:</span>
+                        <span className="text-[11px] font-medium text-[#5F6170] mr-1">Matched:</span>
                         {job.matchedSkills.slice(0, 6).map((skill, i) => (
                           <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-mono">
                             ✓ {skill}
@@ -391,7 +391,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                     {/* Missing Skills */}
                     {job.missingSkills?.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-slate-400 mr-1">Skill Gap:</span>
+                        <span className="text-[11px] font-medium text-[#5F6170] mr-1">Skill Gap:</span>
                         {job.missingSkills.slice(0, 4).map((skill, i) => (
                           <span key={i} className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono">
                             ! {skill}
@@ -402,15 +402,15 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                   </div>
 
                   {/* Right: Score + Actions */}
-                  <div className="flex items-center justify-between md:justify-end gap-4 pt-4 md:pt-0 border-t md:border-t-0 border-slate-800">
+                  <div className="flex items-center justify-between md:justify-end gap-4 pt-4 md:pt-0 border-t md:border-t-0 border-[#2B2D42]/12">
                     {/* Score */}
                     <div className="text-center min-w-[72px]">
                       <div className={`text-3xl font-extrabold tracking-tight ${
-                        isTop ? 'text-emerald-400' : isGood ? 'text-sky-400' : 'text-slate-400'
+                        isTop ? 'text-emerald-400' : isGood ? 'text-sky-400' : 'text-[#5F6170]'
                       }`}>
                         {isSearchLink ? '—' : `${chance}%`}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                      <div className="text-[10px] text-[#5F6170] font-medium uppercase tracking-wider mt-0.5">
                         {isSearchLink ? 'Live Search' : 'Selection Chance'}
                       </div>
                     </div>
@@ -423,7 +423,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                           href={targetUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-all"
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-[#D4A24C]/20 text-[#2B2D42] border border-slate-700 text-slate-200 text-xs font-semibold transition-all"
                         >
                           <ExternalLink size={12} />
                           {isSearchLink ? `Open ${platform}` : 'View Job'}
@@ -440,7 +440,7 @@ export default function MatchLeaderboard({ onSelectJob, onNavigateToApply }) {
                           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold text-xs transition-all ${
                             isTop
                               ? 'bg-aqua/15 hover:bg-aqua/25 text-aqua border border-aqua/30'
-                              : 'bg-slate-700/60 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                              : 'bg-[#D4A24C]/20 text-[#2B2D42]/60 hover:bg-[#D4A24C]/20 text-[#2B2D42] text-slate-200 border border-slate-700'
                           }`}
                         >
                           <Sparkles size={12} />
