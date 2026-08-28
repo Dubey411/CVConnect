@@ -70,7 +70,7 @@ function Nav({ onGetStarted, onSignIn }) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center gap-1 text-[11px] font-semibold text-[#F5EFE4] px-3.5 py-1.5 rounded-full shadow-sm"
-            style={{ background: '#9E6634' }}
+            style={{ background: '#A8412E' }}
           >
             Get started <ArrowRight size={11} />
           </motion.button>
@@ -115,7 +115,7 @@ function ScrollIndicator() {
     >
       <motion.div
         className="w-px h-10 rounded-full"
-        style={{ background: 'linear-gradient(180deg, transparent, #9E6634, transparent)' }}
+        style={{ background: 'linear-gradient(180deg, transparent, #A8412E, transparent)' }}
         animate={{ scaleY: [0.6, 1, 0.6], opacity: [0.3, 0.8, 0.3] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
       />
