@@ -15,14 +15,14 @@ export default function ResumeUpload({ resume, busy, onUpload }) {
     return (
       <div className="panel p-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center bg-aqua text-ink font-semibold rounded">
+          <div className="grid h-10 w-10 shrink-0 place-items-center bg-[#A8412E] text-[#F5EFE4] font-semibold rounded">
             <FileText size={19} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">
               {resume.original?.contact?.name || 'Resume Uploaded'}
             </p>
-            <p className="truncate font-mono text-[10px] text-slate-400">
+            <p className="truncate font-mono text-[10px] text-[#5F6170]">
               {resume.original?.contact?.email || 'Parsed resume ready'} · {Math.round((resume.original?.confidence || 0.95) * 100)}% confidence
             </p>
           </div>
@@ -33,7 +33,7 @@ export default function ResumeUpload({ resume, busy, onUpload }) {
           <button
             type="button"
             onClick={() => dispatch(clearResume())}
-            className="text-slate-400 hover:text-coral transition-colors flex items-center gap-1"
+            className="text-[#5F6170] hover:text-coral transition-colors flex items-center gap-1"
           >
             <X size={13} /> Remove
           </button>
@@ -42,7 +42,7 @@ export default function ResumeUpload({ resume, busy, onUpload }) {
             type="button"
             disabled={busy}
             onClick={() => input.current.click()}
-            className="text-aqua hover:text-white transition-colors flex items-center gap-1 font-medium"
+            className="text-[#A8412E] hover:text-[#8F3423] transition-colors flex items-center gap-1 font-medium"
           >
             <Plus size={13} /> Upload Another Resume
           </button>
@@ -65,7 +65,7 @@ export default function ResumeUpload({ resume, busy, onUpload }) {
       onDragOver={e => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={e => { e.preventDefault(); setDragging(false); accept(e.dataTransfer.files[0]); }}
-      className={`group border border-dashed p-7 text-center transition ${dragging ? 'border-aqua bg-aqua/10' : 'border-line bg-surface/30 hover:border-aqua/60'}`}
+      className={`group border border-dashed p-7 text-center transition ${dragging ? 'border-aqua bg-aqua/10' : 'border-line bg-[#F5EFE4]/80 rounded-xl border-[#2B2D42]/16 hover:border-[#A8412E]'}`}
     >
       <input
         ref={input}
@@ -78,7 +78,7 @@ export default function ResumeUpload({ resume, busy, onUpload }) {
         <FileUp className="text-aqua" size={21} />
       </div>
       <p className="text-sm font-semibold">Drop your resume here</p>
-      <p className="mt-1 text-xs text-slate-400">PDF or DOCX · 10 MB maximum</p>
+      <p className="mt-1 text-xs text-[#5F6170]">PDF or DOCX · 10 MB maximum</p>
       <button
         type="button"
         disabled={busy}
