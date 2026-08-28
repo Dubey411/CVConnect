@@ -1,44 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
-
-/* ─── Handcrafted Indian Artisan Vector Glyphs (Subtle Hand-Drawn Style) ─ */
-function ArtisanSparkle({ className, color = '#D4A24C' }) {
-  return (
-    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2 C12 7, 17 12, 22 12 C17 12, 12 17, 12 22 C12 17, 7 12, 2 12 C7 12, 12 7, 12 2 Z" fill={color} fillOpacity="0.85" stroke={color} strokeWidth="1" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArtisanDiamond({ className, color = '#A8412E' }) {
-  return (
-    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 3 L21 12 L12 21 L3 12 Z" stroke={color} strokeWidth="1.6" strokeLinejoin="round" />
-      <circle cx="12" cy="12" r="2.5" fill={color} />
-    </svg>
-  );
-}
-
-function ArtisanDocument({ className, color = '#2B2D42' }) {
-  return (
-    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5 4 C5 3.4 5.4 3 6 3 L14 3 L19 8 L19 20 C19 20.6 18.6 21 18 21 L6 21 C5.4 21 5 20.6 5 20 Z" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 3 L14 8 L19 8" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-      <line x1="8" y1="13" x2="16" y2="13" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-      <line x1="8" y1="17" x2="13" y2="17" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ArtisanCheckmark({ className, color = '#D4A24C' }) {
-  return (
-    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5" strokeDasharray="2 3" />
-      <path d="M8 12.5 L10.5 15 L16 9" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+import { ArrowRight, Sparkles, FileText, Check, Layers } from 'lucide-react';
 
 /* ─── Animated Metric Counter ────────────────────────────────────────── */
 function AnimatedCounter({ to, duration = 1.6 }) {
@@ -63,7 +25,7 @@ function AnimatedCounter({ to, duration = 1.6 }) {
   return <span ref={ref}>{val}</span>;
 }
 
-/* ─── Product UI Card with Varied Imperfect Radii (8-14px) ───────────── */
+/* ─── Handcrafted Product UI Card Exactly Matching User Screenshot ──── */
 function ProductCard() {
   const [score, setScore] = useState(64);
   const [activeStep, setActiveStep] = useState(0);
@@ -78,16 +40,15 @@ function ProductCard() {
 
   return (
     <div
-      /* Varied, organic corner radii: 14px top-left, 9px top-right, 13px bottom-right, 10px bottom-left */
-      className="overflow-hidden relative transition-shadow duration-300"
+      className="overflow-hidden relative transition-all duration-300"
       style={{
         borderRadius: '14px 9px 13px 10px',
         background: '#FAF6EE',
-        border: '1px solid rgba(43, 45, 66, 0.14)',
-        boxShadow: '0 24px 48px -12px rgba(43, 45, 66, 0.10), 0 4px 16px rgba(43, 45, 66, 0.04)',
+        border: '1px solid rgba(43, 45, 66, 0.16)',
+        boxShadow: '0 24px 50px -12px rgba(43, 45, 66, 0.12), 0 4px 16px rgba(43, 45, 66, 0.04)',
       }}
     >
-      {/* Card Header Bar with hairline divider */}
+      {/* Title bar with studio label */}
       <div
         className="flex items-center gap-2 px-4 py-3 border-b"
         style={{ borderColor: 'rgba(43, 45, 66, 0.10)', background: 'rgba(237, 228, 211, 0.65)' }}
@@ -101,7 +62,7 @@ function ProductCard() {
       </div>
 
       <div className="p-5 space-y-4">
-        {/* Candidate + Role Grid with artisan varied radii */}
+        {/* Candidate + Role Grid */}
         <div className="grid grid-cols-2 gap-3">
           <div
             className="p-3"
@@ -111,7 +72,7 @@ function ProductCard() {
               border: '1px solid rgba(43, 45, 66, 0.09)',
             }}
           >
-            <p className="text-[9px] text-[#5F6170] mb-0.5 uppercase tracking-widest font-mono">Candidate</p>
+            <p className="text-[9px] text-[#5F6170] mb-0.5 uppercase tracking-widest font-mono">CANDIDATE</p>
             <p className="text-sm font-semibold text-[#2B2D42]">Shubham Dubey</p>
             <p className="text-[11px] text-[#5F6170]">Computer Engineer</p>
           </div>
@@ -123,13 +84,13 @@ function ProductCard() {
               border: '1px solid rgba(43, 45, 66, 0.09)',
             }}
           >
-            <p className="text-[9px] text-[#5F6170] mb-0.5 uppercase tracking-widest font-mono">Target Position</p>
+            <p className="text-[9px] text-[#5F6170] mb-0.5 uppercase tracking-widest font-mono">TARGET POSITION</p>
             <p className="text-sm font-semibold text-[#A8412E]">Data Analyst</p>
             <p className="text-[11px] text-[#5F6170]">Nova Technology</p>
           </div>
         </div>
 
-        {/* ATS Score Progress Block */}
+        {/* ATS Score Meter */}
         <div
           className="p-4"
           style={{
@@ -140,7 +101,7 @@ function ProductCard() {
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-[#2B2D42] flex items-center gap-1.5 font-sans">
-              <ArtisanSparkle className="shrink-0" color="#A8412E" />
+              <Sparkles size={13} className="text-[#A8412E]" />
               ATS Score Precision
             </span>
             <div className="flex items-baseline gap-0.5">
@@ -170,9 +131,9 @@ function ProductCard() {
             className="grid grid-cols-2 px-3 py-2 text-[10px] font-mono uppercase tracking-wider border-b"
             style={{ borderColor: 'rgba(43, 45, 66, 0.08)', background: 'rgba(237, 228, 211, 0.7)' }}
           >
-            <span className="text-[#5F6170]">Raw Phrasing</span>
+            <span className="text-[#5F6170]">RAW PHRASING</span>
             <span className="text-[#A8412E] font-semibold flex items-center gap-1">
-              <ArtisanSparkle color="#A8412E" /> Tailored Output
+              <Sparkles size={11} /> TAILORED OUTPUT
             </span>
           </div>
           <div className="grid grid-cols-2 p-3 gap-3 leading-relaxed bg-[#FAF6EE]">
@@ -188,7 +149,7 @@ function ProductCard() {
           </div>
         </div>
 
-        {/* 4 Step Progress Indicators */}
+        {/* Step Indicators */}
         <div className="flex items-center gap-1.5 pt-1">
           {steps.map((s, i) => (
             <motion.div
@@ -211,19 +172,19 @@ function ProductCard() {
   );
 }
 
-/* ─── Hero Section with Scroll-Reveal Stagger ────────────────────────── */
+/* ─── Hero Section ───────────────────────────────────────────────────── */
 export default function HeroSection({ onGetStarted, onSignIn }) {
   return (
     <section className="max-w-6xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10">
 
-      {/* ── LEFT SIDE: Editorial Copy, CTAs, Feature Row & Metrics ─────── */}
+      {/* ── LEFT COLUMN ────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        className="space-y-7"
+        className="space-y-6"
       >
-        {/* Eyebrow Label with Turmeric Micro-Highlight */}
+        {/* Eyebrow badge */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -235,13 +196,13 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
             border: '1px solid rgba(43, 45, 66, 0.14)',
           }}
         >
-          <span className="w-2 h-2 rounded-full bg-[#D4A24C] shrink-0" />
+          <span className="w-2 h-2 rounded-full bg-[#A8412E] shrink-0" />
           <span className="font-mono text-[10.5px] uppercase tracking-wider text-[#5F6170]">
-            AI Resume Optimization · v2.4
+            AI RESUME OPTIMIZATION · V2.4
           </span>
         </motion.div>
 
-        {/* Large Serif Headline with Optical Sizing (Fraunces) */}
+        {/* Large Editorial Headline — Fraunces Serif with Optical Sizing */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -257,7 +218,7 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           </span>
         </motion.h1>
 
-        {/* Medium Subtext in Humanist Sans */}
+        {/* Medium Subtext */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -267,14 +228,14 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           Upload your resume. Paste a job description. Get an ATS-optimized, print-ready PDF in under 5 seconds — powered by real ML, not templates.
         </motion.p>
 
-        {/* Two CTAs: Primary Terracotta / Madder-Root & Secondary Outline */}
+        {/* Two CTAs: Primary Terracotta & Secondary Outline */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
           className="flex flex-wrap gap-3.5 pt-1"
         >
-          {/* Primary Action Button */}
+          {/* Primary Terracotta CTA */}
           <motion.button
             onClick={onGetStarted}
             whileHover={{ scale: 1.02, backgroundColor: '#8F3423' }}
@@ -290,7 +251,7 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
             <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
           </motion.button>
 
-          {/* Secondary Outline Action Button */}
+          {/* Secondary Outline CTA */}
           <motion.button
             onClick={onSignIn}
             whileHover={{ scale: 1.01, borderColor: '#A8412E' }}
@@ -305,31 +266,31 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           </motion.button>
         </motion.div>
 
-        {/* Small Feature Icon Row with Handcrafted Glyphs & Thin Ajrakh Divider */}
+        {/* Aligned 4-Pill Feature Row (Positioned Directly Below CTAs as in Screenshot) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.65 }}
-          className="pt-3 border-t"
-          style={{ borderColor: 'rgba(43, 45, 66, 0.12)' }}
+          className="pt-2"
         >
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {[
-              { icon: ArtisanSparkle,   label: 'Smart Parsing',       color: '#D4A24C' },
-              { icon: ArtisanDiamond,   label: 'Keyword Gap Analysis',color: '#A8412E' },
-              { icon: ArtisanDocument,  label: 'Print-Ready PDF',     color: '#2B2D42' },
-              { icon: ArtisanCheckmark, label: '98% ATS Precision',   color: '#D4A24C' },
+              { icon: Sparkles, label: 'Smart Parsing',       color: '#D4A24C' },
+              { icon: Layers,   label: 'Keyword Gap ...',     color: '#A8412E' },
+              { icon: FileText, label: 'Print-Ready PDF',     color: '#2B2D42' },
+              { icon: Check,    label: '98% ATS Preci...',    color: '#D4A24C' },
             ].map(({ icon: Icon, label, color }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 p-2"
+                className="flex items-center gap-2 px-3 py-2"
                 style={{
-                  borderRadius: '8px 6px 8px 6px',
-                  background: 'rgba(245, 239, 228, 0.65)',
-                  border: '1px solid rgba(43, 45, 66, 0.08)',
+                  borderRadius: '10px 8px 10px 8px',
+                  background: 'rgba(245, 239, 228, 0.75)',
+                  border: '1px solid rgba(43, 45, 66, 0.12)',
+                  boxShadow: '0 2px 8px rgba(43, 45, 66, 0.03)',
                 }}
               >
-                <Icon className="shrink-0" color={color} />
+                <Icon size={14} style={{ color }} className="shrink-0" />
                 <span className="text-[11px] font-medium text-[#2B2D42] truncate font-sans">{label}</span>
               </div>
             ))}
@@ -341,7 +302,7 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="grid grid-cols-3 gap-6 pt-1"
+          className="grid grid-cols-3 gap-6 pt-2"
         >
           {[
             { val: 98, suffix: '%', label: 'ATS Accuracy' },
@@ -358,18 +319,18 @@ export default function HeroSection({ onGetStarted, onSignIn }) {
         </motion.div>
       </motion.div>
 
-      {/* ── RIGHT SIDE: Floating Product UI Card (Scroll-Reveal: 200ms stagger) */}
+      {/* ── RIGHT COLUMN: Product UI Card ──────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.9, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="relative"
       >
-        {/* Soft atmospheric backlight halo */}
+        {/* Soft atmospheric halo */}
         <div
           className="absolute inset-0 rounded-3xl pointer-events-none"
           style={{
-            background: 'radial-gradient(ellipse at 50% 50%, rgba(212, 162, 76, 0.12) 0%, rgba(168, 65, 46, 0.05) 45%, transparent 70%)',
+            background: 'radial-gradient(ellipse at 50% 50%, rgba(212, 162, 76, 0.14) 0%, rgba(168, 65, 46, 0.05) 45%, transparent 70%)',
             filter: 'blur(35px)',
           }}
         />
