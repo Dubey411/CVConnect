@@ -179,3 +179,12 @@
     animation: none !important;
   }
 }
+
+@keyframes tokenFloat1 {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -10px, 0); }
+}
+@keyframes tokenFloat2 {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, 10px, 0); }
+}
