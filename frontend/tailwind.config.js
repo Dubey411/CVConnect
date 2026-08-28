@@ -3,20 +3,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#16202C',
-        surface: '#1E2C3A',
-        line: '#2A3C4E',
-        mist: '#EDE8E1',
-        aqua: '#9E6634',
-        coral: '#B85D38',
-        sand: '#C4B59D',
+        cotton: '#EDE4D3',
+        khadi: '#F5EFE4',
+        madder: '#A8412E',
+        indigoCharcoal: '#2B2D42',
+        turmeric: '#D4A24C',
+        ink: '#2B2D42',
+        surface: '#F5EFE4',
+        line: '#D8C7AF',
+        mist: '#5F6170',
+        aqua: '#A8412E',
+        coral: '#A8412E',
       },
       fontFamily: {
-        display: ['DM Sans', 'sans-serif'],
+        serif: ['Fraunces', 'Georgia', 'serif'],
+        sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['DM Mono', 'monospace'],
-      },
-      boxShadow: {
-        lift: '0 22px 60px rgba(0,0,0,.28)',
       },
     },
   },
