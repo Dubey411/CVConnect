@@ -12,13 +12,22 @@ Rules you MUST follow:
 4. INJECT ONLY missing required target job keywords (e.g. Java, Spring Boot, Git/GitHub, debugging, technical documentation) naturally into the relevant summary, skills list, or project tech stack where appropriate.
 5. Strict 1-Page Fit: Keep section text concise to ensure the resume fits cleanly on a single 1-page document without spilling over onto a second page.`;
 
-// ─── ML-service fallback ──────────────────────────────────────────────────────
+import { mlRewriteEngine } from './mlEngine.js';
+
+// ─── In-process ML rewrite fallback ───────────────────────────────────────────
 const mlRewrite = async (resume, job) => {
   try {
-    const { data } = await axios.post(`${ML_SERVICE_URL}/rewrite`, { resume, job }, { timeout: 15000 });
-    return { ...data, provider: 'ml-lexical-v2' };
-  } catch (mlErr) {
-    console.warn(`[ResumeRewriter] ML service unavailable (${mlErr?.message}). Using local fallback.`);
+    if (process.env.ML_SERVICE_URL) {
+      try {
+        const { data } = await axios.post(`${process.env.ML_SERVICE_URL}/rewrite`, { resume, job }, { timeout: 4000 });
+        return { ...data, provider: 'remote-ml-v2' };
+      } catch {
+        // Fall back to in-process engine
+      }
+    }
+    return mlRewriteEngine(resume, job);
+  } catch (err) {
+    console.warn(`[ResumeRewriter] In-process rewrite error (${err?.message}). Using safe fallback.`);
     return dumbLocalRewrite(resume, job);
   }
 };
