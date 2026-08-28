@@ -83,12 +83,17 @@
   .input {
     width: 100%;
     border-radius: 0.5rem;
-    border: 1px solid rgba(22, 32, 44, 0.18);
-    background: #FFFFFF;
+    border: 1px solid rgba(43, 45, 66, 0.16);
+    background: #FAF6EE;
     padding: 0.625rem 0.875rem;
     font-size: 0.875rem;
     color: #2B2D42;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .input:focus {
+    border-color: #A8412E;
+    box-shadow: 0 0 0 2px rgba(168, 65, 46, 0.12);
+    outline: none;
   }
   .input:focus {
     border-color: #D4A24C;
@@ -98,21 +103,21 @@
     color: #8C827A;
   }
   .panel {
-    border: 1px solid rgba(22, 32, 44, 0.12);
-    background: #F5EFE4;
+    border: 1px solid rgba(43, 45, 66, 0.12);
+    background: #FAF6EE;
     border-radius: 0.75rem;
     color: #2B2D42;
-    box-shadow: 0 2px 10px rgba(22, 32, 44, 0.04);
+    box-shadow: 0 2px 12px rgba(43, 45, 66, 0.04);
   }
 }
 
 /* Explicit color helper overrides to guarantee zero-cyan */
-.text-aqua { color: #9E6634 !important; }
-.bg-aqua { background-color: #9E6634 !important; }
-.border-aqua { border-color: #9E6634 !important; }
+.text-aqua { color: #A8412E !important; }
+.bg-aqua { background-color: #A8412E !important; }
+.border-aqua { border-color: #A8412E !important; }
 .text-ink { color: #2B2D42 !important; }
 .bg-ink { background-color: #EDE4D3 !important; }
-.bg-surface { background-color: #FAF8F4 !important; }
+.bg-surface { background-color: #FAF6EE !important; }
 .border-line { border-color: rgba(43, 45, 66, 0.12) !important; }
 .text-mist { color: #2B2D42 !important; }
 
