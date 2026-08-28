@@ -12,12 +12,12 @@ import { request } from '../api';
 
 function ScoreBadge({ label, value, thresholds = [75, 50] }) {
   const color =
-    value >= thresholds[0] ? 'text-aqua'
+    value >= thresholds[0] ? 'text-[#A8412E]'
     : value >= thresholds[1] ? 'text-amber-400'
-    : 'text-slate-400';
+    : 'text-[#5F6170]';
   return (
-    <div className="bg-black/20 p-2.5 rounded-lg border border-line/50">
-      <span className="text-[10px] text-slate-500 block mb-0.5">{label}</span>
+    <div className="bg-[#F5EFE4] p-2.5 rounded-lg border border-[#2B2D42]/10">
+      <span className="text-[10px] text-[#5F6170] block mb-0.5">{label}</span>
       <span className={`text-lg font-bold font-mono ${color}`}>
         {value != null ? `${value}%` : '—'}
       </span>
@@ -67,10 +67,10 @@ export default function History({ onLoadResume }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Resume History</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-white">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#2B2D42]">
             Your Saved Drafts
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-[#5F6170]">
             Every resume you've uploaded or had AI-tailored to a job description.
           </p>
         </div>
@@ -93,16 +93,16 @@ export default function History({ onLoadResume }) {
 
       {/* Loading */}
       {loading ? (
-        <div className="panel p-14 text-center text-slate-400">
-          <RefreshCw size={22} className="animate-spin mx-auto mb-3 text-aqua" />
+        <div className="panel p-14 text-center text-[#5F6170]">
+          <RefreshCw size={22} className="animate-spin mx-auto mb-3 text-[#A8412E]" />
           Loading resume history…
         </div>
       ) : resumes.length === 0 ? (
         /* Empty state */
         <div className="panel p-14 text-center">
           <FileText size={40} className="mx-auto mb-4 text-slate-700" />
-          <h3 className="text-lg font-semibold text-white">No resumes yet</h3>
-          <p className="mt-1 text-sm text-slate-400 max-w-sm mx-auto">
+          <h3 className="text-lg font-semibold text-[#2B2D42]">No resumes yet</h3>
+          <p className="mt-1 text-sm text-[#5F6170] max-w-sm mx-auto">
             Upload a resume and paste a job description in the Workspace to create your first tailored draft.
           </p>
         </div>
@@ -121,19 +121,19 @@ export default function History({ onLoadResume }) {
             return (
               <div
                 key={item.id}
-                className="panel p-5 flex flex-col justify-between hover:border-slate-700 transition-all"
+                className="panel p-5 flex flex-col justify-between hover:border-[#A8412E]/40 transition-all"
               >
                 {/* Card top */}
                 <div>
                   {/* Meta row */}
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                  <div className="flex items-center justify-between text-xs text-[#5F6170] mb-3">
                     <span className="flex items-center gap-1 font-mono text-[11px]">
                       <Clock size={12} /> {date}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                       tailored
-                        ? 'bg-aqua/10 text-aqua border-aqua/25'
-                        : 'bg-slate-700/40 text-slate-400 border-slate-700/40'
+                        ? 'bg-aqua/10 text-[#A8412E] border-aqua/25'
+                        : 'bg-slate-700/40 text-[#5F6170] border-slate-700/40'
                     }`}>
                       {tailored ? '✨ AI Tailored' : 'Original'}
                     </span>
@@ -142,8 +142,8 @@ export default function History({ onLoadResume }) {
                   {/* Title */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-sm text-white line-clamp-1">{title}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{sub}</p>
+                      <h3 className="font-semibold text-sm text-[#2B2D42] line-clamp-1">{title}</h3>
+                      <p className="text-xs text-[#5F6170] mt-0.5 line-clamp-1">{sub}</p>
                     </div>
                     <button
                       onClick={(e) => handleDelete(item.id, e)}
@@ -163,15 +163,15 @@ export default function History({ onLoadResume }) {
 
                   {/* Category tag */}
                   {item.category && (
-                    <span className="inline-block mt-3 px-2 py-0.5 rounded text-[10px] font-mono border border-line/50 text-slate-500">
+                    <span className="inline-block mt-3 px-2 py-0.5 rounded text-[10px] font-mono border border-[#2B2D42]/12 text-[#5F6170]">
                       {item.category}
                     </span>
                   )}
                 </div>
 
                 {/* Card bottom */}
-                <div className="mt-5 pt-3 border-t border-line/50 flex items-center justify-between">
-                  <span className={`text-[11px] font-medium flex items-center gap-1 ${tailored ? 'text-aqua' : 'text-slate-500'}`}>
+                <div className="mt-5 pt-3 border-t border-[#2B2D42]/12 flex items-center justify-between">
+                  <span className={`text-[11px] font-medium flex items-center gap-1 ${tailored ? 'text-[#A8412E]' : 'text-[#5F6170]'}`}>
                     {tailored
                       ? <><Sparkles size={11} /> Tailored Draft</>
                       : <><FileText size={11} /> Original Upload</>
@@ -180,7 +180,7 @@ export default function History({ onLoadResume }) {
                   {onLoadResume && (
                     <button
                       onClick={() => onLoadResume(item)}
-                      className="text-xs font-semibold text-aqua hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-[#A8412E] hover:underline flex items-center gap-1"
                     >
                       Open in Workspace <ArrowUpRight size={12} />
                     </button>
