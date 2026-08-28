@@ -156,41 +156,36 @@
   }
 }
 
-/* Ambient Intelligence Field Keyframes */
-@keyframes driftTopLeft {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(24px, 20px, 0) scale(1.04); }
+/* Modern Indian Artisan Slow Organic Keyframes */
+@keyframes grainDrift {
+  0%   { transform: translate3d(0, 0, 0); }
+  20%  { transform: translate3d(1.5%, -1.0%, 0); }
+  40%  { transform: translate3d(-1.0%, 1.4%, 0); }
+  60%  { transform: translate3d(1.2%, 0.8%, 0); }
+  80%  { transform: translate3d(-1.4%, -0.8%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
 }
-@keyframes breatheGlow {
-  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.88; }
-  50% { transform: translate3d(-18px, 14px, 0) scale(1.05); opacity: 1.05; }
-  100% { transform: translate3d(12px, -10px, 0) scale(0.98); opacity: 0.88; }
+
+@keyframes dyeDriftMadder {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(32px, -24px, 0) scale(1.08); }
+  100% { transform: translate3d(-20px, 18px, 0) scale(0.95); }
 }
-@keyframes driftMidLeft {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(20px, -18px, 0) scale(1.03); }
+
+@keyframes dyeDriftTurmeric {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-28px, 32px, 0) scale(1.06); }
+  100% { transform: translate3d(24px, -18px, 0) scale(0.94); }
 }
-@keyframes particleDrift {
-  0% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(6px, -12px, 0); }
-  100% { transform: translate3d(-8px, 8px, 0); }
-}
-@keyframes labelFloat {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(0, -8px, 0); }
+
+@keyframes dyeDriftIndigo {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(22px, 26px, 0) scale(0.96); }
+  100% { transform: translate3d(-28px, -22px, 0) scale(1.06); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ambient-animated {
+  .artisan-animated {
     animation: none !important;
   }
-}
-
-@keyframes tokenFloat1 {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(0, -10px, 0); }
-}
-@keyframes tokenFloat2 {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(0, 10px, 0); }
 }
