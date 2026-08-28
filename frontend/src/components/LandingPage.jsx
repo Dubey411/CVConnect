@@ -37,21 +37,21 @@ function Nav({ onGetStarted, onSignIn }) {
       <header
         className={`max-w-xl mx-auto h-12 px-4 rounded-full flex items-center justify-between pointer-events-auto transition-all duration-500 ${
           scrolled
-            ? 'bg-[#F5F0E8]/90 backdrop-blur-xl border border-[#16202C]/20 shadow-[0_8px_30px_rgba(22,32,44,0.12)]'
+            ? 'bg-[#FAF6EE]/90 backdrop-blur-xl border border-[#2B2D42]/14 shadow-[0_8px_30px_rgba(22,32,44,0.12)]'
             : 'bg-[#F5F0E8]/75 backdrop-blur-md border border-[#16202C+]/12 shadow-[0_4px_20px_rgba(22,32,44,0.06)]'
         }`}
       >
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#F5F0E8] text-[10px] shrink-0 shadow-sm"
+            className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#F5EFE4] text-[10px] shrink-0 shadow-sm"
             style={{ background: '#16202C' }}
           >
             CV
           </div>
-          <span className="font-semibold text-[#2A2622] text-xs tracking-tight">CVConnect</span>
+          <span className="font-semibold text-[#2B2D42] text-xs tracking-tight">CVConnect</span>
           <span
-            className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] font-mono text-[#9E6634] border border-[#9E6634]/25"
+            className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] font-mono text-[#A8412E] border border-[#9E6634]/25"
             style={{ background: 'rgba(158, 102, 52, 0.08)' }}
           >
             v2.4
@@ -61,7 +61,7 @@ function Nav({ onGetStarted, onSignIn }) {
         <div className="flex items-center gap-1">
           <button
             onClick={onSignIn}
-            className="text-[11px] font-medium text-[#6E6259] hover:text-[#2A2622] transition-colors duration-200 px-3 py-1.5"
+            className="text-[11px] font-medium text-[#6E6259] hover:text-[#2B2D42] transition-colors duration-200 px-3 py-1.5"
           >
             Sign in
           </button>
@@ -69,7 +69,7 @@ function Nav({ onGetStarted, onSignIn }) {
             onClick={onGetStarted}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-1 text-[11px] font-semibold text-[#F5F0E8] px-3.5 py-1.5 rounded-full shadow-sm"
+            className="flex items-center gap-1 text-[11px] font-semibold text-[#F5EFE4] px-3.5 py-1.5 rounded-full shadow-sm"
             style={{ background: '#9E6634' }}
           >
             Get started <ArrowRight size={11} />
@@ -90,13 +90,13 @@ function Footer() {
             className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[#081422] text-[10px]"
             style={{ background: '#16202C' }}
           >CV</div>
-          <span className="font-medium text-[#2A2622] text-sm tracking-tight">CVConnect</span>
+          <span className="font-medium text-[#2B2D42] text-sm tracking-tight">CVConnect</span>
         </div>
         <p className="text-xs text-[#6E6259]">
           © {new Date().getFullYear()} CVConnect · AI Resume Optimization · v2.4
         </p>
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#9E6634] animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#A8412E] animate-pulse" />
           <span className="text-[11px] text-[#6E6259]">All systems operational</span>
         </div>
       </div>
@@ -149,8 +149,8 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
 
   return (
     <div
-      className="min-h-screen text-[#2A2622] selection:bg-[#9E6634]/25 selection:text-[#2A2622] relative overflow-x-hidden"
-      style={{ backgroundColor: '#F5F1E9' }}
+      className="min-h-screen text-[#2B2D42] selection:bg-[#A8412E]/25 selection:text-[#2B2D42] relative overflow-x-hidden"
+      style={{ backgroundColor: '#EDE4D3' }}
     >
       <ATSIntelligenceField />
 
