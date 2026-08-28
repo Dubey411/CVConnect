@@ -71,9 +71,17 @@ export const ACTION_VERBS = {
 export const WEAK_OPENERS = /^\s*(responsible for|helped|assisted|worked on|contributed to|was involved in|participated in|tasked with|duties included)\b/i;
 
 // ─── Text Normalisation and Lexical Matchers ─────────────────────────────────
+const STOPWORDS = new Set([
+  'and', 'the', 'with', 'for', 'in', 'to', 'of', 'is', 'a', 'an', 'on', 'at', 'by', 'from', 'this', 'that'
+]);
+
 export function normText(text) {
   if (!text || typeof text !== 'string') return ' ';
-  return ' ' + text.toLowerCase().replace(/[^a-z0-9+#. ]/g, ' ') + ' ';
+  const sanitized = text
+    .toLowerCase()
+    .replace(/\.(?![a-z0-9])/g, ' ')
+    .replace(/[^a-z0-9+#. ]/g, ' ');
+  return ' ' + sanitized.replace(/\s+/g, ' ') + ' ';
 }
 
 export function lexSkills(text) {
@@ -90,8 +98,9 @@ export function lexSkills(text) {
 
 export function tokens(text) {
   if (!text || typeof text !== 'string') return new Set();
-  const matches = text.toLowerCase().match(/[a-z][a-z0-9+#.]{2,}/g) || [];
-  return new Set(matches);
+  const sanitized = text.toLowerCase().replace(/\.(?![a-z0-9])/g, ' ');
+  const matches = sanitized.match(/[a-z][a-z0-9+#.]{2,}/g) || [];
+  return new Set(matches.filter(t => !STOPWORDS.has(t)));
 }
 
 export function tfidfSimilarity(textA, textB) {
