@@ -1,46 +1,28 @@
 import React from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { Sparkles, FileText, BarChart2, Check, ChevronDown } from 'lucide-react';
 
 /**
  * ATSIntelligenceField.jsx
  *
- * Ambient "ATS Intelligence Field" background for CVConnect:
- * - Huge, ultra-soft radial gradient glows (warm ivory, beige, burnt orange, soft charcoal)
- * - Delicate floating intelligent particles with slow organic breathing
- * - Subtle connected curved data paths with glowing traveling pulses
- * - Faded architectural dot grid behind the hero dashboard
- * - Faint floating peripheral metadata annotations (Smart Parsing, Real-time Analysis, etc.)
- * - Parallax scroll depth (GPU-accelerated, disabled on reduced motion)
- * - 100% pointer-events-none & z-0, strictly subordinate to hero UI
+ * Exact implementation of the luminous "ATS Intelligence Field" background:
+ * - Warm golden-silk ribbon curves sweeping across the canvas
+ * - Glowing orb pearl nodes stationed along the trajectories
+ * - Glassmorphic floating token nodes (AI Power, 📄, Smart Parsing, Real-time Analysis, 📊, ✓, Optimized Output)
+ * - Warm dot matrix grid behind the right-hand dashboard
+ * - Luminous central spotlight with warm sand/honey corner vignettes
+ * - Delicate traveling light pulses along the curves
+ * - 100% pointer-events-none & z-0
  */
-
-const PARTICLES = [
-  { id: 1, x: '8%',  y: '14%', size: 3,   color: '#B9783C', opacity: 0.26, duration: 11, delay: 0 },
-  { id: 2, x: '18%', y: '32%', size: 2,   color: '#C89462', opacity: 0.20, duration: 14, delay: 2 },
-  { id: 3, x: '24%', y: '68%', size: 3.5, color: '#A96B32', opacity: 0.18, duration: 16, delay: 1 },
-  { id: 4, x: '35%', y: '22%', size: 2,   color: '#25231F', opacity: 0.10, duration: 13, delay: 3 },
-  { id: 5, x: '42%', y: '82%', size: 2.5, color: '#B9783C', opacity: 0.22, duration: 15, delay: 4 },
-  { id: 6, x: '52%', y: '16%', size: 2,   color: '#C89462', opacity: 0.16, duration: 12, delay: 1.5 },
-  { id: 7, x: '58%', y: '48%', size: 3,   color: '#A96B32', opacity: 0.24, duration: 17, delay: 2.5 },
-  { id: 8, x: '66%', y: '88%', size: 2,   color: '#25231F', opacity: 0.12, duration: 13, delay: 0.5 },
-  { id: 9, x: '74%', y: '28%', size: 3.5, color: '#B9783C', opacity: 0.26, duration: 14, delay: 3.5 },
-  { id: 10, x: '82%', y: '62%', size: 2,  color: '#C89462', opacity: 0.18, duration: 16, delay: 1 },
-  { id: 11, x: '91%', y: '20%', size: 2.5, color: '#A96B32', opacity: 0.20, duration: 12, delay: 2 },
-  { id: 12, x: '94%', y: '78%', size: 3,   color: '#B9783C', opacity: 0.22, duration: 15, delay: 4 },
-  { id: 13, x: '12%', y: '86%', size: 2,   color: '#C89462', opacity: 0.16, duration: 18, delay: 1 },
-  { id: 14, x: '30%', y: '44%', size: 2.5, color: '#B9783C', opacity: 0.20, duration: 14, delay: 3 },
-  { id: 15, x: '88%', y: '42%', size: 2,   color: '#25231F', opacity: 0.08, duration: 16, delay: 2 },
-];
 
 export default function ATSIntelligenceField() {
   const shouldReduceMotion = useReducedMotion();
   const { scrollY } = useScroll();
 
-  // Gentle parallax depths
-  const glowY = useTransform(scrollY, [0, 1000], [0, shouldReduceMotion ? 0 : -35]);
-  const linesY = useTransform(scrollY, [0, 1000], [0, shouldReduceMotion ? 0 : -60]);
-  const particlesY = useTransform(scrollY, [0, 1000], [0, shouldReduceMotion ? 0 : -95]);
-  const labelsY = useTransform(scrollY, [0, 1000], [0, shouldReduceMotion ? 0 : -45]);
+  // Subtle multi-plane parallax response
+  const parallaxGlow = useTransform(scrollY, [0, 800], [0, shouldReduceMotion ? 0 : -30]);
+  const parallaxCurves = useTransform(scrollY, [0, 800], [0, shouldReduceMotion ? 0 : -50]);
+  const parallaxTokens = useTransform(scrollY, [0, 800], [0, shouldReduceMotion ? 0 : -75]);
 
   return (
     <div
@@ -48,69 +30,67 @@ export default function ATSIntelligenceField() {
       className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
       style={{ backgroundColor: '#F5F1E9' }}
     >
-      {/* ── 1. AMBIENT GRADIENT GLOWS ────────────────────────────────────── */}
-      <motion.div style={{ y: glowY }} className="absolute inset-0">
-        {/* Glow 1: Warm Ivory / Sand (Top-Left) */}
+      {/* ── 1. AMBIENT LIGHTING & GLOWING VIGNETTES ──────────────────────── */}
+      <motion.div style={{ y: parallaxGlow }} className="absolute inset-0">
+        {/* Central Luminous Spotlight (Highlights Headline & Dashboard) */}
         <div
-          className="absolute -top-[10%] -left-[10%] w-[900px] h-[900px] rounded-full ambient-animated"
+          className="absolute top-[8%] left-[15%] w-[70vw] h-[75vh] rounded-full"
           style={{
-            background: 'radial-gradient(circle, #EEE7DC 0%, rgba(245, 241, 233, 0) 70%)',
+            background: 'radial-gradient(ellipse at 50% 45%, rgba(255, 253, 249, 0.85) 0%, rgba(245, 241, 233, 0.4) 55%, transparent 75%)',
+            filter: 'blur(60px)',
+          }}
+        />
+
+        {/* Top-Left Warm Toasted Glow */}
+        <div
+          className="absolute -top-[12%] -left-[10%] w-[680px] h-[680px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(212, 163, 115, 0.22) 0%, rgba(229, 217, 201, 0.12) 50%, transparent 70%)',
+            filter: 'blur(80px)',
+            animation: shouldReduceMotion ? 'none' : 'driftTopLeft 22s ease-in-out infinite alternate',
+          }}
+        />
+
+        {/* Right Dashboard Ambient Glow */}
+        <div
+          className="absolute top-[10%] right-[0%] w-[720px] h-[720px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(185, 120, 60, 0.18) 0%, rgba(212, 163, 115, 0.08) 45%, transparent 70%)',
             filter: 'blur(90px)',
-            opacity: 0.85,
-            animation: shouldReduceMotion ? 'none' : 'driftTopLeft 24s ease-in-out infinite alternate',
+            animation: shouldReduceMotion ? 'none' : 'breatheGlow 24s ease-in-out infinite alternate',
           }}
         />
 
-        {/* Glow 2: Warm Burnt Orange Anchor (Right-Side Hero / Dashboard) */}
+        {/* Bottom Sweeping Warm Sand Aura */}
         <div
-          className="absolute top-[12%] right-[2%] w-[820px] h-[820px] rounded-full ambient-animated"
+          className="absolute -bottom-[15%] left-[20%] w-[65vw] h-[500px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(185, 120, 60, 0.12) 0%, rgba(200, 148, 98, 0.05) 45%, transparent 70%)',
-            filter: 'blur(110px)',
-            animation: shouldReduceMotion ? 'none' : 'breatheGlow 20s ease-in-out infinite alternate',
-          }}
-        />
-
-        {/* Glow 3: Warm Ochre Whisper (Mid-Left) */}
-        <div
-          className="absolute top-[48%] left-[2%] w-[750px] h-[750px] rounded-full ambient-animated"
-          style={{
-            background: 'radial-gradient(circle, rgba(169, 107, 50, 0.07) 0%, rgba(229, 217, 201, 0.35) 50%, transparent 70%)',
-            filter: 'blur(100px)',
-            animation: shouldReduceMotion ? 'none' : 'driftMidLeft 28s ease-in-out infinite alternate',
-          }}
-        />
-
-        {/* Glow 4: Subtle Charcoal Anchor (Lower-Right) */}
-        <div
-          className="absolute -bottom-[10%] -right-[5%] w-[700px] h-[700px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(37, 35, 31, 0.035) 0%, transparent 70%)',
-            filter: 'blur(95px)',
+            background: 'radial-gradient(ellipse at 50% 60%, rgba(200, 148, 98, 0.16) 0%, rgba(229, 217, 201, 0.08) 50%, transparent 70%)',
+            filter: 'blur(80px)',
           }}
         />
       </motion.div>
 
-      {/* ── 2. DATA GRID (BEHIND RIGHT-SIDE HERO DASHBOARD) ─────────────── */}
+      {/* ── 2. DOTTED CONSTELLATION GRID ─────────────────────────────────── */}
       <div
-        className="absolute top-[6%] right-0 w-[55%] h-[720px] pointer-events-none hidden md:block"
+        className="absolute top-[2%] right-[0%] w-[60vw] h-[800px] pointer-events-none hidden md:block"
         style={{
-          maskImage: 'radial-gradient(ellipse 65% 65% at 55% 45%, black 20%, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 65% 65% at 55% 45%, black 20%, transparent 80%)',
+          maskImage: 'radial-gradient(ellipse 70% 65% at 60% 45%, black 25%, transparent 80%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 70% 65% at 60% 45%, black 25%, transparent 80%)',
         }}
       >
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <pattern id="ats-data-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-              <circle cx="16" cy="16" r="1" fill="#A96B32" fillOpacity="0.12" />
+            <pattern id="ats-matrix-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+              <circle cx="14" cy="14" r="1.1" fill="#B9783C" fillOpacity="0.22" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#ats-data-grid)" />
+          <rect width="100%" height="100%" fill="url(#ats-matrix-grid)" />
         </svg>
       </div>
 
-      {/* ── 3. CONNECTED CURVED DATA LINES & INTELLIGENCE SIGNALS ───────── */}
-      <motion.div style={{ y: linesY }} className="absolute inset-0 w-full h-full">
+      {/* ── 3. LUMINOUS GOLDEN-SILK RIBBON STRANDS & TRAVELING SIGNALS ────── */}
+      <motion.div style={{ y: parallaxCurves }} className="absolute inset-0 w-full h-full">
         <svg
           className="w-full h-full"
           viewBox="0 0 1440 900"
@@ -119,8 +99,26 @@ export default function ATSIntelligenceField() {
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <filter id="glow-blur" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
+            {/* Golden Strand Gradient */}
+            <linearGradient id="goldStrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#C89462" stopOpacity="0.35" />
+              <stop offset="35%" stopColor="#B9783C" stopOpacity="0.55" />
+              <stop offset="70%" stopColor="#D4A373" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#A96B32" stopOpacity="0.30" />
+            </linearGradient>
+
+            {/* Soft Ambient Line Glow */}
+            <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
+            {/* Intense Orb Glow */}
+            <filter id="orbGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -128,142 +126,199 @@ export default function ATSIntelligenceField() {
             </filter>
           </defs>
 
-          {/* Path 1: Primary Intelligence Flow (Bottom-Left to Top-Right Dashboard) */}
+          {/* ── Curve 1: Left Sweeping S-Curve (AI Power -> Document Icon -> Smart Parsing) */}
           <path
-            id="ats-flow-path-1"
-            d="M 80 760 C 340 720, 520 440, 860 410 C 1060 390, 1220 480, 1400 350"
-            stroke="rgba(169, 107, 50, 0.10)"
-            strokeWidth="1.2"
-            strokeDasharray="4 8"
+            d="M 120 180 C 60 280, 50 380, 80 440 C 120 520, 140 640, 80 780 C 50 850, 120 900, 240 910"
+            stroke="rgba(212, 163, 115, 0.25)"
+            strokeWidth="3.5"
+            filter="url(#ribbonGlow)"
+          />
+          <path
+            id="strand-left"
+            d="M 120 180 C 60 280, 50 380, 80 440 C 120 520, 140 640, 80 780 C 50 850, 120 900, 240 910"
+            stroke="url(#goldStrandGrad)"
+            strokeWidth="1.6"
           />
 
-          {/* Path 2: Sub-Flow (Across Header / Upper Hero) */}
+          {/* ── Curve 2: Top Arch Flowing Across Title Behind Dashboard ───── */}
           <path
-            id="ats-flow-path-2"
-            d="M 220 160 C 460 210, 680 130, 980 200 C 1180 245, 1310 155, 1420 230"
-            stroke="rgba(185, 120, 60, 0.08)"
+            d="M 40 240 C 260 160, 480 280, 740 260 C 980 240, 1180 140, 1340 180"
+            stroke="rgba(212, 163, 115, 0.20)"
+            strokeWidth="3"
+            filter="url(#ribbonGlow)"
+          />
+          <path
+            id="strand-top"
+            d="M 40 240 C 260 160, 480 280, 740 260 C 980 240, 1180 140, 1340 180"
+            stroke="url(#goldStrandGrad)"
+            strokeWidth="1.4"
+          />
+
+          {/* ── Curve 3: Right Arc Cascading Through Analytics to Output ─── */}
+          <path
+            d="M 1340 180 C 1420 280, 1390 480, 1360 620 C 1330 760, 1400 830, 1320 870 C 1240 910, 980 890, 720 910"
+            stroke="rgba(212, 163, 115, 0.22)"
+            strokeWidth="3.5"
+            filter="url(#ribbonGlow)"
+          />
+          <path
+            id="strand-right"
+            d="M 1340 180 C 1420 280, 1390 480, 1360 620 C 1330 760, 1400 830, 1320 870 C 1240 910, 980 890, 720 910"
+            stroke="url(#goldStrandGrad)"
+            strokeWidth="1.6"
+          />
+
+          {/* ── Curve 4: Delicate Diagonal Connecting Swirl ───────────────── */}
+          <path
+            d="M 80 440 C 280 420, 520 680, 840 640 C 1100 600, 1260 760, 1340 850"
+            stroke="rgba(185, 120, 60, 0.18)"
             strokeWidth="1"
+            strokeDasharray="4 6"
           />
 
-          {/* Path 3: Lateral Optimization Stream */}
-          <path
-            d="M 40 420 C 300 370, 540 560, 890 510 C 1140 470, 1290 590, 1430 540"
-            stroke="rgba(200, 148, 98, 0.07)"
-            strokeWidth="1"
-            strokeDasharray="3 6"
-          />
+          {/* ── Golden Glowing Orb Pearls Along Curves ────────────────────── */}
+          {/* Pearl 1 (near top-left) */}
+          <circle cx="120" cy="180" r="3.5" fill="#D4A373" filter="url(#orbGlow)" />
+          <circle cx="120" cy="180" r="2" fill="#FFFFFF" />
 
-          {/* Traveling Intelligence Signal 1 */}
+          {/* Pearl 2 (mid left above document) */}
+          <circle cx="68" cy="340" r="3.2" fill="#B9783C" filter="url(#orbGlow)" />
+          <circle cx="68" cy="340" r="1.8" fill="#FFF5EB" />
+
+          {/* Pearl 3 (lower left near smart parsing) */}
+          <circle cx="95" cy="710" r="3" fill="#D4A373" filter="url(#orbGlow)" />
+
+          {/* Pearl 4 (center top arch) */}
+          <circle cx="560" cy="270" r="2.8" fill="#C89462" filter="url(#orbGlow)" />
+
+          {/* Pearl 5 (right side near chart) */}
+          <circle cx="1370" cy="340" r="3.5" fill="#B9783C" filter="url(#orbGlow)" />
+          <circle cx="1370" cy="340" r="2" fill="#FFFFFF" />
+
+          {/* Pearl 6 (lower right near output) */}
+          <circle cx="1340" cy="740" r="3.2" fill="#D4A373" filter="url(#orbGlow)" />
+          <circle cx="1340" cy="740" r="1.8" fill="#FFF5EB" />
+
+          {/* Pearl 7 (bottom center flow) */}
+          <circle cx="820" cy="895" r="3" fill="#B9783C" filter="url(#orbGlow)" />
+
+          {/* ── Traveling Intelligence Light Signals ─────────────────────── */}
           {!shouldReduceMotion && (
-            <g filter="url(#glow-blur)">
-              <circle r="2.8" fill="#B9783C" opacity="0.85">
+            <>
+              {/* Signal 1: Travels down left curve */}
+              <circle r="3.2" fill="#FFFFFF" filter="url(#orbGlow)">
                 <animateMotion
-                  dur="16s"
+                  dur="14s"
                   repeatCount="indefinite"
-                  path="M 80 760 C 340 720, 520 440, 860 410 C 1060 390, 1220 480, 1400 350"
+                  path="M 120 180 C 60 280, 50 380, 80 440 C 120 520, 140 640, 80 780 C 50 850, 120 900, 240 910"
                 />
               </circle>
-            </g>
-          )}
 
-          {/* Traveling Intelligence Signal 2 */}
-          {!shouldReduceMotion && (
-            <g filter="url(#glow-blur)">
-              <circle r="2" fill="#C89462" opacity="0.7">
+              {/* Signal 2: Travels down right curve */}
+              <circle r="3" fill="#FFFFFF" filter="url(#orbGlow)">
                 <animateMotion
-                  dur="22s"
-                  begin="6s"
+                  dur="18s"
+                  begin="4s"
                   repeatCount="indefinite"
-                  path="M 220 160 C 460 210, 680 130, 980 200 C 1180 245, 1310 155, 1420 230"
+                  path="M 1340 180 C 1420 280, 1390 480, 1360 620 C 1330 760, 1400 830, 1320 870 C 1240 910, 980 890, 720 910"
                 />
               </circle>
-            </g>
+            </>
           )}
         </svg>
       </motion.div>
 
-      {/* ── 4. FLOATING PARTICLES ─────────────────────────────────────────── */}
-      <motion.div style={{ y: particlesY }} className="absolute inset-0">
-        {PARTICLES.map((p) => (
-          <div
-            key={p.id}
-            className="absolute rounded-full ambient-animated"
-            style={{
-              left: p.x,
-              top: p.y,
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              backgroundColor: p.color,
-              opacity: p.opacity,
-              boxShadow: `0 0 8px ${p.color}40`,
-              animation: shouldReduceMotion
-                ? 'none'
-                : `particleDrift ${p.duration}s ease-in-out ${p.delay}s infinite alternate`,
-            }}
-          />
-        ))}
-      </motion.div>
-
-      {/* ── 5. SUBTLE PERIPHERAL METADATA LABELS ─────────────────────────── */}
+      {/* ── 4. FLOATING GLASS TOKENS & BADGES (MATCHING REFERENCE IMAGE) ── */}
       <motion.div
-        style={{ y: labelsY }}
-        className="absolute inset-0 hidden xl:block pointer-events-none"
+        style={{ y: parallaxTokens }}
+        className="absolute inset-0 pointer-events-none"
       >
-        {/* Label 1: Smart Parsing (Top Left) */}
+        {/* Token 1: [✦ AI Power] (Top Left) */}
         <div
-          className="absolute top-[18%] left-[4%] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#A96B32]/15 bg-[#F5F1E9]/60 backdrop-blur-[2px] shadow-[0_2px_10px_rgba(37,35,31,0.03)] ambient-animated"
+          className="absolute top-[22%] left-[4.5%] hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#B9783C]/35 bg-[#FAF6F0]/85 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.12)]"
           style={{
-            animation: shouldReduceMotion ? 'none' : 'labelFloat 14s ease-in-out 0s infinite alternate',
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat1 12s ease-in-out infinite alternate',
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#B9783C] opacity-75" />
-          <span className="font-mono text-[9.5px] uppercase tracking-wider text-[#25231F]/45 font-medium">
-            Smart Parsing · ML Engine
+          <Sparkles size={13} className="text-[#A96B32]" />
+          <span className="text-[11.5px] font-medium text-[#25231F]/85 tracking-tight font-sans">
+            AI Power
           </span>
         </div>
 
-        {/* Label 2: Real-time Analysis (Top Right) */}
+        {/* Token 2: [📄 Document Coin Node] (Mid Left) */}
         <div
-          className="absolute top-[14%] right-[3%] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#A96B32]/15 bg-[#F5F1E9]/60 backdrop-blur-[2px] shadow-[0_2px_10px_rgba(37,35,31,0.03)] ambient-animated"
+          className="absolute top-[44%] left-[4.8%] hidden lg:flex w-9 h-9 rounded-full items-center justify-center border border-[#B9783C]/35 bg-[#FAF6F0]/90 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.14)]"
           style={{
-            animation: shouldReduceMotion ? 'none' : 'labelFloat 16s ease-in-out 2s infinite alternate',
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat2 15s ease-in-out 1s infinite alternate',
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#A96B32] opacity-70 animate-pulse" />
-          <span className="font-mono text-[9.5px] uppercase tracking-wider text-[#25231F]/45 font-medium">
+          <FileText size={16} className="text-[#A96B32]" />
+        </div>
+
+        {/* Token 3: [● Smart Parsing] (Bottom Left) */}
+        <div
+          className="absolute bottom-[13%] left-[3.2%] hidden lg:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#B9783C]/35 bg-[#FAF6F0]/85 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.12)]"
+          style={{
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat1 16s ease-in-out 2s infinite alternate',
+          }}
+        >
+          <span className="w-2 h-2 rounded-full bg-[#B9783C] shadow-[0_0_6px_#B9783C]" />
+          <span className="text-[11.5px] font-medium text-[#25231F]/85 tracking-tight font-sans">
+            Smart Parsing
+          </span>
+        </div>
+
+        {/* Token 4: [✦ Real-time Analysis] (Top Right) */}
+        <div
+          className="absolute top-[12%] right-[5.5%] hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#B9783C]/35 bg-[#FAF6F0]/85 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.12)]"
+          style={{
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat2 14s ease-in-out 0.5s infinite alternate',
+          }}
+        >
+          <Sparkles size={13} className="text-[#A96B32]" />
+          <span className="text-[11.5px] font-medium text-[#25231F]/85 tracking-tight font-sans">
             Real-time Analysis
           </span>
         </div>
 
-        {/* Label 3: ATS Score Intelligence (Mid Left) */}
+        {/* Token 5: [📊 Bar Chart Coin Node] (Mid Right) */}
         <div
-          className="absolute top-[56%] left-[3%] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#A96B32]/15 bg-[#F5F1E9]/60 backdrop-blur-[2px] shadow-[0_2px_10px_rgba(37,35,31,0.03)] ambient-animated"
+          className="absolute top-[18.5%] right-[9.2%] hidden lg:flex w-9 h-9 rounded-full items-center justify-center border border-[#B9783C]/35 bg-[#FAF6F0]/90 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.14)]"
           style={{
-            animation: shouldReduceMotion ? 'none' : 'labelFloat 15s ease-in-out 4s infinite alternate',
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat1 17s ease-in-out 1.5s infinite alternate',
           }}
         >
-          <span className="font-mono text-[9.5px] uppercase tracking-wider text-[#25231F]/40 font-medium">
-            ATS Score Field <span className="text-[#A96B32]/80 ml-0.5">· 98%</span>
-          </span>
+          <BarChart2 size={16} className="text-[#A96B32]" />
         </div>
 
-        {/* Label 4: Optimized Output (Lower Right) */}
+        {/* Token 6: [✓ Checkmark Coin Node] (Bottom Right) */}
         <div
-          className="absolute top-[72%] right-[4%] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#A96B32]/15 bg-[#F5F1E9]/60 backdrop-blur-[2px] shadow-[0_2px_10px_rgba(37,35,31,0.03)] ambient-animated"
+          className="absolute bottom-[16%] right-[5.2%] hidden lg:flex w-9 h-9 rounded-full items-center justify-center border border-[#B9783C]/35 bg-[#FAF6F0]/90 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.14)]"
           style={{
-            animation: shouldReduceMotion ? 'none' : 'labelFloat 18s ease-in-out 1s infinite alternate',
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat2 13s ease-in-out 2.5s infinite alternate',
           }}
         >
-          <span className="text-[#B9783C] text-[10px]">✓</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-wider text-[#25231F]/40 font-medium">
-            Optimized Output · 0ms
+          <Check size={16} className="text-[#A96B32] stroke-[2.5]" />
+        </div>
+
+        {/* Token 7: [⌄ Optimized Output] (Bottom Right Pill) */}
+        <div
+          className="absolute bottom-[10.5%] right-[5%] hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#B9783C]/35 bg-[#FAF6F0]/85 backdrop-blur-md shadow-[0_6px_20px_rgba(185,120,60,0.12)]"
+          style={{
+            animation: shouldReduceMotion ? 'none' : 'tokenFloat1 15s ease-in-out 3s infinite alternate',
+          }}
+        >
+          <ChevronDown size={14} className="text-[#A96B32]" />
+          <span className="text-[11.5px] font-medium text-[#25231F]/85 tracking-tight font-sans">
+            Optimized Output
           </span>
         </div>
       </motion.div>
 
-      {/* ── 6. ORGANIC PAPER GRAIN TEXTURE ───────────────────────────────── */}
+      {/* ── 5. ORGANIC NOISE TEXTURE OVERLAY ─────────────────────────────── */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
           backgroundImage:
             "url('data:image/svg+xml;utf8,<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\"><filter id=\"noiseFilter\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.82\" numOctaves=\"3\" stitchTiles=\"stitch\"/></filter><rect width=\"100%\" height=\"100%\" filter=\"url(%23noiseFilter)\"/></svg>')",
