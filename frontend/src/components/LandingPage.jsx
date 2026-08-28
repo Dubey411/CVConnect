@@ -13,29 +13,9 @@ import Lenis from 'lenis';
 
 import HeroSection from './landing/HeroSection';
 import ScrollStory from './landing/scroll/ScrollStory';
+import ATSIntelligenceField from './landing/ATSIntelligenceField';
 
 gsap.registerPlugin(ScrollTrigger);
-
-/* ─── Ambient Background — intentionally minimal ─────────────────────── */
-function AmbientBackground() {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundColor: '#F7F5F0',
-          backgroundImage: 'radial-gradient(ellipse 130% 110% at 30% 20%, #F7F5F0 15%, rgba(184, 155, 114, 0.28) 55%, #16202C 90%)',
-        }}
-      />
-      <div 
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage: "url('---NOISE---')",
-        }}
-      />
-    </div>
-  );
-}
 
 /* ─── Nav — compact floating glass capsule ───────────────────────────── */
 function Nav({ onGetStarted, onSignIn }) {
@@ -170,9 +150,9 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
   return (
     <div
       className="min-h-screen text-[#2A2622] selection:bg-[#9E6634]/25 selection:text-[#2A2622] relative overflow-x-hidden"
-      style={{ backgroundColor: '#F7F5F0' }}
+      style={{ backgroundColor: '#F5F1E9' }}
     >
-      <AmbientBackground />
+      <ATSIntelligenceField />
 
       <div className="relative z-10">
         <Nav onGetStarted={onGetStarted} onSignIn={onSignIn} />
