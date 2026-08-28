@@ -17,13 +17,13 @@ const DIM_LABELS = {
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 function scoreColor(s) {
-  if (s >= 75) return 'text-aqua';
+  if (s >= 75) return 'text-[#A8412E]';
   if (s >= 55) return 'text-amber-300';
   return 'text-coral';
 }
 
 function scoreBg(s) {
-  if (s >= 75) return 'bg-aqua/10 border-aqua/30';
+  if (s >= 75) return 'bg-[#A8412E]/10 border-[#A8412E]/30';
   if (s >= 55) return 'bg-amber-300/10 border-amber-300/30';
   return 'bg-coral/10 border-coral/30';
 }
@@ -40,8 +40,8 @@ function Chip({ text, variant = 'missing' }) {
   const base = 'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium';
   const styles = {
     missing:  `${base} bg-coral/10 text-coral border border-coral/20`,
-    matched:  `${base} bg-aqua/10 text-aqua border border-aqua/20`,
-    neutral:  `${base} bg-slate-700/40 text-slate-400 border border-slate-700/40`,
+    matched:  `${base} bg-aqua/10 text-[#A8412E] border border-aqua/20`,
+    neutral:  `${base} bg-slate-700/40 text-[#5F6170] border border-slate-700/40`,
   };
   return <span className={styles[variant]}>{text}</span>;
 }
@@ -49,9 +49,9 @@ function Chip({ text, variant = 'missing' }) {
 /* ── action item ─────────────────────────────────────────────────────────── */
 function ActionItem({ n, text }) {
   return (
-    <div className="flex gap-2.5 text-xs text-slate-300 leading-relaxed">
+    <div className="flex gap-2.5 text-xs text-[#2B2D42] leading-relaxed">
       <span
-        className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-aqua/15 text-aqua text-[9px] font-bold flex items-center justify-center"
+        className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-[#A8412E]/15 text-[#A8412E] text-[9px] font-bold flex items-center justify-center"
       >
         {n}
       </span>
@@ -67,11 +67,11 @@ function EmptyState() {
       <div>
         <p className="eyebrow">Match Intelligence</p>
         <h2 className="mt-2 text-xl font-semibold">Nothing to score—yet.</h2>
-        <p className="mt-2 max-w-xs text-sm leading-6 text-slate-400">
+        <p className="mt-2 max-w-xs text-sm leading-6 text-[#5F6170]">
           Paste a job description and upload your resume to see your ATS match score, skill gaps, and what to add.
         </p>
       </div>
-      <div className="font-mono text-[11px] text-slate-500">
+      <div className="font-mono text-[11px] text-[#5F6170]">
         Scored across: Skills · Experience · Keywords · Domain · Education
       </div>
     </div>
@@ -115,13 +115,13 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
             <span className={`text-5xl font-bold tracking-tighter font-mono ${cColor}`}>{sc}</span>
-            <span className="text-lg text-slate-400">%</span>
+            <span className="text-lg text-[#5F6170]">%</span>
           </div>
           <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border ${cBg} ${cColor}`}>
             {scoreLabel(sc)}
           </span>
         </div>
-        <div className="mt-1 text-[11px] text-slate-500 font-mono">ATS Score {analysis.atsScore ?? '—'}/100</div>
+        <div className="mt-1 text-[11px] text-[#5F6170] font-mono">ATS Score {analysis.atsScore ?? '—'}/100</div>
       </div>
 
       {/* ── Radar ── */}
@@ -148,13 +148,13 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
             {missingSkills.slice(0, 8).map(s => <Chip key={s} text={s} variant="missing" />)}
           </div>
         ) : (
-          <p className="text-xs text-slate-500 italic">All required skills matched.</p>
+          <p className="text-xs text-[#5F6170] italic">All required skills matched.</p>
         )}
 
         {matchedSkills.length > 0 && (
           <>
             <p className="text-xs font-medium text-mist flex items-center gap-1.5">
-              <CheckCircle2 size={12} className="text-aqua" /> Matched Skills
+              <CheckCircle2 size={12} className="text-[#A8412E]" /> Matched Skills
             </p>
             <div className="flex flex-wrap gap-1.5">
               {matchedSkills.slice(0, 6).map(s => <Chip key={s} text={s} variant="matched" />)}
@@ -178,7 +178,7 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
           {missingKeywords.length > 8 && (
             <button
               onClick={() => setShowAllMissing(v => !v)}
-              className="text-[10px] text-aqua hover:underline"
+              className="text-[10px] text-[#A8412E] hover:underline"
             >
               {showAllMissing ? 'Show less' : `+${missingKeywords.length - 8} more`}
             </button>
@@ -192,7 +192,7 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
           <div className="rule -mx-5" />
           <div className="space-y-2.5">
             <p className="text-xs font-medium text-mist flex items-center gap-1.5">
-              <TrendingUp size={12} className="text-aqua" /> What to Add to Improve Your Score
+              <TrendingUp size={12} className="text-[#A8412E]" /> What to Add to Improve Your Score
             </p>
             {actionItems.map((item, i) => <ActionItem key={i} n={i + 1} text={item} />)}
           </div>
