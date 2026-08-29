@@ -18,14 +18,14 @@ const DIM_LABELS = {
 /* ── helpers ────────────────────────────────────────────────────────────── */
 function scoreColor(s) {
   if (s >= 75) return 'text-[#A8412E]';
-  if (s >= 55) return 'text-amber-300';
-  return 'text-coral';
+  if (s >= 55) return 'text-[#D4A24C]';
+  return 'text-[#A8412E]';
 }
 
 function scoreBg(s) {
   if (s >= 75) return 'bg-[#A8412E]/10 border-[#A8412E]/30';
-  if (s >= 55) return 'bg-amber-300/10 border-amber-300/30';
-  return 'bg-coral/10 border-coral/30';
+  if (s >= 55) return 'bg-[#D4A24C]/15 border-[#D4A24C]/35';
+  return 'bg-[#A8412E]/10 border-[#A8412E]/25';
 }
 
 function scoreLabel(s) {
@@ -37,11 +37,11 @@ function scoreLabel(s) {
 
 /* ── keyword chip ───────────────────────────────────────────────────────── */
 function Chip({ text, variant = 'missing' }) {
-  const base = 'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium';
+  const base = 'inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-medium transition-colors';
   const styles = {
-    missing:  `${base} bg-coral/10 text-coral border border-coral/20`,
-    matched:  `${base} bg-aqua/10 text-[#A8412E] border border-aqua/20`,
-    neutral:  `${base} bg-slate-700/40 text-[#5F6170] border border-slate-700/40`,
+    missing:  `${base} bg-[#A8412E]/10 text-[#A8412E] border border-[#A8412E]/25`,
+    matched:  `${base} bg-[#D4A24C]/15 text-[#2B2D42] border border-[#D4A24C]/35`,
+    neutral:  `${base} bg-[#F5EFE4] text-[#5F6170] border border-[#2B2D42]/12`,
   };
   return <span className={styles[variant]}>{text}</span>;
 }
@@ -79,10 +79,10 @@ function EmptyState() {
 }
 
 /* ── main ────────────────────────────────────────────────────────────────── */
-export default function ScorePanel({ analysis, onRewrite, busy }) {
+export default function ScorePanel({ analysis, onRewrite, busy, resumeId }) {
   const [showAllMissing, setShowAllMissing] = useState(false);
 
-  if (!analysis) return <EmptyState />;
+  if (!resumeId || !analysis) return <EmptyState />;
 
   const radarData = Object.entries(analysis.components).map(([k, v]) => ({
     dimension: DIM_LABELS[k] ?? k,
@@ -128,10 +128,21 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
       <div className="h-44">
         <ResponsiveContainer>
           <RadarChart data={radarData}>
-            <PolarGrid stroke="#2A3C4E" />
-            <PolarAngleAxis dataKey="dimension" tick={{ fill: '#9eacb9', fontSize: 10 }} />
-            <Radar dataKey="value" stroke="#9E6634" fill="#9E6634" fillOpacity={0.25} />
-            <Tooltip contentStyle={{ background: '#1E2C3A', border: '1px solid #2A3C4E', fontSize: 11 }} />
+            <PolarGrid stroke="rgba(43, 45, 66, 0.12)" />
+            <PolarAngleAxis dataKey="dimension" tick={{ fill: '#5F6170', fontSize: 10 }} />
+            <Radar dataKey="value" stroke="#A8412E" strokeWidth={2} fill="#A8412E" fillOpacity={0.20} dot={{ r: 3, fill: '#D4A24C', stroke: '#A8412E' }} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#FAF6EE',
+                border: '1px solid rgba(43, 45, 66, 0.14)',
+                borderRadius: '8px',
+                color: '#2B2D42',
+                fontSize: '11px',
+                boxShadow: '0 4px 16px rgba(43, 45, 66, 0.08)'
+              }}
+              labelStyle={{ color: '#2B2D42', fontWeight: 600 }}
+              itemStyle={{ color: '#A8412E' }}
+            />
           </RadarChart>
         </ResponsiveContainer>
       </div>
@@ -140,8 +151,8 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
 
       {/* ── Skill Gaps ── */}
       <div className="space-y-3">
-        <p className="text-xs font-medium text-mist flex items-center gap-1.5">
-          <XCircle size={12} className="text-coral" /> Missing Skills
+        <p className="text-xs font-medium text-[#2B2D42] flex items-center gap-1.5">
+          <XCircle size={12} className="text-[#A8412E]" /> Missing Skills
         </p>
         {missingSkills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -153,7 +164,7 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
 
         {matchedSkills.length > 0 && (
           <>
-            <p className="text-xs font-medium text-mist flex items-center gap-1.5">
+            <p className="text-xs font-medium text-[#2B2D42] flex items-center gap-1.5">
               <CheckCircle2 size={12} className="text-[#A8412E]" /> Matched Skills
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -168,7 +179,7 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
       {/* ── Keyword Gaps ── */}
       {missingKeywords.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-mist flex items-center gap-1.5">
+          <p className="text-xs font-medium text-[#2B2D42] flex items-center gap-1.5">
             <AlertTriangle size={12} className="text-amber-400" />
             JD Keywords Not in Your Resume ({missingKeywords.length})
           </p>
@@ -191,7 +202,7 @@ export default function ScorePanel({ analysis, onRewrite, busy }) {
         <>
           <div className="rule -mx-5" />
           <div className="space-y-2.5">
-            <p className="text-xs font-medium text-mist flex items-center gap-1.5">
+            <p className="text-xs font-medium text-[#2B2D42] flex items-center gap-1.5">
               <TrendingUp size={12} className="text-[#A8412E]" /> What to Add to Improve Your Score
             </p>
             {actionItems.map((item, i) => <ActionItem key={i} n={i + 1} text={item} />)}
