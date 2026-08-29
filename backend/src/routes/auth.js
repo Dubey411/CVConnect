@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -39,4 +40,59 @@ router.post('/login', [body('email').isEmail().normalizeEmail(), body('password'
     return res.status(500).json({ error: { code: 'REGISTRATION_FAILED', message: e.message || 'Registration failed.' } });
   } });
 router.post('/refresh', [body('refreshToken').isString()], validate, async (req, res, next) => { try { const data = jwt.verify(req.body.refreshToken, JWT_REFRESH_SECRET); const user = await prisma.user.findFirst({ where: { id: data.sub, refreshToken: req.body.refreshToken } }); if (!user) throw new Error('Invalid refresh token'); const tokens = sign(user); await prisma.user.update({ where: { id: user.id }, data: { refreshToken: tokens.refreshToken } }); res.json(tokens); } catch { res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Please sign in again.' } }); } });
+router.post('/google', [body('credential').isString().notEmpty()], validate, async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    let googleUser;
+    // Development / mock fallback
+    if (credential === 'demo-google-credential' || credential.startsWith('mock-')) {
+      googleUser = {
+        email: 'google_user@gmail.com',
+        name: 'Google User',
+        email_verified: true
+      };
+    } else {
+      const googleRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`, { timeout: 8000 });
+      const payload = googleRes.data;
+
+      if (!payload.email) {
+        return res.status(400).json({ error: { code: 'INVALID_GOOGLE_TOKEN', message: 'Could not retrieve email from Google.' } });
+      }
+
+      googleUser = {
+        email: payload.email.toLowerCase(),
+        name: payload.name || payload.email.split('@')[0],
+        email_verified: payload.email_verified === 'true' || payload.email_verified === true
+      };
+    }
+
+    if (!googleUser.email_verified) {
+      return res.status(400).json({ error: { code: 'EMAIL_UNVERIFIED', message: 'Your Google email is not verified.' } });
+    }
+
+    let user = await prisma.user.findUnique({ where: { email: googleUser.email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: googleUser.email,
+          name: googleUser.name
+        }
+      });
+    }
+
+    const tokens = sign(user);
+    await prisma.user.update({ where: { id: user.id }, data: { refreshToken: tokens.refreshToken } });
+
+    return res.json({
+      user: { id: user.id, email: user.email, name: user.name },
+      ...tokens
+    });
+  } catch (err) {
+    console.error('[AUTH_GOOGLE_ERROR]:', err.response?.data || err.message);
+    const msg = err.response?.data?.error_description || 'Unable to authenticate with Google. Please try again.';
+    return res.status(401).json({ error: { code: 'GOOGLE_AUTH_FAILED', message: msg } });
+  }
+});
+
 export default router;
