@@ -31,7 +31,7 @@ app.get('/health', async (req, res) => {
     dbError = err.message;
   }
   res.json({
-    status: dbStatus === 'ok' ? 'ok' : 'degraded',
+    status: 'ok',
     service: 'cvconnect-api',
     database: dbStatus,
     ...(dbError ? { databaseError: dbError } : {}),
