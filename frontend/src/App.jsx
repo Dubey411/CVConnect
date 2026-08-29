@@ -142,9 +142,8 @@ function Shell() {
   });
   const busy = status === 'loading';
 
-  useEffect(() => {
-    dispatch(fetchLatestResume());
-  }, [dispatch]);
+  // Note: Workspace starts clean so users only see scores for their active upload.
+  // Previous resumes can always be loaded from the History tab.
 
   useEffect(() => {
     if (activeTab) {
@@ -174,13 +173,8 @@ function Shell() {
     if (data.jobUrl) setLastTargetUrl(data.jobUrl);
     const action = await dispatch(analyzeJob(data));
     if (analyzeJob.fulfilled.match(action)) {
-      let currentResume = resume;
-      if (!currentResume) {
-        const latest = await dispatch(fetchLatestResume());
-        currentResume = latest.payload;
-      }
-      if (currentResume?.id) {
-        await dispatch(matchResume({ resumeId: currentResume.id, jobId: action.payload.job.id }));
+      if (resume?.id) {
+        await dispatch(matchResume({ resumeId: resume.id, jobId: action.payload.job.id }));
       }
     }
   };
