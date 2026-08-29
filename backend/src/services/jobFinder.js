@@ -165,7 +165,55 @@ export class JobFinderService {
       console.log(`  ✅ Internshala (Active live listings): ${count} listings`);
     };
 
-    // ── 3. LINKEDIN & GLASSDOOR — Deep links for active hiring ─────────────
+        // ── 3. ADZUNA — Live real-time aggregated jobs across India ─────────────
+    const fetchAdzuna = async () => {
+      const appId = process.env.ADZUNA_APP_ID || 'c6660a46';
+      const appKey = process.env.ADZUNA_APP_KEY || '07137cb1eb9eec83d065af1b508015f9';
+      if (!appId || !appKey) return;
+
+      try {
+        const url = 'https://api.adzuna.com/v1/api/jobs/in/search/1';
+        const res = await axios.get(url, {
+          params: {
+            app_id: appId,
+            app_key: appKey,
+            results_per_page: 15,
+            what: searchQuery || primarySkill,
+            'content-type': 'application/json'
+          },
+          timeout: 10000
+        });
+
+        const items = res.data?.results || [];
+        let count = 0;
+        for (const item of items) {
+          const rawTitle = (item.title || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
+          if (!rawTitle || !isRelevantForCandidate(rawTitle, primarySkill)) continue;
+
+          const company = item.company?.display_name || 'Adzuna Partner';
+          const targetUrl = item.redirect_url;
+          const description = (item.description || '').replace(/<\/?[^>]+(>|$)/g, '').trim() || `${rawTitle} at ${company}`;
+
+          const key = `${rawTitle.toLowerCase()}::${company.toLowerCase()}`;
+          if (!discoveredMap.has(key)) {
+            discoveredMap.set(key, {
+              title: rawTitle,
+              company,
+              targetUrl,
+              description: description.slice(0, 400),
+              platform: 'Adzuna',
+              skills: [primarySkill, secondarySkill].filter(Boolean)
+            });
+            count++;
+          }
+        }
+        console.log(`  ✅ Adzuna India: ${count} real live listings fetched`);
+      } catch (err) {
+        console.warn(`  ⚠️  Adzuna: ${err.message}`);
+      }
+    };
+
+    // ── 4. LINKEDIN & GLASSDOOR — Deep links for active hiring ─────────────
     const addPlatformSearchLinks = () => {
       const linkedInUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(searchQuery)}&location=India&f_E=1,2&f_JT=I,F`;
       const glassdoorUrl = `https://www.glassdoor.co.in/Job/india-${primarySkill.toLowerCase().replace(/\s+/g, '-')}-jobs-SRCH_IL.0,5_IN115_KO6,${6 + primarySkill.length}.htm`;
@@ -197,7 +245,8 @@ export class JobFinderService {
     await Promise.all([
       fetchUnstop('jobs'),
       fetchUnstop('internships'),
-      fetchInternshala()
+      fetchInternshala(),
+      fetchAdzuna()
     ]);
     addPlatformSearchLinks();
 
