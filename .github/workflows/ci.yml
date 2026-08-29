@@ -11,5 +11,5 @@ jobs:
         with: { node-version: 20 }
       - run: npm install
         working-directory: ${{ matrix.app }}
-      - run: npm test -- --runInBand
+      - run: npm test
         working-directory: ${{ matrix.app }}
