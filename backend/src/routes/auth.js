@@ -16,7 +16,7 @@ const validate = (req, res, next) => {
   return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: msg, details: e.array() } });
 };
 const JWT_SECRET = process.env.JWT_SECRET || 'cvconnect_jwt_secret_render_production_key_2026';
-const JWT_REFRESH_SECRET = JWT_REFRESH_SECRET || 'cvconnect_refresh_secret_render_production_key_2026';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'cvconnect_refresh_secret_render_production_key_2026';
 
 const sign = (user) => ({
   accessToken: jwt.sign(
