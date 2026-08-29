@@ -38,7 +38,9 @@ function Auth({ mode, setMode, onBack }) {
       }
       dispatch(signIn(result.user));
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Unable to continue. Check your connection and try again.');
+      const errData = err.response?.data?.error;
+      const msg = errData?.message || (errData?.details?.[0] ? `${errData.details[0].path}: ${errData.details[0].msg}` : null);
+      setError(msg || 'Unable to continue. Check your information and try again.');
     } finally {
       setBusy(false);
     }
